@@ -145,8 +145,8 @@ Every ambiguity is resolved or recorded here - nothing is left silently unclear.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | YTTR-01 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-02 | P1: Hybrid JSON | Design | Pending |
-| YTTR-03 | P1: Hybrid JSON | Design | Pending |
+| YTTR-02 | P1: Hybrid JSON | Execute | Implementing |
+| YTTR-03 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-04 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-05 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-06 | P1: Hybrid JSON | Execute | Implementing |

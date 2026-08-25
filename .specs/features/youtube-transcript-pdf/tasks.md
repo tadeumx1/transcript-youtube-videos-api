@@ -164,7 +164,7 @@ T5 → T6 → T7 → T8
 **Gate**: quick
 **Commit**: `feat(transcription): add openai audio fallback`
 
-### T5: Select captions before the billable fallback
+### T5: Select captions before the billable fallback ✅
 
 **What**: Implement the hybrid application service that returns captions first and invokes audio only for known caption unavailability.
 **Where**: `src/application/hybrid-transcript-service.ts`
@@ -179,13 +179,13 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Caption success returns `youtube_captions` and never calls audio fallback.
-- [ ] Typed caption unavailability returns `openai_transcription` from the audio fallback.
-- [ ] Unexpected caption failures propagate and never incur an audio fallback call.
-- [ ] Empty fallback content becomes `OPENAI_TRANSCRIPTION_FAILED` rather than an empty success.
-- [ ] Unified `text` contains every non-empty segment once and in chronological order.
-- [ ] At least five spec-derived unit tests pass.
-- [ ] `npm run check` exits zero because this closes Phase 2.
+- [x] Caption success returns `youtube_captions` and never calls audio fallback.
+- [x] Typed caption unavailability returns `openai_transcription` from the audio fallback.
+- [x] Unexpected caption failures propagate and never incur an audio fallback call.
+- [x] Empty fallback content becomes `OPENAI_TRANSCRIPTION_FAILED` rather than an empty success.
+- [x] Unified `text` contains every non-empty segment once and in chronological order.
+- [x] Five spec-derived service tests pass; 39 unit tests pass in total.
+- [x] `npm run check` exits zero because this closes Phase 2.
 
 **Tests**: unit
 **Gate**: build
