@@ -191,7 +191,7 @@ T5 → T6 → T7 → T8
 **Gate**: build
 **Commit**: `feat(transcription): orchestrate hybrid transcript sources`
 
-### T6: Build and render provider-neutral PDFs
+### T6: Build and render provider-neutral PDFs ✅
 
 **What**: Implement the PDF document model, bounded paragraph grouping, and PDFKit buffer renderer.
 **Where**: `src/infrastructure/pdf/`
@@ -206,12 +206,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Metadata includes source URL, video ID, source, language, generation flag, timestamp precision, and extraction time.
-- [ ] Timestamped paragraphs preserve each segment exactly once and remain at or below 1,500 characters.
-- [ ] Brazilian Portuguese diacritics remain unchanged in the document model.
-- [ ] Multi-page content renders into a buffer beginning with the PDF signature.
-- [ ] Renderer failures become `PDF_GENERATION_FAILED`.
-- [ ] At least six spec-derived unit tests pass.
+- [x] Metadata includes source URL, video ID, source, language, generation flag, timestamp precision, and extraction time.
+- [x] Timestamped paragraphs preserve each segment exactly once and remain at or below 1,500 characters.
+- [x] Brazilian Portuguese diacritics remain unchanged in the document model.
+- [x] Multi-page content renders into a buffer beginning with the PDF signature.
+- [x] Renderer failures become `PDF_GENERATION_FAILED`.
+- [x] Six spec-derived PDF tests pass; 45 unit tests pass in total.
 
 **Tests**: unit
 **Gate**: quick

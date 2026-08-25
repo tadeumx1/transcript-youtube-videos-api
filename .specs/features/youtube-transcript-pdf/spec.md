@@ -165,12 +165,12 @@ Every ambiguity is resolved or recorded here - nothing is left silently unclear.
 | YTAUD-05 | P1: Safe audio | Execute | Implementing |
 | YTAUD-06 | P1: Safe audio | Execute | Implementing |
 | YTAUD-07 | Edge case | Execute | Implementing |
-| YTPDF-01 | P1: PDF | Design | Pending |
-| YTPDF-02 | P1: PDF | Design | Pending |
-| YTPDF-03 | P1: PDF | Design | Pending |
+| YTPDF-01 | P1: PDF | Execute | Implementing |
+| YTPDF-02 | P1: PDF | Execute | Implementing |
+| YTPDF-03 | P1: PDF | Execute | Implementing |
 | YTPDF-04 | P1: PDF | Design | Pending |
-| YTPDF-05 | Edge case | Design | Pending |
-| YTPDF-06 | Edge case | Design | Pending |
+| YTPDF-05 | Edge case | Execute | Implementing |
+| YTPDF-06 | Edge case | Execute | Implementing |
 | YTOPS-01 | P1: Operations | Design | Pending |
 | YTOPS-02 | P1: Operations | Design | Pending |
 | YTOPS-03 | P1: Operations | Execute | Implementing |
