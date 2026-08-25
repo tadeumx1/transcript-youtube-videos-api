@@ -144,20 +144,20 @@ Every ambiguity is resolved or recorded here - nothing is left silently unclear.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| YTTR-01 | P1: Hybrid JSON | Design | Pending |
+| YTTR-01 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-02 | P1: Hybrid JSON | Design | Pending |
 | YTTR-03 | P1: Hybrid JSON | Design | Pending |
-| YTTR-04 | P1: Hybrid JSON | Design | Pending |
-| YTTR-05 | P1: Hybrid JSON | Design | Pending |
+| YTTR-04 | P1: Hybrid JSON | Execute | Implementing |
+| YTTR-05 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-06 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-07 | P1: Hybrid JSON | Design | Pending |
+| YTTR-07 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-08 | P1: Hybrid JSON | Design | Pending |
 | YTTR-09 | P1: Hybrid JSON | Design | Pending |
 | YTTR-10 | P1: Hybrid JSON | Design | Pending |
 | YTTR-11 | P1: Hybrid JSON | Design | Pending |
-| YTTR-12 | P1: Hybrid JSON | Design | Pending |
+| YTTR-12 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-13 | Edge case | Execute | Implementing |
-| YTTR-14 | Edge case | Design | Pending |
+| YTTR-14 | Edge case | Execute | Implementing |
 | YTAUD-01 | P1: Safe audio | Design | Pending |
 | YTAUD-02 | P1: Safe audio | Design | Pending |
 | YTAUD-03 | P1: Safe audio | Design | Pending |

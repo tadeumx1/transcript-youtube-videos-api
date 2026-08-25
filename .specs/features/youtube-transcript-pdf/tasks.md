@@ -111,7 +111,7 @@ T5 → T6 → T7 → T8
 **Gate**: build
 **Commit**: `feat(api): validate youtube video urls`
 
-### T3: Adapt YouTube captions to the domain contract
+### T3: Adapt YouTube captions to the domain contract ✅
 
 **What**: Implement the caption provider and translate the caption library's outcomes into stable domain results or errors.
 **Where**: `src/infrastructure/youtube/`
@@ -126,12 +126,12 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Successful captions preserve language, generation flag, chronological segment text, start time, and duration.
-- [ ] Omitted languages use `pt-BR`, `pt`, then `en`.
-- [ ] Disabled, missing-language, and empty captions produce the typed captions-unavailable outcome.
-- [ ] Private, unavailable, and age-restricted videos produce `VIDEO_NOT_AVAILABLE`.
-- [ ] Unexpected provider failures produce `YOUTUBE_UPSTREAM_ERROR`.
-- [ ] At least seven spec-derived unit tests pass.
+- [x] Successful captions preserve language, generation flag, chronological segment text, start time, and duration.
+- [x] Omitted languages use `pt-BR`, `pt`, then `en`.
+- [x] Disabled, missing-language, and empty captions produce the typed captions-unavailable outcome.
+- [x] Private, unavailable, and age-restricted videos produce `VIDEO_NOT_AVAILABLE`.
+- [x] Unexpected provider failures produce `YOUTUBE_UPSTREAM_ERROR`.
+- [x] Eight spec-derived caption-provider tests pass; 21 unit tests pass in total.
 
 **Tests**: unit
 **Gate**: quick
