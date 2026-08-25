@@ -217,7 +217,7 @@ T5 → T6 → T7 → T8
 **Gate**: quick
 **Commit**: `feat(pdf): render transcript documents`
 
-### T7: Expose health, transcript, and PDF routes
+### T7: Expose health, transcript, and PDF routes ✅
 
 **What**: Build the Fastify application, JSON Schema validation, safe error handler, dependency wiring, and three HTTP routes.
 **Where**: `src/http/`
@@ -232,13 +232,13 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `GET /health` returns exactly HTTP 200 and `{ "status": "ok" }` without external calls.
-- [ ] `POST /v1/transcripts` validates a closed body schema and returns the unified JSON contract.
-- [ ] `POST /v1/transcripts/pdf` returns `application/pdf` with a video-ID attachment filename.
-- [ ] Every specified `AppError` status and code is preserved by both transcript endpoints.
-- [ ] Validation errors return HTTP 400 without external calls.
-- [ ] Logs never serialize transcript text, media, PDF bytes, API keys, or provider error causes.
-- [ ] At least fourteen network-isolated integration tests pass.
+- [x] `GET /health` returns exactly HTTP 200 and `{ "status": "ok" }` without external calls.
+- [x] `POST /v1/transcripts` validates a closed body schema and returns the unified JSON contract.
+- [x] `POST /v1/transcripts/pdf` returns `application/pdf` with a video-ID attachment filename.
+- [x] Every specified `AppError` status and code is preserved by both transcript endpoints.
+- [x] Validation errors return HTTP 400 without external calls.
+- [x] Logs never serialize transcript text, media, PDF bytes, API keys, or provider error causes.
+- [x] Twenty-one network-isolated integration tests pass; 66 tests pass in total.
 
 **Tests**: integration
 **Gate**: full
