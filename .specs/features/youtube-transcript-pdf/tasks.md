@@ -244,7 +244,7 @@ T5 → T6 → T7 → T8
 **Gate**: full
 **Commit**: `feat(api): expose transcript and pdf routes`
 
-### T8: Package and document the runnable service
+### T8: Package and document the runnable service ✅
 
 **What**: Add the production entrypoint, Docker image with media tools, environment documentation, local examples, and operational limitations.
 **Where**: `.`
@@ -259,11 +259,11 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `npm run build` produces a runnable `dist/server.js`.
-- [ ] Docker installs `yt-dlp` and FFmpeg in the runtime stage and starts the compiled API as a non-root user.
-- [ ] README documents API Platform billing separation, `OPENAI_API_KEY`, routes, curl examples, temporary-file behavior, and YouTube blocking limitations.
-- [ ] `.env.example` contains placeholders only and no credentials.
-- [ ] `npm run check` passes with the final expected test count and zero skipped tests.
+- [x] `npm run build` produces a runnable `dist/server.js`; local health and invalid-URL smoke requests pass.
+- [x] Docker installs pinned `yt-dlp` and FFmpeg in the runtime stage and starts the compiled API as a non-root user.
+- [x] README documents API Platform billing separation, `OPENAI_API_KEY`, routes, curl examples, temporary-file behavior, and YouTube blocking limitations.
+- [x] `.env.example` contains placeholders only and no credentials.
+- [x] `npm run check` passes with 66 tests and zero skipped tests.
 
 **Tests**: none - runtime and documentation use the build gate per matrix
 **Gate**: build

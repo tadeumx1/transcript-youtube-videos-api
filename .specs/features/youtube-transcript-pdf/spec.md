@@ -175,7 +175,7 @@ Every ambiguity is resolved or recorded here - nothing is left silently unclear.
 | YTOPS-02 | P1: Operations | Execute | Implementing |
 | YTOPS-03 | P1: Operations | Execute | Implementing |
 | YTOPS-04 | P1: Operations | Execute | Implementing |
-| YTOPS-05 | P1: Operations | Design | Pending |
+| YTOPS-05 | P1: Operations | Execute | Implementing |
 
 **Coverage:** 32 total, 0 mapped to tasks, 32 pending design.
 
