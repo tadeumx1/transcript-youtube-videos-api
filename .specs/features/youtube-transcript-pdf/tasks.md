@@ -137,7 +137,7 @@ T5 → T6 → T7 → T8
 **Gate**: quick
 **Commit**: `feat(captions): add youtube caption provider`
 
-### T4: Extract and transcribe fallback audio
+### T4: Extract and transcribe fallback audio ✅
 
 **What**: Implement the no-shell process runner, temporary media pipeline, OpenAI chunk transcriber, and composed audio fallback.
 **Where**: `src/infrastructure/audio/`
@@ -152,13 +152,13 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] Missing API configuration stops before temporary media or subprocess work.
-- [ ] `yt-dlp` receives a canonical URL, `--no-playlist`, audio-only format, and a request-local output template through an argument array.
-- [ ] FFmpeg receives mono, 16 kHz, 48 kbps MP3, and 1,200-second segment arguments through an argument array.
-- [ ] Ordered chunks no larger than 24 MB are sent sequentially to `gpt-transcribe` with automotive context and normalized language hints.
-- [ ] Missing tools, command failure, oversized chunks, and OpenAI failure map to their specified error codes.
-- [ ] Unique request directories are removed after both success and failure.
-- [ ] At least eleven spec-derived unit tests pass.
+- [x] Missing API configuration stops before temporary media or subprocess work.
+- [x] `yt-dlp` receives a canonical URL, `--no-playlist`, audio-only format, and a request-local output template through an argument array.
+- [x] FFmpeg receives mono, 16 kHz, 48 kbps MP3, and 1,200-second segment arguments through an argument array.
+- [x] Ordered chunks no larger than 24 MB are sent sequentially to `gpt-transcribe` with automotive context and normalized language hints.
+- [x] Missing tools, command failure, oversized chunks, and OpenAI failure map to their specified error codes.
+- [x] Unique request directories are removed after both success and failure.
+- [x] Thirteen spec-derived fallback tests pass; 34 unit tests pass in total.
 
 **Tests**: unit
 **Gate**: quick
