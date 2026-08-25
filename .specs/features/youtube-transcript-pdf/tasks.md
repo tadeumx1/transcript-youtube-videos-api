@@ -87,7 +87,7 @@ T5 → T6 → T7 → T8
 **Gate**: build
 **Commit**: `build(api): initialize typed service foundation`
 
-### T2: Validate and canonicalize YouTube URLs
+### T2: Validate and canonicalize YouTube URLs ✅
 
 **What**: Implement the pure URL parser for supported YouTube URL shapes and exact video IDs.
 **Where**: `src/domain/youtube-url.ts`
@@ -102,10 +102,10 @@ T5 → T6 → T7 → T8
 
 **Done when**:
 
-- [ ] `watch`, short, `shorts`, `embed`, and `live` URLs return the same exact video ID and canonical HTTPS URL.
-- [ ] Non-HTTPS, deceptive subdomain, unsupported host, malformed URL, missing ID, and invalid ID inputs throw `INVALID_YOUTUBE_URL`.
-- [ ] At least nine spec-derived unit tests pass.
-- [ ] `npm run check` exits zero because this closes Phase 1.
+- [x] `watch`, short, `shorts`, `embed`, and `live` URLs return the same exact video ID and canonical HTTPS URL.
+- [x] Non-HTTPS, deceptive subdomain, unsupported host, malformed URL, missing ID, and invalid ID inputs throw `INVALID_YOUTUBE_URL`.
+- [x] Thirteen spec-derived unit tests pass.
+- [x] `npm run check` exits zero because this closes Phase 1.
 
 **Tests**: unit
 **Gate**: build

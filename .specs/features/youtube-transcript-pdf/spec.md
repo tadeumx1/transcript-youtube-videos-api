@@ -149,14 +149,14 @@ Every ambiguity is resolved or recorded here - nothing is left silently unclear.
 | YTTR-03 | P1: Hybrid JSON | Design | Pending |
 | YTTR-04 | P1: Hybrid JSON | Design | Pending |
 | YTTR-05 | P1: Hybrid JSON | Design | Pending |
-| YTTR-06 | P1: Hybrid JSON | Design | Pending |
+| YTTR-06 | P1: Hybrid JSON | Execute | Implementing |
 | YTTR-07 | P1: Hybrid JSON | Design | Pending |
 | YTTR-08 | P1: Hybrid JSON | Design | Pending |
 | YTTR-09 | P1: Hybrid JSON | Design | Pending |
 | YTTR-10 | P1: Hybrid JSON | Design | Pending |
 | YTTR-11 | P1: Hybrid JSON | Design | Pending |
 | YTTR-12 | P1: Hybrid JSON | Design | Pending |
-| YTTR-13 | Edge case | Design | Pending |
+| YTTR-13 | Edge case | Execute | Implementing |
 | YTTR-14 | Edge case | Design | Pending |
 | YTAUD-01 | P1: Safe audio | Design | Pending |
 | YTAUD-02 | P1: Safe audio | Design | Pending |
