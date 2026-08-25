@@ -1,8 +1,11 @@
+import { EventEmitter } from 'node:events'
+
 import { describe, expect, it } from 'vitest'
 
 import type { Transcript } from '../../src/domain/transcript.js'
 import {
   buildTranscriptPdfModel,
+  type TranscriptPdfModel,
   TranscriptPdfRenderer,
 } from '../../src/infrastructure/pdf/transcript-pdf.js'
 
@@ -22,6 +25,55 @@ const transcript: Transcript = {
       durationSeconds: null,
     },
   ],
+}
+
+class RecordingPdfDocument extends EventEmitter {
+  readonly textValues: string[] = []
+
+  font(): this {
+    return this
+  }
+
+  fontSize(): this {
+    return this
+  }
+
+  fillColor(): this {
+    return this
+  }
+
+  moveDown(): this {
+    return this
+  }
+
+  text(value: string): this {
+    this.textValues.push(value)
+    return this
+  }
+
+  end(): void {
+    this.emit('end')
+  }
+}
+
+function buildLongTranscriptModel(): TranscriptPdfModel {
+  return buildTranscriptPdfModel({
+    ...transcript,
+    segments: Array.from({ length: 80 }, (_, index) => ({
+      text: `Parágrafo ${index}: ${'conteúdo automotivo '.repeat(45).trim()}`,
+      startSeconds: index * 30,
+      durationSeconds: 30,
+    })),
+  })
+}
+
+function expectedRendererText(model: TranscriptPdfModel): string[] {
+  return [
+    model.title,
+    ...model.metadata.flatMap((item) => [`${item.label}:`, ` ${item.value}`]),
+    'Transcrição',
+    ...model.paragraphs.flatMap((paragraph) => [paragraph.timestamp, paragraph.text]),
+  ]
 }
 
 describe('buildTranscriptPdfModel', () => {
@@ -86,20 +138,23 @@ describe('buildTranscriptPdfModel', () => {
 
 describe('TranscriptPdfRenderer', () => {
   it('renders long searchable content as a multi-page PDF buffer', async () => {
-    const model = buildTranscriptPdfModel({
-      ...transcript,
-      segments: Array.from({ length: 80 }, (_, index) => ({
-        text: `Parágrafo ${index}: ${'conteúdo automotivo '.repeat(45).trim()}`,
-        startSeconds: index * 30,
-        durationSeconds: 30,
-      })),
-    })
+    const model = buildLongTranscriptModel()
 
     const buffer = await new TranscriptPdfRenderer().render(model)
     const source = buffer.toString('latin1')
 
     expect(buffer.subarray(0, 5).toString()).toBe('%PDF-')
     expect(source.match(/\/Type \/Page\b/g)?.length ?? 0).toBeGreaterThan(1)
+  })
+
+  it('hands every metadata and multi-page transcript payload to PDFKit in exact order', async () => {
+    const document = new RecordingPdfDocument()
+    const model = buildLongTranscriptModel()
+    const renderer = new TranscriptPdfRenderer(() => document as unknown as PDFKit.PDFDocument)
+
+    await renderer.render(model)
+
+    expect(document.textValues).toEqual(expectedRendererText(model))
   })
 
   it('maps renderer creation failures to PDF_GENERATION_FAILED', async () => {

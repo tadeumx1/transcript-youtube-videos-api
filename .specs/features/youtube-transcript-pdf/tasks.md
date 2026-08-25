@@ -293,7 +293,7 @@ T5 → T6 → T7 → T8 → T9 → T10
 **Gate**: quick
 **Commit**: `fix(pdf): preserve bounded transcript content`
 
-### T10: Verify final renderer text payloads
+### T10: Verify final renderer text payloads ✅
 
 **What**: Add a discriminating renderer test that observes every metadata and transcript text payload handed to PDFKit.
 **Where**: `test/unit/transcript-pdf.test.ts`
@@ -308,11 +308,11 @@ T5 → T6 → T7 → T8 → T9 → T10
 
 **Done when**:
 
-- [ ] The renderer test asserts every metadata label/value and paragraph timestamp/text in exact order.
-- [ ] Replacing rendered paragraph text with a constant makes the renderer test fail.
-- [ ] The real multi-page PDF signature and page-count assertion remains green.
-- [ ] Eight PDF tests pass; 68 tests pass in total.
-- [ ] `npm run check` exits zero before independent re-verification.
+- [x] The renderer test asserts every metadata label/value and paragraph timestamp/text in exact order.
+- [x] Replacing rendered paragraph text with a constant makes the renderer test fail.
+- [x] The real multi-page PDF signature and page-count assertion remains green.
+- [x] Eight PDF tests pass; 68 tests pass in total.
+- [x] `npm run check` exits zero before independent re-verification.
 
 **Tests**: unit
 **Gate**: build
