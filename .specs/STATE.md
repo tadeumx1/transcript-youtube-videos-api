@@ -23,10 +23,10 @@
 ## Handoff
 
 - **Feature:** youtube-transcript-pdf
-- **Phase:** Design
-- **Completed:** Hybrid scope confirmed and specified
-- **In progress:** Architecture and task breakdown
-- **Next step:** Implement the approved hybrid design
-- **Blockers:** None
-- **Uncommitted files:** `.specs/`
-- **Branch:** no Git repository initialized yet
+- **Phase:** Validate complete
+- **Completed:** Hybrid captions/OpenAI transcript API, PDF output, runtime packaging, 68-test gate, and independent 32/32 PASS verification
+- **In progress:** None
+- **Next step:** Configure API Platform billing and `OPENAI_API_KEY`; optionally build and smoke-test the image on a host with Docker
+- **Blockers:** None for source delivery; Docker was unavailable for an image-build verification
+- **Uncommitted files:** Validation and final traceability bookkeeping pending commit
+- **Branch:** `main`

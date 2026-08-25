@@ -6,10 +6,10 @@ Brazilian automotive knowledge from YouTube videos needs to become a reliable so
 
 ## Goals
 
-- [ ] Return a complete, ordered transcript for a supported YouTube URL using captions whenever possible.
-- [ ] Extract and transcribe audio with OpenAI when captions are unavailable.
-- [ ] Return a searchable PDF containing the same transcript and provenance metadata.
-- [ ] Reject unsafe input, clean temporary media, and expose predictable API errors.
+- [x] Return a complete, ordered transcript for a supported YouTube URL using captions whenever possible.
+- [x] Extract and transcribe audio with OpenAI when captions are unavailable.
+- [x] Return a searchable PDF containing the same transcript and provenance metadata.
+- [x] Reject unsafe input, clean temporary media, and expose predictable API errors.
 
 ## Out of Scope
 
@@ -144,48 +144,48 @@ Every ambiguity is resolved or recorded here - nothing is left silently unclear.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| YTTR-01 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-02 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-03 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-04 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-05 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-06 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-07 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-08 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-09 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-10 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-11 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-12 | P1: Hybrid JSON | Execute | Implementing |
-| YTTR-13 | Edge case | Execute | Implementing |
-| YTTR-14 | Edge case | Execute | Implementing |
-| YTAUD-01 | P1: Safe audio | Execute | Implementing |
-| YTAUD-02 | P1: Safe audio | Execute | Implementing |
-| YTAUD-03 | P1: Safe audio | Execute | Implementing |
-| YTAUD-04 | P1: Safe audio | Execute | Implementing |
-| YTAUD-05 | P1: Safe audio | Execute | Implementing |
-| YTAUD-06 | P1: Safe audio | Execute | Implementing |
-| YTAUD-07 | Edge case | Execute | Implementing |
-| YTPDF-01 | P1: PDF | Execute | Implementing |
-| YTPDF-02 | P1: PDF | Execute | Implementing |
-| YTPDF-03 | P1: PDF | Execute | Implementing |
-| YTPDF-04 | P1: PDF | Execute | Implementing |
-| YTPDF-05 | Edge case | Execute | Implementing |
-| YTPDF-06 | Edge case | Execute | Implementing |
-| YTOPS-01 | P1: Operations | Execute | Implementing |
-| YTOPS-02 | P1: Operations | Execute | Implementing |
-| YTOPS-03 | P1: Operations | Execute | Implementing |
-| YTOPS-04 | P1: Operations | Execute | Implementing |
-| YTOPS-05 | P1: Operations | Execute | Implementing |
+| YTTR-01 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-02 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-03 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-04 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-05 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-06 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-07 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-08 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-09 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-10 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-11 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-12 | P1: Hybrid JSON | Validate | Verified |
+| YTTR-13 | Edge case | Validate | Verified |
+| YTTR-14 | Edge case | Validate | Verified |
+| YTAUD-01 | P1: Safe audio | Validate | Verified |
+| YTAUD-02 | P1: Safe audio | Validate | Verified |
+| YTAUD-03 | P1: Safe audio | Validate | Verified |
+| YTAUD-04 | P1: Safe audio | Validate | Verified |
+| YTAUD-05 | P1: Safe audio | Validate | Verified |
+| YTAUD-06 | P1: Safe audio | Validate | Verified |
+| YTAUD-07 | Edge case | Validate | Verified |
+| YTPDF-01 | P1: PDF | Validate | Verified |
+| YTPDF-02 | P1: PDF | Validate | Verified |
+| YTPDF-03 | P1: PDF | Validate | Verified |
+| YTPDF-04 | P1: PDF | Validate | Verified |
+| YTPDF-05 | Edge case | Validate | Verified |
+| YTPDF-06 | Edge case | Validate | Verified |
+| YTOPS-01 | P1: Operations | Validate | Verified |
+| YTOPS-02 | P1: Operations | Validate | Verified |
+| YTOPS-03 | P1: Operations | Validate | Verified |
+| YTOPS-04 | P1: Operations | Validate | Verified |
+| YTOPS-05 | P1: Operations | Validate | Verified (structural; Docker unavailable) |
 
-**Coverage:** 32 total, 0 mapped to tasks, 32 pending design.
+**Coverage:** 32 total, 32 independently verified, 0 pending.
 
 ---
 
 ## Success Criteria
 
-- [ ] A captioned public video returns all requested-language caption segments without calling OpenAI.
-- [ ] A captionless public video returns a complete `gpt-transcribe` transcript when API billing is configured.
-- [ ] JSON and PDF expose the same provenance and transcript content contract for both sources.
-- [ ] Temporary media is removed after every fallback outcome.
-- [ ] All validation and dependency failures return stable HTTP status codes and machine-readable error codes.
-- [ ] Build, lint, type-check, and network-isolated automated tests pass.
+- [x] A captioned public video returns all requested-language caption segments without calling OpenAI.
+- [x] A captionless public video returns a complete `gpt-transcribe` transcript when API billing is configured.
+- [x] JSON and PDF expose the same provenance and transcript content contract for both sources.
+- [x] Temporary media is removed after every fallback outcome.
+- [x] All validation and dependency failures return stable HTTP status codes and machine-readable error codes.
+- [x] Build, lint, type-check, and network-isolated automated tests pass.
