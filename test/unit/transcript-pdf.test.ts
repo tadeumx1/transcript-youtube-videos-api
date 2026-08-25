@@ -54,9 +54,22 @@ describe('buildTranscriptPdfModel', () => {
     const model = buildTranscriptPdfModel({ ...transcript, segments })
 
     expect(model.paragraphs.every((paragraph) => paragraph.text.length <= 1500)).toBe(true)
-    expect(model.paragraphs.map((paragraph) => paragraph.text).join(' ')).toBe(
+    expect(model.paragraphs.map((paragraph) => paragraph.text).join('')).toBe(
       segments.map((segment) => segment.text).join(' '),
     )
+  })
+
+  it('preserves a long unbroken token without inserting separator characters', () => {
+    const text = 'm'.repeat(1501)
+
+    const model = buildTranscriptPdfModel({
+      ...transcript,
+      text,
+      segments: [{ text, startSeconds: 0, durationSeconds: null }],
+    })
+
+    expect(model.paragraphs.map((paragraph) => paragraph.text.length)).toEqual([1500, 1])
+    expect(model.paragraphs.map((paragraph) => paragraph.text).join('')).toBe(text)
   })
 
   it('preserves Brazilian Portuguese diacritics in the document model', () => {

@@ -31,49 +31,70 @@ function formatTimestamp(totalSeconds: number): string {
   return [hours, minutes, seconds].map((part) => part.toString().padStart(2, '0')).join(':')
 }
 
-function splitWords(text: string): string[] {
-  const words: string[] = []
-  for (const word of text.trim().split(/\s+/)) {
-    if (word.length <= MAX_PARAGRAPH_CHARACTERS) {
-      words.push(word)
-      continue
-    }
+interface TranscriptSpan {
+  start: number
+  end: number
+  timestamp: string
+}
 
-    for (let offset = 0; offset < word.length; offset += MAX_PARAGRAPH_CHARACTERS) {
-      words.push(word.slice(offset, offset + MAX_PARAGRAPH_CHARACTERS))
+function buildTranscriptStream(transcript: Transcript): {
+  text: string
+  spans: TranscriptSpan[]
+} {
+  const sourceSegments =
+    transcript.segments.length > 0
+      ? transcript.segments
+      : [{ text: transcript.text, startSeconds: 0, durationSeconds: null }]
+  const spans: TranscriptSpan[] = []
+  let text = ''
+
+  for (const segment of sourceSegments) {
+    if (!segment.text) continue
+    if (text) text += ' '
+
+    const start = text.length
+    text += segment.text
+    spans.push({
+      start,
+      end: text.length,
+      timestamp: formatTimestamp(segment.startSeconds),
+    })
+  }
+
+  return { text, spans }
+}
+
+function findParagraphEnd(text: string, start: number): number {
+  const maximumEnd = Math.min(start + MAX_PARAGRAPH_CHARACTERS, text.length)
+  if (maximumEnd === text.length) return maximumEnd
+
+  for (let end = maximumEnd; end > start; end -= 1) {
+    if (/\s/u.test(text[end - 1] ?? '')) {
+      return end
     }
   }
-  return words
+
+  return maximumEnd
+}
+
+function timestampAt(spans: readonly TranscriptSpan[], start: number, end: number): string {
+  return spans.find((span) => span.end > start && span.start < end)?.timestamp ?? '00:00:00'
 }
 
 function buildParagraphs(transcript: Transcript): PdfParagraph[] {
+  const { text, spans } = buildTranscriptStream(transcript)
   const paragraphs: PdfParagraph[] = []
-  let currentText = ''
-  let currentTimestamp = '00:00:00'
+  let start = 0
 
-  const flush = () => {
-    if (currentText) {
-      paragraphs.push({ timestamp: currentTimestamp, text: currentText })
-      currentText = ''
-    }
+  while (start < text.length) {
+    const end = findParagraphEnd(text, start)
+    paragraphs.push({
+      timestamp: timestampAt(spans, start, end),
+      text: text.slice(start, end),
+    })
+    start = end
   }
 
-  for (const segment of transcript.segments) {
-    const timestamp = formatTimestamp(segment.startSeconds)
-    for (const word of splitWords(segment.text)) {
-      const candidate = currentText ? `${currentText} ${word}` : word
-      if (candidate.length > MAX_PARAGRAPH_CHARACTERS) {
-        flush()
-      }
-
-      if (!currentText) {
-        currentTimestamp = timestamp
-      }
-      currentText = currentText ? `${currentText} ${word}` : word
-    }
-  }
-
-  flush()
   return paragraphs
 }
 

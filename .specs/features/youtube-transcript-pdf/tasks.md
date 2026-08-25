@@ -39,7 +39,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ## Execution Plan
 
-Phases are ordered and run sequentially. The feature has eight tasks, so it fits one inline batch and does not require batch workers.
+Phases are ordered and run sequentially. The feature has ten tasks, including two validation-derived fixes, so it fits one inline batch and does not require batch workers.
 
 ### Phase 1: Foundation
 
@@ -56,7 +56,7 @@ T2 → T3 → T4 → T5
 ### Phase 3: Delivery
 
 ```text
-T5 → T6 → T7 → T8
+T5 → T6 → T7 → T8 → T9 → T10
 ```
 
 ---
@@ -269,6 +269,55 @@ T5 → T6 → T7 → T8
 **Gate**: build
 **Commit**: `docs(api): package and document hybrid service`
 
+### T9: Preserve exact content in bounded PDF paragraphs ✅
+
+**What**: Replace word-based paragraph reconstruction with bounded slices over the exact transcript stream.
+**Where**: `src/infrastructure/pdf/transcript-pdf.ts`
+**Depends on**: T8
+**Reuses**: Provider-neutral transcript segments and the 1,500-character PDF bound
+**Requirement**: YTPDF-03
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when**:
+
+- [x] Paragraph slices reconstruct the exact ordered transcript stream without inserted or removed characters.
+- [x] Every paragraph remains at or below 1,500 characters.
+- [x] A 1,501-character unbroken token becomes bounded 1,500 and 1-character slices with exact reconstruction.
+- [x] Seven PDF unit tests pass; 67 tests pass in total.
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(pdf): preserve bounded transcript content`
+
+### T10: Verify final renderer text payloads
+
+**What**: Add a discriminating renderer test that observes every metadata and transcript text payload handed to PDFKit.
+**Where**: `test/unit/transcript-pdf.test.ts`
+**Depends on**: T9
+**Reuses**: Transcript PDF model and injectable PDF document factory
+**Requirement**: YTPDF-02, YTPDF-05
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when**:
+
+- [ ] The renderer test asserts every metadata label/value and paragraph timestamp/text in exact order.
+- [ ] Replacing rendered paragraph text with a constant makes the renderer test fail.
+- [ ] The real multi-page PDF signature and page-count assertion remains green.
+- [ ] Eight PDF tests pass; 68 tests pass in total.
+- [ ] `npm run check` exits zero before independent re-verification.
+
+**Tests**: unit
+**Gate**: build
+**Commit**: `test(pdf): verify rendered transcript payloads`
+
 ---
 
 ## Phase Execution Map
@@ -278,7 +327,7 @@ Phase 1 → Phase 2 → Phase 3
 
 Phase 1: T1 → T2
 Phase 2: T3 → T4 → T5
-Phase 3: T6 → T7 → T8
+Phase 3: T6 → T7 → T8 → T9 → T10
 ```
 
 Execution is strictly sequential. Cross-phase dependencies are carried by the first task of each later phase.
@@ -297,6 +346,8 @@ Execution is strictly sequential. Cross-phase dependencies are carried by the fi
 | T6 | One PDF adapter boundary | ✅ Granular |
 | T7 | One HTTP delivery boundary | ✅ Granular |
 | T8 | One runtime packaging deliverable | ✅ Granular |
+| T9 | One exact-content paragraph correction | ✅ Granular |
+| T10 | One final-renderer evidence correction | ✅ Granular |
 
 ---
 
@@ -312,6 +363,8 @@ Execution is strictly sequential. Cross-phase dependencies are carried by the fi
 | T6 | T5 | Phase 2 → Phase 3, T5 → T6 | ✅ Match |
 | T7 | T6 | T6 → T7 | ✅ Match |
 | T8 | T7 | T7 → T8 | ✅ Match |
+| T9 | T8 | T8 → T9 | ✅ Match |
+| T10 | T9 | T9 → T10 | ✅ Match |
 
 ---
 
@@ -327,3 +380,5 @@ Execution is strictly sequential. Cross-phase dependencies are carried by the fi
 | T6 | PDF model and renderer | unit | unit | ✅ OK |
 | T7 | Fastify routes | integration | integration | ✅ OK |
 | T8 | Runtime and container files | none | none | ✅ OK |
+| T9 | PDF document model | unit | unit | ✅ OK |
+| T10 | PDF renderer | unit | unit | ✅ OK |
