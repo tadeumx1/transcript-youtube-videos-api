@@ -258,7 +258,7 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | CI-06 | Continuous integration | T10 | Implemented |
 | CI-07 | Continuous integration edge case | T10 | Implemented |
 | OPS-01 | YouTube operations runbook | T11 | Implemented |
-| OPS-02 | YouTube operations runbook | T11, T14 | Fix task T14 pending |
+| OPS-02 | YouTube operations runbook | T11, T14 | Fix implemented; independent revalidation pending |
 | OPS-03 | YouTube operations runbook | T11 | Implemented |
 | OPS-04 | YouTube operations runbook | T11 | Implemented |
 | OPS-05 | YouTube operations runbook | T11 | Implemented |

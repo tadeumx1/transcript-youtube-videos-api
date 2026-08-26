@@ -456,7 +456,7 @@ failure through `continue-on-error`, killing verifier mutant M12.
 **Gate:** quick
 **Commit:** `test(ci): require fail-closed gates`
 
-### T14: Require transcript-output suppression in diagnostics
+### T14: Require transcript-output suppression in diagnostics ✅
 
 **What:** Strengthen the runbook contract so every transcript diagnostic discards its response body,
 killing verifier mutant M9.
@@ -472,11 +472,11 @@ killing verifier mutant M9.
 
 **Done when:**
 
-- [ ] Every command that calls `/v1/transcripts` or `/v1/transcripts/pdf` is identified explicitly.
-- [ ] Each identified transcript command is asserted to include `--output /dev/null` or an equivalent explicit body sink.
-- [ ] The contract test fails when the sink is removed from the runbook command.
-- [ ] Existing timeout, output-bound, placeholder, policy, error-code, and prohibited-guidance assertions remain unchanged.
-- [ ] `npm run check` passes with at least 215 tests and no silent deletions.
+- [x] Every command that calls `/v1/transcripts` or `/v1/transcripts/pdf` is identified explicitly.
+- [x] Each identified transcript command is asserted to include `--output /dev/null` or an equivalent explicit body sink.
+- [x] The contract test fails when the sink is removed from the runbook command.
+- [x] Existing timeout, output-bound, placeholder, policy, error-code, and prohibited-guidance assertions remain unchanged.
+- [x] `npm run check` passes with 215 tests and no silent deletions.
 
 **Tests:** unit/static
 **Gate:** build

@@ -33,6 +33,21 @@ describe('YouTube datacenter blocking runbook contract', () => {
     expect(runbook).not.toContain('dQw4w9WgXcQ')
   })
 
+  it('discards every transcript diagnostic response body', async () => {
+    const runbook = await readFile(RUNBOOK_PATH, 'utf8')
+    const bashBlocks = [...runbook.matchAll(/```bash\n([\s\S]*?)```/g)].map(
+      (match) => match[1] ?? '',
+    )
+    const transcriptCommands = bashBlocks
+      .flatMap((block) => block.split('\n'))
+      .filter((line) => /\/v1\/transcripts(?:\/pdf)?(?:\s|$)/.test(line))
+
+    expect(transcriptCommands.length).toBeGreaterThan(0)
+    for (const command of transcriptCommands) {
+      expect(command).toMatch(/--output\s+\/dev\/null|>\s*\/dev\/null/)
+    }
+  })
+
   it('maps every sanitized platform, YouTube, media, and Muse failure code', async () => {
     const runbook = await readFile(RUNBOOK_PATH, 'utf8')
     const requiredCodes = [
