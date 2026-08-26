@@ -69,6 +69,11 @@ const publicErrorMessages: Record<AppErrorCode, string> = {
   AUDIO_PROCESS_ABORTED: 'Audio processing was aborted',
   AUDIO_CHUNK_TOO_LARGE: 'An audio chunk exceeds the upload safety limit',
   MUSE_TRANSCRIPTION_FAILED: 'The video audio could not be transcribed',
+  MUSE_AUTHENTICATION_FAILED: 'Muse authentication failed',
+  MUSE_QUOTA_EXCEEDED: 'Muse quota is exhausted',
+  MUSE_TIMEOUT: 'Muse transcription timed out',
+  MUSE_UPSTREAM_UNAVAILABLE: 'Muse is unavailable',
+  MUSE_INVALID_RESPONSE: 'Muse returned an invalid response',
   PDF_GENERATION_FAILED: 'The transcript PDF could not be generated',
 }
 

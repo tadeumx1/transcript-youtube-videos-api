@@ -220,7 +220,7 @@ preserving request-directory cleanup for every terminal path.
 **Gate:** quick
 **Commit:** `feat(media): propagate cancellation policies`
 
-### T6: Classify and redact Muse provider failures
+### T6: Classify and redact Muse provider failures ✅
 
 **What:** Translate Muse HTTP, network, timeout, parse, and output failures into stable `AppError`
 codes with optional validated Retry-After metadata and zero retries.
@@ -236,13 +236,13 @@ codes with optional validated Retry-After metadata and zero retries.
 
 **Done when:**
 
-- [ ] 401/403, 429, 5xx, network, timeout, malformed JSON/shape, and empty output map to the exact spec status/code.
-- [ ] Only a numeric or HTTP-date Retry-After value within the owned bound is retained; arbitrary provider headers are discarded.
-- [ ] Request cancellation combines with the configured Muse timeout and all listeners/timers are removed.
-- [ ] Every failure path calls fetch/create exactly once and never retries a chunk.
-- [ ] Public errors/log fixtures exclude API key, authorization, provider body, audio Base64, transcript text, and nested cause messages.
-- [ ] Unit tests cover each status, network rejection, timeout, caller abort, malformed JSON, malformed shape, empty output, header bounds, sequential success, and zero retry.
-- [ ] `npm run test:unit` passes with at least 132 tests and no silent deletions.
+- [x] 401/403, 429, 5xx, network, timeout, malformed JSON/shape, and empty output map to the exact spec status/code.
+- [x] Only a numeric or HTTP-date Retry-After value within the owned bound is retained; arbitrary provider headers are discarded.
+- [x] Request cancellation combines with the configured Muse timeout and all listeners/timers are removed.
+- [x] Every failure path calls fetch/create exactly once and never retries a chunk.
+- [x] Public errors/log fixtures exclude API key, authorization, provider body, audio Base64, transcript text, and nested cause messages.
+- [x] Unit tests cover each status, network rejection, timeout, caller abort, malformed JSON, malformed shape, empty output, header bounds, sequential success, and zero retry.
+- [x] `npm run test:unit` passes with at least 132 tests and no silent deletions.
 
 **Tests:** unit
 **Gate:** quick

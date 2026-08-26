@@ -229,12 +229,12 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | PROC-05 | Media timeout and cancellation | T4 | Implemented |
 | PROC-06 | Media timeout and cancellation | T5, T7 | Partial: T5 complete |
 | PROC-07 | Media timeout and cancellation edge case | T4 | Implemented |
-| PROV-01 | Muse failure classification | T6 | In Tasks |
-| PROV-02 | Muse failure classification | T6, T8 | In Tasks |
-| PROV-03 | Muse failure classification | T1, T6 | Partial: T1 complete |
-| PROV-04 | Muse failure classification | T6 | In Tasks |
-| PROV-05 | Muse failure classification | T6 | In Tasks |
-| PROV-06 | Muse failure classification | T6 | In Tasks |
+| PROV-01 | Muse failure classification | T6 | Implemented |
+| PROV-02 | Muse failure classification | T6, T8 | Partial: T6 complete |
+| PROV-03 | Muse failure classification | T1, T6 | Implemented |
+| PROV-04 | Muse failure classification | T6 | Implemented |
+| PROV-05 | Muse failure classification | T6 | Implemented |
+| PROV-06 | Muse failure classification | T6 | Implemented |
 | PROV-07 | Muse failure classification edge case | T7 | In Tasks |
 | OBS-01 | Observability and readiness | T3, T8 | Partial: T3 complete |
 | OBS-02 | Observability and readiness | T3, T8 | Partial: T3 complete |
