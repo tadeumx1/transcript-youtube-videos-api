@@ -10,13 +10,13 @@ to diagnose without risking transcript, audio, or credential disclosure.
 
 ## Goals
 
-- [ ] Bound expensive transcript work and release every admission slot deterministically.
-- [ ] Cancel or time out media subprocesses without leaking temporary files or settling twice.
-- [ ] Classify Muse failures into stable, sanitized public and operational reason codes.
-- [ ] Expose safe liveness, readiness, and bounded operational metrics.
-- [ ] Publish and continuously validate the complete HTTP contract.
-- [ ] Run source, test, build, and container gates in CI without provider secrets.
-- [ ] Document supported diagnosis for YouTube datacenter blocking without bypass guidance.
+- [x] Bound expensive transcript work and release every admission slot deterministically.
+- [x] Cancel or time out media subprocesses without leaking temporary files or settling twice.
+- [x] Classify Muse failures into stable, sanitized public and operational reason codes.
+- [x] Expose safe liveness, readiness, and bounded operational metrics.
+- [x] Publish and continuously validate the complete HTTP contract.
+- [x] Run source, test, build, and container gates in CI without provider secrets.
+- [x] Document supported diagnosis for YouTube datacenter blocking without bypass guidance.
 
 ## Out of Scope
 
@@ -216,52 +216,52 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HARD-01 | Bounded transcript work | T3, T8 | Implemented |
-| HARD-02 | Bounded transcript work | T3, T8 | Implemented |
-| HARD-03 | Bounded transcript work | T3, T8 | Implemented |
-| HARD-04 | Bounded transcript work | T3, T8 | Implemented |
-| HARD-05 | Bounded transcript work | T1 | Implemented |
-| HARD-06 | Bounded transcript work edge case | T8 | Implemented |
-| PROC-01 | Media timeout and cancellation | T1, T4, T5 | Implemented |
-| PROC-02 | Media timeout and cancellation | T4, T5, T7 | Implemented |
-| PROC-03 | Media timeout and cancellation | T1, T4 | Implemented |
-| PROC-04 | Media timeout and cancellation | T4, T12 | Fix implemented; independent revalidation pending |
-| PROC-05 | Media timeout and cancellation | T4 | Implemented |
-| PROC-06 | Media timeout and cancellation | T5, T7 | Implemented |
-| PROC-07 | Media timeout and cancellation edge case | T4 | Implemented |
-| PROV-01 | Muse failure classification | T6 | Implemented |
-| PROV-02 | Muse failure classification | T6, T8 | Implemented |
-| PROV-03 | Muse failure classification | T1, T6 | Implemented |
-| PROV-04 | Muse failure classification | T6 | Implemented |
-| PROV-05 | Muse failure classification | T6 | Implemented |
-| PROV-06 | Muse failure classification | T6 | Implemented |
-| PROV-07 | Muse failure classification edge case | T7 | Implemented |
-| OBS-01 | Observability and readiness | T3, T8 | Implemented |
-| OBS-02 | Observability and readiness | T3, T8 | Implemented |
-| OBS-03 | Observability and readiness | T2, T7, T8 | Implemented |
-| OBS-04 | Observability and readiness | T8 | Implemented |
-| OBS-05 | Observability and readiness | T2, T7, T8 | Implemented |
-| OBS-06 | Observability and readiness | T7, T8 | Implemented |
-| OBS-07 | Observability and readiness edge case | T2 | Implemented |
-| API-01 | OpenAPI contract | T9 | Implemented |
-| API-02 | OpenAPI contract | T9 | Implemented |
-| API-03 | OpenAPI contract | T9 | Implemented |
-| API-04 | OpenAPI contract | T9 | Implemented |
-| API-05 | OpenAPI contract | T9 | Implemented |
-| API-06 | OpenAPI contract | T9 | Implemented |
-| API-07 | OpenAPI contract edge case | T9 | Implemented |
-| CI-01 | Continuous integration | T10 | Implemented |
-| CI-02 | Continuous integration | T10 | Implemented |
-| CI-03 | Continuous integration | T10 | Implemented |
-| CI-04 | Continuous integration | T10 | Implemented |
-| CI-05 | Continuous integration | T10, T13 | Fix implemented; independent revalidation pending |
-| CI-06 | Continuous integration | T10 | Implemented |
-| CI-07 | Continuous integration edge case | T10 | Implemented |
-| OPS-01 | YouTube operations runbook | T11 | Implemented |
-| OPS-02 | YouTube operations runbook | T11, T14 | Fix implemented; independent revalidation pending |
-| OPS-03 | YouTube operations runbook | T11 | Implemented |
-| OPS-04 | YouTube operations runbook | T11 | Implemented |
-| OPS-05 | YouTube operations runbook | T11 | Implemented |
+| HARD-01 | Bounded transcript work | T3, T8 | Verified |
+| HARD-02 | Bounded transcript work | T3, T8 | Verified |
+| HARD-03 | Bounded transcript work | T3, T8 | Verified |
+| HARD-04 | Bounded transcript work | T3, T8 | Verified |
+| HARD-05 | Bounded transcript work | T1 | Verified |
+| HARD-06 | Bounded transcript work edge case | T8 | Verified |
+| PROC-01 | Media timeout and cancellation | T1, T4, T5 | Verified |
+| PROC-02 | Media timeout and cancellation | T4, T5, T7 | Verified |
+| PROC-03 | Media timeout and cancellation | T1, T4 | Verified |
+| PROC-04 | Media timeout and cancellation | T4, T12 | Verified |
+| PROC-05 | Media timeout and cancellation | T4 | Verified |
+| PROC-06 | Media timeout and cancellation | T5, T7 | Verified |
+| PROC-07 | Media timeout and cancellation edge case | T4 | Verified |
+| PROV-01 | Muse failure classification | T6 | Verified |
+| PROV-02 | Muse failure classification | T6, T8 | Verified |
+| PROV-03 | Muse failure classification | T1, T6 | Verified |
+| PROV-04 | Muse failure classification | T6 | Verified |
+| PROV-05 | Muse failure classification | T6 | Verified |
+| PROV-06 | Muse failure classification | T6 | Verified |
+| PROV-07 | Muse failure classification edge case | T7 | Verified |
+| OBS-01 | Observability and readiness | T3, T8 | Verified |
+| OBS-02 | Observability and readiness | T3, T8 | Verified |
+| OBS-03 | Observability and readiness | T2, T7, T8 | Verified |
+| OBS-04 | Observability and readiness | T8 | Verified |
+| OBS-05 | Observability and readiness | T2, T7, T8 | Verified |
+| OBS-06 | Observability and readiness | T7, T8 | Verified |
+| OBS-07 | Observability and readiness edge case | T2 | Verified |
+| API-01 | OpenAPI contract | T9 | Verified |
+| API-02 | OpenAPI contract | T9 | Verified |
+| API-03 | OpenAPI contract | T9 | Verified |
+| API-04 | OpenAPI contract | T9 | Verified |
+| API-05 | OpenAPI contract | T9 | Verified |
+| API-06 | OpenAPI contract | T9 | Verified |
+| API-07 | OpenAPI contract edge case | T9 | Verified |
+| CI-01 | Continuous integration | T10 | Verified |
+| CI-02 | Continuous integration | T10 | Verified |
+| CI-03 | Continuous integration | T10 | Verified |
+| CI-04 | Continuous integration | T10 | Verified |
+| CI-05 | Continuous integration | T10, T13 | Verified |
+| CI-06 | Continuous integration | T10 | Verified |
+| CI-07 | Continuous integration edge case | T10 | Verified |
+| OPS-01 | YouTube operations runbook | T11 | Verified |
+| OPS-02 | YouTube operations runbook | T11, T14 | Verified |
+| OPS-03 | YouTube operations runbook | T11 | Verified |
+| OPS-04 | YouTube operations runbook | T11 | Verified |
+| OPS-05 | YouTube operations runbook | T11 | Verified |
 
 **Coverage:** 46 total requirements, 46 mapped to tasks, 0 unmapped.
 
@@ -269,11 +269,11 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 
 ## Success Criteria
 
-- [ ] Saturation tests prove the global cap, dependency short-circuit, and exact slot release on every terminal path.
-- [ ] Process-runner tests prove timeout, abort, graceful termination, forced kill, single settlement, stderr bounds, and cleanup.
-- [ ] Provider tests prove every classified failure and zero automatic retries or sensitive disclosures.
-- [ ] Readiness, Prometheus metrics, and logging tests prove lifecycle behavior and a fixed redacted label/content contract.
-- [ ] OpenAPI validation and parity tests cover every in-scope route, schema, security boundary, and stable error envelope.
-- [ ] GitHub Actions parses and runs source/container gates without provider credentials.
-- [ ] The operations runbook passes static policy and bounded-diagnostic checks.
-- [ ] `npm run check` and the Docker build pass before deployment.
+- [x] Saturation tests prove the global cap, dependency short-circuit, and exact slot release on every terminal path.
+- [x] Process-runner tests prove timeout, abort, graceful termination, forced kill, single settlement, stderr bounds, and cleanup.
+- [x] Provider tests prove every classified failure and zero automatic retries or sensitive disclosures.
+- [x] Readiness, Prometheus metrics, and logging tests prove lifecycle behavior and a fixed redacted label/content contract.
+- [x] OpenAPI validation and parity tests cover every in-scope route, schema, security boundary, and stable error envelope.
+- [x] GitHub Actions parses and runs source/container gates without provider credentials.
+- [x] The operations runbook passes static policy and bounded-diagnostic checks.
+- [x] `npm run check` passes locally and CI remains the authoritative Docker build gate before deployment.

@@ -77,10 +77,10 @@
 ## Handoff
 
 - **Feature**: production-runtime-hardening
-- **Phase / Task**: Execute approved; batch 1 (T1-T7) ready to dispatch
-- **Completed**: validated 46-requirement spec, approved context/design, AD-008/AD-009, and validated 11-task/two-batch execution plan
+- **Phase / Task**: Complete after independent validation iteration 2
+- **Completed**: T1-T14; 46/46 requirements verified; 215 tests and all local source gates pass; discrimination sensor killed 6/6 mutants
 - **In-progress** (file:line): none
-- **Next step**: dispatch approved batch 1 for T1-T7, verify its commits/gates, then dispatch batch 2 for T8-T11
+- **Next step**: specify durable jobs and artifact deduplication/cache for IMP-03/IMP-04 on the approved Railway Volume
 - **Blockers**: none
-- **Uncommitted files**: `.specs/STATE.md` and `tasks.md` approval status pending execution-start commit
+- **Uncommitted files**: none after this validation commit
 - **Branch**: `main`
