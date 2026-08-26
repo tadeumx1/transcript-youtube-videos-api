@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 7,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::assert every resource cleanup conjunct directly including removal of caller owned abortsignal listeners",
+      "text": "Assert every resource-cleanup conjunct directly, including removal of caller-owned AbortSignal listeners.",
+      "signal": "ac_gap",
+      "scope": "process-runner",
+      "status": "candidate",
+      "features": [
+        "production-runtime-hardening"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "PROC-04 (process-runner)"
+      ],
+      "created": "2026-08-26T20:38:32Z",
+      "last_seen": "2026-08-26T20:38:32Z"
+    },
+    {
+      "id": "L-002",
+      "key": "surviving_mutant::process runner mutation tests must remove each cleanup action independently and fail on retained listeners",
+      "text": "Process-runner mutation tests must remove each cleanup action independently and fail on retained listeners.",
+      "signal": "surviving_mutant",
+      "scope": "process-runner",
+      "status": "candidate",
+      "features": [
+        "production-runtime-hardening"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M10 (process-runner)"
+      ],
+      "created": "2026-08-26T20:38:32Z",
+      "last_seen": "2026-08-26T20:38:32Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::assert that source and container gate steps omit failure tolerating controls such as continue on error",
+      "text": "Assert that source and container gate steps omit failure-tolerating controls such as continue-on-error.",
+      "signal": "ac_gap",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "production-runtime-hardening"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CI-05 (ci)"
+      ],
+      "created": "2026-08-26T20:38:32Z",
+      "last_seen": "2026-08-26T20:38:32Z"
+    },
+    {
+      "id": "L-004",
+      "key": "surviving_mutant::ci contract mutation tests must fail when a required gate is made non blocking",
+      "text": "CI contract mutation tests must fail when a required gate is made non-blocking.",
+      "signal": "surviving_mutant",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "production-runtime-hardening"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M12 (ci)"
+      ],
+      "created": "2026-08-26T20:38:33Z",
+      "last_seen": "2026-08-26T20:38:33Z"
+    },
+    {
+      "id": "L-005",
+      "key": "ac_gap::assert that every diagnostic command which can return user content explicitly discards its response body",
+      "text": "Assert that every diagnostic command which can return user content explicitly discards its response body.",
+      "signal": "ac_gap",
+      "scope": "runbook",
+      "status": "candidate",
+      "features": [
+        "production-runtime-hardening"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "OPS-02 (runbook)"
+      ],
+      "created": "2026-08-26T20:38:33Z",
+      "last_seen": "2026-08-26T20:38:33Z"
+    },
+    {
+      "id": "L-006",
+      "key": "surviving_mutant::runbook contract tests must fail when a transcript diagnostic stops suppressing response output",
+      "text": "Runbook contract tests must fail when a transcript diagnostic stops suppressing response output.",
+      "signal": "surviving_mutant",
+      "scope": "runbook",
+      "status": "candidate",
+      "features": [
+        "production-runtime-hardening"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M9 (runbook)"
+      ],
+      "created": "2026-08-26T20:38:33Z",
+      "last_seen": "2026-08-26T20:38:33Z"
+    }
+  ]
+}
