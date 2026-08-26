@@ -257,11 +257,11 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | CI-05 | Continuous integration | T10 | Implemented |
 | CI-06 | Continuous integration | T10 | Implemented |
 | CI-07 | Continuous integration edge case | T10 | Implemented |
-| OPS-01 | YouTube operations runbook | T11 | In Tasks |
-| OPS-02 | YouTube operations runbook | T11 | In Tasks |
-| OPS-03 | YouTube operations runbook | T11 | In Tasks |
-| OPS-04 | YouTube operations runbook | T11 | In Tasks |
-| OPS-05 | YouTube operations runbook | T11 | In Tasks |
+| OPS-01 | YouTube operations runbook | T11 | Implemented |
+| OPS-02 | YouTube operations runbook | T11 | Implemented |
+| OPS-03 | YouTube operations runbook | T11 | Implemented |
+| OPS-04 | YouTube operations runbook | T11 | Implemented |
+| OPS-05 | YouTube operations runbook | T11 | Implemented |
 
 **Coverage:** 46 total requirements, 46 mapped to tasks, 0 unmapped.
 

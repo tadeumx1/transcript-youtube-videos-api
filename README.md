@@ -254,6 +254,12 @@ Depois de copiar `API_ACCESS_KEY` para um gerenciador de senhas, você pode usar
 aba Variables do Railway. O seal é irreversível e impede recuperar o valor pelo painel ou CLI, então
 faça isso somente depois de confirmar que o cliente autorizado guardou o token.
 
+Para separar saúde da plataforma, legendas, download, FFmpeg e Muse sem expor conteúdo, siga o
+[runbook de bloqueio do YouTube em datacenter](docs/runbooks/youtube-datacenter-blocking.md). Mesmo
+durante um incidente, preserve o Bearer, `MAX_CONCURRENT_TRANSCRIPTS`, `YT_DLP_TIMEOUT_MS`,
+`FFMPEG_TIMEOUT_MS` e `MUSE_TIMEOUT_MS`; não desative nem amplie esses controles para contornar uma
+falha de provedor.
+
 ## Privacidade e limitações
 
 - Áudio e blocos ficam em um diretório temporário exclusivo da requisição e são removidos em um

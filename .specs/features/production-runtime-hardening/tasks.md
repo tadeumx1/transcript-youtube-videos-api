@@ -369,7 +369,7 @@ found`); the checked-in `Container build` job is the authoritative image-build g
 **Gate:** build and container
 **Commit:** `ci: enforce source and container gates`
 
-### T11: Publish the bounded YouTube blocking runbook
+### T11: Publish the bounded YouTube blocking runbook ✅
 
 **What:** Document a staged, time/output-bounded production diagnosis and supported public-video
 policy, backed by a static contract test and linked from the README.
@@ -385,13 +385,13 @@ policy, backed by a static contract test and linked from the README.
 
 **Done when:**
 
-- [ ] The runbook checks liveness/readiness/auth, captions, yt-dlp, FFmpeg, and Muse in that order.
-- [ ] Every diagnostic uses placeholders, explicit timeout/output bounds, and excludes transcript/audio/cookies/tokens/provider bodies.
-- [ ] Sanitized examples distinguish video unavailable, caption upstream, tool unavailable, extraction, process timeout, Muse auth/quota/timeout/upstream/invalid response, and platform health.
-- [ ] The supported policy is limited to public videos without account state and explicitly excludes cookies, residential proxies, CAPTCHA solving, IP rotation, or restriction bypass.
-- [ ] A static unit test fails if required stages/bounds/policy/error codes disappear or prohibited guidance appears.
-- [ ] README links the runbook and preserves Bearer, timeout, and capacity requirements during provider incidents.
-- [ ] `npm run check` passes with at least 169 tests and no silent deletions.
+- [x] The runbook checks liveness/readiness/auth, captions, yt-dlp, FFmpeg, and Muse in that order.
+- [x] Every diagnostic uses placeholders, explicit timeout/output bounds, and excludes transcript/audio/cookies/tokens/provider bodies.
+- [x] Sanitized examples distinguish video unavailable, caption upstream, tool unavailable, extraction, process timeout, Muse auth/quota/timeout/upstream/invalid response, and platform health.
+- [x] The supported policy is limited to public videos without account state and explicitly excludes cookies, residential proxies, CAPTCHA solving, IP rotation, or restriction bypass.
+- [x] A static unit test fails if required stages/bounds/policy/error codes disappear or prohibited guidance appears.
+- [x] README links the runbook and preserves Bearer, timeout, and capacity requirements during provider incidents.
+- [x] `npm run check` passes with at least 169 tests and no silent deletions.
 
 **Tests:** unit/static
 **Gate:** build
