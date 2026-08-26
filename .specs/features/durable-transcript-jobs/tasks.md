@@ -348,7 +348,7 @@ synchronous and strict durable modes.
 **Gate**: quick
 **Commit**: `feat(cache): coordinate transcript artifacts`
 
-### T10: Execute and recover durable transcript work
+### T10: Execute and recover durable transcript work ✅
 
 **What**: Implement the single worker loop, capacity wait, revision claim, strict artifact execution,
 conservative restart reconciliation, shutdown, cleanup, and exact metrics.
@@ -364,13 +364,13 @@ conservative restart reconciliation, shutdown, cleanup, and exact metrics.
 
 **Done when**:
 
-- [ ] Exactly one start loop processes FIFO jobs; no-capacity jobs remain queued with zero external/PDF/storage work or rejection metric.
-- [ ] Permit acquisition precedes revision claim/external work and every success/failure/abort/race releases it exactly once.
-- [ ] Terminal/stale records do nothing; typed failures persist allowlisted public failure; unexpected failure is sanitized.
-- [ ] Complete restart bundle becomes completed; verified transcript-only work renders only PDF; missing/invalid transcript becomes `JOB_INTERRUPTED` with zero provider calls.
-- [ ] Shutdown stops claims, aborts/wakes exactly once, persists interrupted state when possible, clears timer/listeners, and returns a settled stop promise.
-- [ ] Unit tests use fake capacity/provider/renderer/clock plus real partial files for every branch/race and exact metrics/state/call payloads.
-- [ ] `npm run test:unit` passes with at least 176 tests and no silent deletions.
+- [x] Exactly one start loop processes FIFO jobs; no-capacity jobs remain queued with zero external/PDF/storage work or rejection metric.
+- [x] Permit acquisition precedes revision claim/external work and every success/failure/abort/race releases it exactly once.
+- [x] Terminal/stale records do nothing; typed failures persist allowlisted public failure; unexpected failure is sanitized.
+- [x] Complete restart bundle becomes completed; verified transcript-only work renders only PDF; missing/invalid transcript becomes `JOB_INTERRUPTED` with zero provider calls.
+- [x] Shutdown stops claims, aborts/wakes exactly once, persists interrupted state when possible, clears timer/listeners, and returns a settled stop promise.
+- [x] Unit tests use fake capacity/provider/renderer/clock plus real partial files for every branch/race and exact metrics/state/call payloads.
+- [x] `npm run test:unit` passes with at least 176 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -679,7 +679,7 @@ boundaries are the only batch boundaries.
 | T7 | One artifact-store component | ✅ Complete |
 | T8 | One job-repository component | ✅ Complete |
 | T9 | One artifact-coordinator component | ✅ Complete |
-| T10 | One durable-worker component | ✅ Cohesive lifecycle boundary |
+| T10 | One durable-worker component | ✅ Complete |
 | T11 | One job-coordinator component | ✅ Cohesive API/application boundary |
 | T12 | One job-route plugin | ✅ Cohesive four-operation resource |
 | T13 | One Fastify integration boundary | ✅ Cohesive lifecycle/cache wiring |

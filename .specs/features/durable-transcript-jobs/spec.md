@@ -203,13 +203,13 @@ OpenAPI document without credentials.
 | JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Partial (T8 complete) |
 | JOB-06 | Submit/retrieve durable jobs | T12, T13 | Planned |
 | JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Partial (T2 complete) |
-| WORK-01 | Durable worker lifecycle | T10, T15 | Planned |
-| WORK-02 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
-| WORK-03 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
-| WORK-04 | Durable worker lifecycle | T2, T10 | Partial (T2 complete) |
-| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Partial (T5 complete) |
-| WORK-06 | Durable worker lifecycle | T10 | Planned |
-| WORK-07 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
+| WORK-01 | Durable worker lifecycle | T10, T15 | Partial (T10 complete) |
+| WORK-02 | Durable worker lifecycle | T5, T10 | Completed |
+| WORK-03 | Durable worker lifecycle | T5, T10 | Completed |
+| WORK-04 | Durable worker lifecycle | T2, T10 | Completed |
+| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Partial (T5, T10 complete) |
+| WORK-06 | Durable worker lifecycle | T10 | Completed |
+| WORK-07 | Durable worker lifecycle | T5, T10 | Completed |
 | STORE-01 | Atomic persistent store | T6 | Completed |
 | STORE-02 | Atomic persistent store | T7 | Completed |
 | STORE-03 | Atomic persistent store | T7 | Completed |
@@ -235,8 +235,8 @@ OpenAPI document without credentials.
 | OPS-07 | Durable operations | T3, T17, T18, T19 | Partial (T3 complete) |
 | OPS-08 | Durable operations | T20 | Planned |
 | EDGE-01 | Queue capacity edge case | T11 | Planned |
-| EDGE-02 | Partial publication edge case | T7, T10 | Partial (T7 complete) |
-| EDGE-03 | Uncertain external side effect edge case | T10 | Planned |
+| EDGE-02 | Partial publication edge case | T7, T10 | Completed |
+| EDGE-03 | Uncertain external side effect edge case | T10 | Completed |
 | EDGE-04 | Read/expiry race edge case | T7 | Completed |
 | EDGE-05 | Language identity edge case | T1 | Completed |
 | EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Partial (T7, T9 complete) |
