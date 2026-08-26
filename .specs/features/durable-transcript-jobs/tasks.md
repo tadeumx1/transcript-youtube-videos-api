@@ -11,7 +11,7 @@ commit per task, sequential phase batches, independent verification, and require
 ---
 
 **Design**: `.specs/features/durable-transcript-jobs/design.md`
-**Status**: In Progress (approved by user on 2026-08-26)
+**Status**: Verification Fixes Round 1 (automatic after verifier FAIL on 2026-08-26)
 
 ---
 
@@ -648,10 +648,169 @@ single-Volume topology, redeploy downtime, interrupted-work policy, backup risk,
 
 ---
 
+## Verification Fix Tasks: Round 1
+
+These tasks are scoped only to the ranked gaps in `validation.md`. They run sequentially and are
+followed by a fresh independent verification.
+
+### T21: Clean private work and roll back failed publications
+
+**What**: Remove verified private work after every terminal path and prevent a bundle/cache pointer
+from surviving when the producer cannot persist `completed`.
+**Where**: durable publication boundaries under `src/application/` and
+`src/infrastructure/storage/`, plus their unit tests
+**Depends on**: T20
+**Requirement**: WORK-07, CACHE-04
+
+**Done when**:
+
+- [ ] Success and terminal failure remove only the validated private work directory under the per-key lock.
+- [ ] A completion-transition failure invalidates the just-published pointer/bundle before persisting failed state, so failed producers never become cache hits.
+- [ ] Real-filesystem tests assert cleanup, rollback ordering, no unrelated deletion, and zero surviving cache/work content.
+- [ ] `npm run test:unit` passes with at least 413 total tests and no silent deletions.
+
+**Tests**: unit/real filesystem
+**Gate**: quick
+**Commit**: `fix(storage): clean failed durable publications`
+
+### T22: Sanitize durable submission storage failures
+
+**What**: Convert cache lookup/storage failures during durable submit to the exact public 503,
+degrade storage readiness, and perform no record/provider work.
+**Where**: `src/application/durable-job-coordinator.ts` and its unit/integration contract tests
+**Depends on**: T21
+**Requirement**: STORE-06
+
+**Done when**:
+
+- [ ] Cache lookup I/O failure becomes `JOB_STORAGE_UNAVAILABLE`/503 with no path, cause, or provider text.
+- [ ] Storage readiness becomes unhealthy while liveness remains callable, and no job/provider work starts.
+- [ ] Route and application tests assert exact body/status/redaction and recovery after a healthy probe.
+- [ ] `npm test` passes with at least 414 total tests and no silent deletions.
+
+**Tests**: unit/integration
+**Gate**: full
+**Commit**: `fix(jobs): sanitize submission storage failures`
+
+### T23: Quarantine corrupt completed-job artifacts
+
+**What**: Distinguish verified corruption from operational I/O during completed-job reads,
+invalidate its pointer, quarantine content under an opaque name, and still expose only sanitized 503.
+**Where**: `src/infrastructure/storage/file-artifact-store.ts` and its real-filesystem unit tests
+**Depends on**: T22
+**Requirement**: STORE-03
+
+**Done when**:
+
+- [ ] Corrupt completed content is never returned and its cache pointer is removed before quarantine.
+- [ ] Quarantine naming contains no job/cache/video/content data and unrelated artifacts remain untouched.
+- [ ] Missing/operational I/O retains the existing sanitized 503 contract without false quarantine.
+- [ ] `npm run test:unit` passes with at least 415 total tests and no silent deletions.
+
+**Tests**: unit/real filesystem
+**Gate**: quick
+**Commit**: `fix(storage): quarantine corrupt job artifacts`
+
+### T24: Keep durable lifecycle gauges accurate
+
+**What**: Update queued and processing gauges from true repository state after create, claim,
+terminal transition, recovery, and sweep.
+**Where**: durable lifecycle boundaries under `src/application/`, repository query surface if
+required, and unit/integration metrics tests
+**Depends on**: T23
+**Requirement**: OPS-04
+
+**Done when**:
+
+- [ ] Queued and processing gauges match exact persisted state counts through miss, claim, completion, failure, recovery, and expiry.
+- [ ] A single completed job leaves both gauges at zero; no identifier/content labels are introduced.
+- [ ] Composition-level tests inspect rendered Prometheus values after real lifecycle transitions.
+- [ ] `npm test` passes with at least 416 total tests and no silent deletions.
+
+**Tests**: unit/integration
+**Gate**: full
+**Commit**: `fix(metrics): track durable job states`
+
+### T25: Prove transcript-only recovery never calls the provider
+
+**What**: Strengthen the transcript-only restart test with an explicit prohibited provider call and
+exact local rendering/publication assertions.
+**Where**: `test/unit/durable-job-worker.test.ts`
+**Depends on**: T24
+**Requirement**: WORK-06, EDGE-02
+
+**Done when**:
+
+- [ ] The retained provider/`produceRequired` mock is asserted at zero calls.
+- [ ] Exactly one local PDF render/publication occurs with the unchanged verified transcript.
+- [ ] The M09 mutation fails the test.
+- [ ] `npm run test:unit` passes with at least 416 total tests and no silent deletions.
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `test(jobs): prohibit provider recovery calls`
+
+### T26: Prove completed hits bypass queue capacity
+
+**What**: Add the missing full-capacity completed-hit decision-order test.
+**Where**: `test/unit/durable-job-coordinator.test.ts`
+**Depends on**: T25
+**Requirement**: CACHE-05, EDGE-01
+
+**Done when**:
+
+- [ ] A verified completed bundle at exact queue capacity returns `hit` with the same retained job ID.
+- [ ] No job create, provider work, or worker notification occurs.
+- [ ] Moving the capacity check before cache lookup fails the test.
+- [ ] `npm run test:unit` passes with at least 417 total tests and no silent deletions.
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `test(cache): verify hits bypass queue capacity`
+
+### T27: Prove resubmission after completed expiry
+
+**What**: Close the end-to-end expiry loop from completed cache through sweep/tombstone to a new
+equivalent submission.
+**Where**: `test/integration/application-composition.test.ts`
+**Depends on**: T26
+**Requirement**: CACHE-07
+
+**Done when**:
+
+- [ ] Sweeping at the exact fixed TTL removes the old pointer/artifact and retains the tombstone.
+- [ ] The equivalent request returns a new `miss`, new UUID, and one new worker notification/provider eligibility.
+- [ ] Reading the old job does not slide expiry and continues to return the retained 410 contract.
+- [ ] `npm test` passes with at least 418 total tests and no silent deletions.
+
+**Tests**: integration/real filesystem
+**Gate**: full
+**Commit**: `test(cache): verify resubmission after expiry`
+
+### T28: Persist the Railway Volume plan evidence
+
+**What**: Re-run the read-only Railway config plan and persist its exact non-secret summary for the
+later apply approval without mutating remote state.
+**Where**: `.specs/features/durable-transcript-jobs/railway-plan.md`
+**Depends on**: T27
+**Requirement**: OPS-02 task evidence
+
+**Done when**:
+
+- [ ] Evidence records date/session, `1 to add, 2 to change, 0 to destroy`, Volume name/mount and hidden `DATA_ROOT` change without IDs/secrets.
+- [ ] Evidence explicitly states no apply/deploy/domain/remote mutation ran and that exact apply approval remains pending.
+- [ ] `railway config plan` is read-only and `npm run check` passes with no silent deletions.
+
+**Tests**: existing Railway static contract
+**Gate**: build
+**Commit**: `docs(railway): record transcript volume plan`
+
+---
+
 ## Phase Execution Map
 
 ```text
-Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6
+Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7
 
 Phase 1: T1 -> T2 -> T3 -> T4 -> T5
 Phase 2: T6 -> T7 -> T8
@@ -659,6 +818,7 @@ Phase 3: T9 -> T10 -> T11
 Phase 4: T12 -> T13 -> T14
 Phase 5: T15
 Phase 6: T16 -> T17 -> T18 -> T19 -> T20
+Phase 7: T20 -> T21 -> T22 -> T23 -> T24 -> T25 -> T26 -> T27 -> T28
 ```
 
 Cross-phase dependencies are declared in task bodies. Execution is strictly sequential; phase
@@ -690,6 +850,14 @@ boundaries are the only batch boundaries.
 | T18 | One Docker runtime integration | ✅ Complete |
 | T19 | One ignore-policy change | ✅ Complete |
 | T20 | One operator/developer documentation contract | ✅ Complete |
+| T21 | One durable-publication cleanup boundary | Verification fix |
+| T22 | One durable-submit storage error boundary | Verification fix |
+| T23 | One completed-artifact quarantine path | Verification fix |
+| T24 | One lifecycle-gauge synchronization path | Verification fix |
+| T25 | One recovery non-call discrimination test | Verification fix |
+| T26 | One full-capacity hit discrimination test | Verification fix |
+| T27 | One expiry/resubmission integration scenario | Verification fix |
+| T28 | One Railway plan evidence artifact | Verification fix |
 
 ## Diagram-Definition Cross-Check
 
@@ -715,6 +883,14 @@ boundaries are the only batch boundaries.
 | T18 | T17 | T17 -> T18 | ✅ Match |
 | T19 | T18 | T18 -> T19 | ✅ Match |
 | T20 | T19 | T19 -> T20 | ✅ Match |
+| T21 | T20 (verification round) | Phase 7 start | ✅ Match |
+| T22 | T21 | T21 -> T22 | ✅ Match |
+| T23 | T22 | T22 -> T23 | ✅ Match |
+| T24 | T23 | T23 -> T24 | ✅ Match |
+| T25 | T24 | T24 -> T25 | ✅ Match |
+| T26 | T25 | T25 -> T26 | ✅ Match |
+| T27 | T26 | T26 -> T27 | ✅ Match |
+| T28 | T27 | T27 -> T28 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -740,6 +916,14 @@ boundaries are the only batch boundaries.
 | T18 | Dockerfile | unit/static + container | unit/static | ✅ OK; container gate adds runtime proof |
 | T19 | Ignore policy | unit/static | unit/static | ✅ OK |
 | T20 | Documentation | unit/static | unit/static | ✅ OK |
+| T21 | Artifact cleanup/rollback | unit/real temp | unit | ✅ OK |
+| T22 | Submission storage failure | unit/integration | unit/integration | ✅ OK |
+| T23 | Completed corruption quarantine | unit/real temp | unit | ✅ OK |
+| T24 | Lifecycle metrics | unit/integration | unit/integration | ✅ OK |
+| T25 | Recovery provider non-call | unit | unit | ✅ OK |
+| T26 | Capacity decision order | unit | unit | ✅ OK |
+| T27 | Expiry/resubmission | integration/real temp | integration | ✅ OK |
+| T28 | Railway plan evidence | static/build | existing static/build | ✅ OK |
 
 ---
 
@@ -748,8 +932,8 @@ boundaries are the only batch boundaries.
 The user previously selected TLC, Railway, and sequential subagents for the production program.
 Proposed execution mapping:
 
-- T1-T15 and T17-T19: local source/test tools + `tlc-spec-driven`; no MCP or network.
-- T16 and T20: `tlc-spec-driven` + `use-railway`; Railway CLI is read-only (`config plan`) until
+- T1-T15, T17-T19, and T21-T27: local source/test tools + `tlc-spec-driven`; no MCP or network.
+- T16, T20, and T28: `tlc-spec-driven` + `use-railway`; Railway CLI is read-only (`config plan`) until
   the exact plan receives separate apply approval.
 - T18: local container/static gates; CI remains authoritative if Docker is unavailable.
 - After T20: a fresh verifier subagent runs the full spec-anchored check and expanded sensor

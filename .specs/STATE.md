@@ -86,10 +86,10 @@
 ## Handoff
 
 - **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
-- **Phase / Task**: Execute / Batch 3 complete, T1-T20 complete
-- **Completed**: approved planning and Batches 1-3, Phases 1-6, T1-T20, including durable storage/jobs/cache, authenticated API, OpenAPI 1.1, production composition, Railway Volume IaC, non-root container runtime, local ignore policy, and operations documentation
-- **In-progress** (file:line): none
-- **Next step**: dispatch the fresh independent verifier with the expanded discrimination sensor
-- **Blockers**: none
-- **Uncommitted files**: none after the T20 atomic commit
+- **Phase / Task**: Execute / Verification Fix Round 1, T21 next
+- **Completed**: T1-T20; independent FAIL report at `f8e92a8`; 36/46 requirements matched; 15/18 mutants killed; grounded lessons L-007 through L-010 recorded
+- **In-progress** (file:line): `.specs/features/durable-transcript-jobs/tasks.md:1` fix plan pending commit
+- **Next step**: execute T21-T28 sequentially, then dispatch a fresh independent re-verifier
+- **Blockers**: none; local Docker unavailable, and Railway apply/deploy remain explicitly pending
+- **Uncommitted files**: fix task plan, traceability statuses, and Handoff pending planning commit
 - **Branch**: `main`
