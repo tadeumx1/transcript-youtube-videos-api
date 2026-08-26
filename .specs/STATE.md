@@ -86,10 +86,10 @@
 ## Handoff
 
 - **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
-- **Phase / Task**: Execute / Batch 2 complete, Batch 3 T16 next
-- **Completed**: approved planning and Batch 1-2 Phases 1-5, T1-T15, with durable storage, worker, cache, authenticated job API, OpenAPI 1.1, and production composition
+- **Phase / Task**: Execute / Batch 3 complete, T1-T20 complete
+- **Completed**: approved planning and Batches 1-3, Phases 1-6, T1-T20, including durable storage/jobs/cache, authenticated API, OpenAPI 1.1, production composition, Railway Volume IaC, non-root container runtime, local ignore policy, and operations documentation
 - **In-progress** (file:line): none
-- **Next step**: dispatch sequential Batch 3 for Phase 6, T16-T20
+- **Next step**: dispatch the fresh independent verifier with the expanded discrimination sensor
 - **Blockers**: none
-- **Uncommitted files**: none after the T15 atomic commit
+- **Uncommitted files**: none after the T20 atomic commit
 - **Branch**: `main`

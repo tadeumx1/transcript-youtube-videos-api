@@ -231,9 +231,9 @@ OpenAPI document without credentials.
 | OPS-03 | Durable operations | T13, T15 | Completed |
 | OPS-04 | Durable operations | T4 | Completed |
 | OPS-05 | Durable operations | T14 | Completed |
-| OPS-06 | Durable operations | T4, T13, T20 | Partial (T4, T13 complete) |
+| OPS-06 | Durable operations | T4, T13, T20 | Completed |
 | OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Completed |
-| OPS-08 | Durable operations | T20 | Planned |
+| OPS-08 | Durable operations | T20 | Completed |
 | EDGE-01 | Queue capacity edge case | T11 | Completed |
 | EDGE-02 | Partial publication edge case | T7, T10 | Completed |
 | EDGE-03 | Uncertain external side effect edge case | T10 | Completed |

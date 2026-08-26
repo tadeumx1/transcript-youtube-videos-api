@@ -3,7 +3,8 @@
 API em Node.js, Fastify e TypeScript que recebe a URL de um vídeo público do YouTube,
 prioriza suas legendas e, quando elas não estão disponíveis, transcreve o áudio com
 `muse-spark-1.2-contributor` pelo OpenCode Go. As duas origens produzem o mesmo JSON e um PDF
-pesquisável gerado localmente, prontos para alimentar um fluxo RAG.
+pesquisável gerado localmente. O resultado pode ser obtido de forma síncrona ou por um job durável,
+e o bundle completo fica em cache por tempo limitado para alimentar um fluxo RAG.
 
 ## Como funciona
 
@@ -13,7 +14,10 @@ pesquisável gerado localmente, prontos para alimentar um fluxo RAG.
 4. O FFmpeg converte o áudio em MP3 mono, 16 kHz e 48 kbps, dividido em blocos de 10 minutos.
 5. Envia cada bloco sequencialmente ao Muse com `reasoning.effort: "minimal"`.
 6. Remove os arquivos temporários mesmo quando download, conversão ou transcrição falham.
-7. Retorna o contrato unificado como JSON ou gera um PDF pesquisável sem outra chamada de IA.
+7. Gera um PDF pesquisável localmente, sem outra chamada de IA, e publica JSON e PDF juntos no
+   cache somente quando o bundle está completo.
+8. Atende as rotas síncronas imediatamente ou processa jobs em uma fila durável recuperável após
+   reinício.
 
 O Muse não é acionado quando as legendas funcionam nem quando o provedor de legendas falha de
 forma inesperada.
@@ -68,7 +72,7 @@ ambiente da hospedagem também são aceitas.
 | `HOST` | não | `0.0.0.0` | Endereço em que o Fastify escuta. |
 | `PORT` | não | `3000` | Porta TCP, de 1 a 65535. |
 | `OPENCODE_API_KEY` | apenas no fallback | vazia | Chave do workspace OpenCode Go. |
-| `API_ACCESS_KEY` | sim para transcrever | vazia | Token Bearer que protege os dois endpoints de transcrição. |
+| `API_ACCESS_KEY` | sim para transcrever | vazia | Token Bearer que protege todas as rotas de transcrição e jobs. |
 | `YT_DLP_PATH` | não | `yt-dlp` | Caminho do executável `yt-dlp`. |
 | `FFMPEG_PATH` | não | `ffmpeg` | Caminho do executável FFmpeg. |
 | `MAX_CONCURRENT_TRANSCRIPTS` | não | `1` | Máximo global de transcrições simultâneas, de 1 a 32. |
@@ -77,6 +81,12 @@ ambiente da hospedagem também são aceitas.
 | `FFMPEG_TIMEOUT_MS` | não | `900000` | Limite da conversão, de 1 a 3600000 milissegundos. |
 | `PROCESS_TERMINATION_GRACE_MS` | não | `5000` | Espera entre `SIGTERM` e `SIGKILL`, de 1 a 60000 milissegundos. |
 | `MUSE_TIMEOUT_MS` | não | `300000` | Limite de uma requisição ao Muse, de 1 a 3600000 milissegundos. |
+| `DATA_ROOT` | não | `.data/transcripts` | caminho não vazio da persistência; no Railway a IaC define `/data/transcripts`. |
+| `MAX_QUEUED_JOBS` | não | `100` | Máximo de jobs ativos (`queued + processing`), de 1 a 10000. |
+| `ARTIFACT_TTL_SECONDS` | não | `604800` | Retenção de bundles completos, de 60 a 2678400 segundos. |
+| `FAILED_JOB_TTL_SECONDS` | não | `86400` | Retenção de jobs falhos, de 60 a 604800 segundos. |
+| `JOB_TOMBSTONE_TTL_SECONDS` | não | `86400` | Retenção da indicação de expiração, de 60 a 604800 segundos. |
+| `STORAGE_SWEEP_INTERVAL_MS` | não | `60000` | Intervalo da limpeza local, de 1000 a 3600000 milissegundos. |
 
 `GET /health` continua público. Se `API_ACCESS_KEY` estiver vazio, os endpoints de transcrição
 falham fechados com HTTP 503; eles nunca ficam públicos por acidente.
@@ -109,9 +119,10 @@ docker run --rm \
   youtube-transcript-api
 ```
 
-A imagem executa a aplicação compilada como usuário sem privilégios, inclui FFmpeg e fixa o
-`yt-dlp` na versão `2026.8.19`. Como o YouTube muda com frequência, atualize essa versão quando
-necessário.
+A imagem inclui FFmpeg e fixa o `yt-dlp` na versão `2026.8.19`. O entrypoint inicia como root apenas
+para criar e ajustar a propriedade da raiz `/data`; em seguida usa `gosu` e substitui o processo
+pelo Node como usuário sem privilégios. Como o YouTube muda com frequência, atualize a versão do
+`yt-dlp` quando necessário.
 
 ## Rotas
 
@@ -130,54 +141,100 @@ Resposta:
 ### Transcrição JSON
 
 ```bash
-curl -X POST http://localhost:3000/v1/transcripts \
+export API_BASE_URL=http://localhost:3000
+export VIDEO_URL=https://www.youtube.com/watch?v=SEU_ID_AQUI
+
+curl -X POST ${API_BASE_URL}/v1/transcripts \
   -H "authorization: Bearer $API_ACCESS_KEY" \
   -H 'content-type: application/json' \
-  -d '{
-    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "languages": ["pt-BR", "pt", "en"]
-  }'
+  --data "{\"url\":\"${VIDEO_URL}\",\"languages\":[\"pt-BR\",\"pt\",\"en\"]}" \
+  --output transcript.json
 ```
 
-`languages` é opcional, ordenado e aceita de um a cinco códigos. Exemplo de resposta por legenda:
-
-```json
-{
-  "videoId": "dQw4w9WgXcQ",
-  "sourceUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "source": "youtube_captions",
-  "language": "pt-BR",
-  "isGenerated": false,
-  "timestampPrecision": "caption",
-  "extractedAt": "2026-08-25T12:00:00.000Z",
-  "text": "Transcrição completa...",
-  "segments": [
-    {
-      "text": "Primeiro trecho.",
-      "startSeconds": 0,
-      "durationSeconds": 2.5
-    }
-  ]
-}
-```
-
-Quando o áudio é transcrito, `source` vale `muse_transcription`, `isGenerated` vale `true` e
-`timestampPrecision` vale `chunk`. Cada timestamp representa o início aproximado de um bloco de
-até 10 minutos, não o tempo exato de cada palavra.
+Substitua `SEU_ID_AQUI` por um ID de 11 caracteres de um vídeo público autorizado. `languages` é
+opcional, ordenado e aceita de um a cinco códigos. Quando o áudio é transcrito, `source` vale
+`muse_transcription`, `isGenerated` vale `true` e `timestampPrecision` vale `chunk`. Cada timestamp
+representa o início aproximado de um bloco de até 10 minutos, não o tempo exato de cada palavra.
 
 ### PDF
 
 ```bash
-curl -X POST http://localhost:3000/v1/transcripts/pdf \
+curl -X POST ${API_BASE_URL}/v1/transcripts/pdf \
   -H "authorization: Bearer $API_ACCESS_KEY" \
   -H 'content-type: application/json' \
-  -d '{"url":"https://youtu.be/dQw4w9WgXcQ"}' \
+  --data "{\"url\":\"${VIDEO_URL}\"}" \
   --output transcript.pdf
 ```
 
 O PDF contém URL canônica, ID do vídeo, origem da transcrição, idioma, indicador de conteúdo
 gerado, precisão dos timestamps, data de extração e todo o texto em ordem cronológica. A renderização
 usa PDFKit localmente e não consome tokens do Muse.
+
+As duas rotas síncronas procuram primeiro um bundle verificado para o vídeo canônico e a ordem de
+idiomas solicitada. Um hit retorna os bytes retidos sem chamar YouTube, Muse, FFmpeg ou o renderer.
+Em um miss, a API produz a transcrição e o PDF uma vez e só então publica o bundle completo. Uma
+falha ao completar o cache não transforma uma transcrição JSON já produzida em erro; a rota PDF
+preserva o erro de renderização existente.
+
+### Jobs duráveis
+
+Use jobs para não manter uma conexão HTTP aberta durante vídeos longos. Mantenha `VIDEO_URL` com o
+placeholder `SEU_ID_AQUI` até escolher um vídeo público autorizado. Todos os comandos abaixo enviam
+o mesmo Bearer e gravam a resposta em arquivo, evitando conteúdo de transcrição no terminal.
+
+Envie o job:
+
+```bash
+curl -X POST ${API_BASE_URL}/v1/jobs \
+  -H "authorization: Bearer $API_ACCESS_KEY" \
+  -H 'content-type: application/json' \
+  --data "{\"url\":\"${VIDEO_URL}\",\"languages\":[\"pt-BR\",\"pt\",\"en\"]}" \
+  --dump-header job-headers.txt \
+  --output job-submission.json
+```
+
+O servidor responde 202 com `Location`, `Retry-After: 2`, um `jobId` e disposição `miss`, `joined` ou `hit`.
+Copie o identificador retornado sem registrá-lo em logs compartilhados:
+
+```bash
+export JOB_ID=substitua-pelo-job-id-retornado
+```
+
+Consulte o estado `queued`, `processing`, `completed` ou `failed`:
+
+```bash
+curl -X GET ${API_BASE_URL}/v1/jobs/${JOB_ID} \
+  -H "authorization: Bearer $API_ACCESS_KEY" \
+  --output job-status.json
+```
+
+Depois de `completed`, baixe o JSON e o PDF retidos:
+
+```bash
+curl -X GET ${API_BASE_URL}/v1/jobs/${JOB_ID}/transcript \
+  -H "authorization: Bearer $API_ACCESS_KEY" \
+  --output transcript.json
+
+curl -X GET ${API_BASE_URL}/v1/jobs/${JOB_ID}/pdf \
+  -H "authorization: Bearer $API_ACCESS_KEY" \
+  --output transcript.pdf
+```
+
+Submissões concorrentes com a mesma identidade canônica têm um único dono: um novo trabalho é
+`miss`, seguidores ativos são `joined` e um bundle já verificado é `hit`. Somente um miss novo
+consome `MAX_QUEUED_JOBS`; o limite conta `queued + processing`. O worker escolhe jobs em ordem FIFO
+e espera a mesma capacidade global usada pelas rotas síncronas, sem rejeitar ou chamar provedores
+enquanto não houver um permit.
+
+Os TTLs são fixos e não deslizantes: leituras não prorrogam nenhuma retenção. Bundles completos
+expiram após `ARTIFACT_TTL_SECONDS` contados da conclusão; jobs falhos usam
+`FAILED_JOB_TTL_SECONDS`; a indicação 410 permanece por `JOB_TOMBSTONE_TTL_SECONDS`. A limpeza roda
+no intervalo `STORAGE_SWEEP_INTERVAL_MS`.
+
+Após um reinício, um bundle completo finaliza o job e uma transcrição parcial verificada retoma
+somente a geração local do PDF. Se o efeito externo for incerto e não houver transcrição verificada,
+o job termina como `JOB_INTERRUPTED`. Não há retry automático de YouTube ou Muse. Para tentar outra
+vez e aceitar novo consumo de quota, envie explicitamente um novo `POST /v1/jobs`.
 
 ## Erros
 
@@ -198,24 +255,38 @@ Erros têm o formato:
 | 400 | `INVALID_REQUEST` | Body ausente, campo desconhecido ou idiomas inválidos. |
 | 400 | `INVALID_YOUTUBE_URL` | URL não suportada ou ID inválido. |
 | 404 | `VIDEO_NOT_AVAILABLE` | Vídeo privado, restrito ou indisponível. |
+| 404 | `JOB_NOT_FOUND` | Job desconhecido ou nunca retido. |
+| 409 | `JOB_NOT_COMPLETED` | Resultado solicitado enquanto o job ainda está na fila ou processando; use `Retry-After: 2`. |
+| 409 | `JOB_FAILED` | Resultado solicitado para um job que terminou com falha; consulte o estado. |
+| 410 | `JOB_EXPIRED` | Job expirado ainda representado por um tombstone retido. |
+| 429 | `JOB_QUEUE_CAPACITY_EXCEEDED` | Novo miss excedeu a fila; `joined` e `hit` continuam aceitos. |
 | 502 | `YOUTUBE_UPSTREAM_ERROR` | Falha inesperada ao consultar legendas. |
 | 503 | `AUDIO_FALLBACK_NOT_CONFIGURED` | O fallback precisa de `OPENCODE_API_KEY`. |
 | 503 | `AUDIO_TOOL_UNAVAILABLE` | `yt-dlp` ou FFmpeg não pôde iniciar. |
+| 503 | `JOB_STORAGE_UNAVAILABLE` | Volume, bundle ou metadado durável não está verificável. |
 | 502 | `AUDIO_EXTRACTION_FAILED` | Falha no download ou processamento do áudio. |
 | 502 | `AUDIO_CHUNK_TOO_LARGE` | Um bloco ultrapassou o limite interno de 8 MiB. |
 | 502 | `MUSE_TRANSCRIPTION_FAILED` | O OpenCode Go ou o Muse não concluiu a transcrição. |
 | 500 | `PDF_GENERATION_FAILED` | Não foi possível renderizar o PDF. |
 | 503 | `API_AUTH_NOT_CONFIGURED` | `API_ACCESS_KEY` não foi configurada no servidor. |
 
-Não há retry automático. Uma falha interrompe a requisição para evitar consumo duplicado da
-franquia e amplificação de bloqueios do YouTube.
+Não há retry automático. Uma falha interrompe a requisição ou o job para evitar consumo duplicado
+da franquia e amplificação de bloqueios do YouTube. O código `JOB_INTERRUPTED` é persistido no estado
+do job, não usado para refazer silenciosamente o trabalho externo.
 
 ## Railway
 
 O arquivo `.railway/railway.ts` mantém o projeto e o serviço no Infrastructure as Code atual do
 Railway. Ele configura `/health` como health check e permite até 300 segundos para a imagem ficar
-saudável. O serviço usa o Dockerfile da raiz e a política padrão limitada de reinício por falha. O
-container e o Fastify usam a variável `PORT` fornecida pelo Railway.
+saudável. A topologia usa um único Volume de 1024 MB montado em `/data` e uma única réplica. A IaC
+define `DATA_ROOT=/data/transcripts`, preserva os dois segredos existentes e não cria banco ou
+armazenamento público. O container e o Fastify usam a variável `PORT` fornecida pelo Railway.
+
+Um Volume só pode ficar anexado a um deployment dessa réplica por vez. Isso causa indisponibilidade breve durante cada redeploy.
+O backup é responsabilidade do operador: excluir, recriar ou corromper o Volume sem uma cópia
+recuperável pode causar perda permanente dos jobs, JSONs e PDFs retidos.
+Reserve `/data/lancedb` para a futura ingestão local do IMP-10; esta feature usa somente
+`/data/transcripts` e não cria o índice vetorial.
 
 Para revisar mudanças de infraestrutura antes de aplicá-las:
 
@@ -223,6 +294,9 @@ Para revisar mudanças de infraestrutura antes de aplicá-las:
 railway config plan
 railway config apply
 ```
+
+Revise a contagem e cada item de add/change/destroy do `plan`; execute `apply` somente após aprovação
+explícita daquele plano exato. A configuração do Volume não é aplicada automaticamente pelos testes.
 
 No primeiro deploy, execute na raiz do projeto:
 
@@ -263,14 +337,20 @@ falha de provedor.
 ## Privacidade e limitações
 
 - Áudio e blocos ficam em um diretório temporário exclusivo da requisição e são removidos em um
-  bloco `finally`. JSONs e PDFs não são persistidos pela API.
+  bloco `finally`; áudio nunca entra no Volume. JSONs, PDFs e metadados de job bem-sucedidos ficam
+  retidos em `DATA_ROOT` somente pelos TTLs configurados.
 - Os chunks usam MP3 a 48 kbps, duram até 10 minutos e são enviados ao OpenCode Go como Base64.
-- A transcrição é síncrona. Vídeos longos podem exceder o timeout do proxy ou da hospedagem; uma
-  fila assíncrona é recomendada para produção em escala.
+- Rotas síncronas e jobs duráveis compartilham `MAX_CONCURRENT_TRANSCRIPTS`; use jobs para vídeos
+  que podem exceder o timeout do proxy. `MAX_QUEUED_JOBS` limita novos misses, mas não é uma quota
+  individual por cliente.
 - O YouTube pode bloquear IPs de datacenter, exigir login, aplicar rate limit ou alterar endpoints.
   Esta versão aceita somente vídeos públicos acessíveis sem cookies e não contorna restrições.
-- Um Bearer token protege os endpoints, mas limite de concorrência, quotas por cliente, fila
-  assíncrona e ingestão no banco vetorial/RAG ainda não foram implementados.
+- O Bearer protege submissão, estado e cada leitura de JSON/PDF. Trate os artefatos persistidos como
+  conteúdo do vídeo e proteja também backups; logs e métricas não incluem IDs, URLs ou conteúdo.
+- Não há retry automático. Preserve `MAX_CONCURRENT_TRANSCRIPTS`, `YT_DLP_TIMEOUT_MS`,
+  `FFMPEG_TIMEOUT_MS` e `MUSE_TIMEOUT_MS`; não amplie esses controles para contornar falhas.
+- A ingestão no banco vetorial/RAG ainda não foi implementada. O namespace `/data/lancedb` está
+  reservado para IMP-10 e não deve ser usado por jobs ou pelo cache.
 - Um `/health` bem-sucedido prova que a API está online; não prova que o YouTube aceitará requisições
   originadas do IP do Railway. Erros do provedor devem ser diagnosticados separadamente.
 

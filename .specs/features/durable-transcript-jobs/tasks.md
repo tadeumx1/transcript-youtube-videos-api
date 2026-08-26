@@ -619,7 +619,7 @@ static repository contract.
 **Gate**: build
 **Commit**: `chore(storage): ignore local durable data`
 
-### T20: Document durable jobs, retention, and deployment
+### T20: Document durable jobs, retention, and deployment ✅
 
 **What**: Document the four job workflows, synchronous cache behavior, configuration, retention,
 single-Volume topology, redeploy downtime, interrupted-work policy, backup risk, and IMP-10 namespace.
@@ -635,12 +635,12 @@ single-Volume topology, redeploy downtime, interrupted-work policy, backup risk,
 
 **Done when**:
 
-- [ ] Authenticated examples cover submit, poll, JSON, and PDF without real credentials/video IDs or response-body leakage.
-- [ ] Exact defaults/bounds, non-sliding TTLs, queue semantics, 404/409/410/429/503 codes, and explicit resubmission after `JOB_INTERRUPTED` are documented.
-- [ ] One Volume/one instance, brief redeploy downtime, backup/data-loss responsibility, non-root entrypoint, `/data/transcripts`, and reserved `/data/lancedb` are explicit.
-- [ ] Privacy text replaces obsolete stateless/synchronous-only claims and preserves temporary-audio cleanup, Bearer, limits, no retries, and public-video policy.
-- [ ] Static documentation contract rejects missing required behavior, prohibited identifiers/content, bypass guidance, or claims of automatic retry/zero downtime.
-- [ ] `npm run check` passes with at least 235 total tests and no silent deletions.
+- [x] Authenticated examples cover submit, poll, JSON, and PDF without real credentials/video IDs or response-body leakage.
+- [x] Exact defaults/bounds, non-sliding TTLs, queue semantics, 404/409/410/429/503 codes, and explicit resubmission after `JOB_INTERRUPTED` are documented.
+- [x] One Volume/one instance, brief redeploy downtime, backup/data-loss responsibility, non-root entrypoint, `/data/transcripts`, and reserved `/data/lancedb` are explicit.
+- [x] Privacy text replaces obsolete stateless/synchronous-only claims and preserves temporary-audio cleanup, Bearer, limits, no retries, and public-video policy.
+- [x] Static documentation contract rejects missing required behavior, prohibited identifiers/content, bypass guidance, or claims of automatic retry/zero downtime.
+- [x] `npm run check` passes with at least 235 total tests and no silent deletions.
 
 **Tests**: unit/static
 **Gate**: build
@@ -689,7 +689,7 @@ boundaries are the only batch boundaries.
 | T17 | One container entrypoint | ✅ Complete |
 | T18 | One Docker runtime integration | ✅ Complete |
 | T19 | One ignore-policy change | ✅ Complete |
-| T20 | One operator/developer documentation contract | ✅ Granular |
+| T20 | One operator/developer documentation contract | ✅ Complete |
 
 ## Diagram-Definition Cross-Check
 
