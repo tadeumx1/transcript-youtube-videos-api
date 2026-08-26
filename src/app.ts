@@ -15,16 +15,35 @@ export interface ApplicationConfig {
   apiAccessKey?: string
   ytDlpPath?: string
   ffmpegPath?: string
+  maxConcurrentTranscripts?: number
+  transcriptRetryAfterSeconds?: number
+  ytDlpTimeoutMs?: number
+  ffmpegTimeoutMs?: number
+  processTerminationGraceMs?: number
+  museTimeoutMs?: number
 }
 
 export function createApplication(config: ApplicationConfig = {}, options: BuildAppOptions = {}) {
-  const processRunner = new NodeProcessRunner()
-  const mediaPipeline = new AudioMediaPipeline(processRunner, undefined, undefined, {
-    ytDlpPath: config.ytDlpPath ?? 'yt-dlp',
-    ffmpegPath: config.ffmpegPath ?? 'ffmpeg',
-  })
+  const processRunner = new NodeProcessRunner(undefined, config.processTerminationGraceMs)
+  const mediaPipeline = new AudioMediaPipeline(
+    processRunner,
+    undefined,
+    undefined,
+    {
+      ytDlpPath: config.ytDlpPath ?? 'yt-dlp',
+      ffmpegPath: config.ffmpegPath ?? 'ffmpeg',
+    },
+    {
+      ytDlpTimeoutMs: config.ytDlpTimeoutMs ?? 300_000,
+      ffmpegTimeoutMs: config.ffmpegTimeoutMs ?? 900_000,
+    },
+  )
   const audioTranscriber = config.openCodeApiKey
-    ? new MuseAudioTranscriber(createMuseResponsesCreate(config.openCodeApiKey))
+    ? new MuseAudioTranscriber(
+        createMuseResponsesCreate(config.openCodeApiKey, {
+          timeoutMs: config.museTimeoutMs ?? 300_000,
+        }),
+      )
     : undefined
   const audioFallback = new MuseAudioFallback(mediaPipeline, audioTranscriber)
   const transcriptService = new HybridTranscriptService(new YouTubeCaptionProvider(), audioFallback)
@@ -37,6 +56,12 @@ export function createApplication(config: ApplicationConfig = {}, options: Build
     {
       ...options,
       ...(config.apiAccessKey ? { apiAccessKey: config.apiAccessKey } : {}),
+      ...(config.maxConcurrentTranscripts
+        ? { maxConcurrentTranscripts: config.maxConcurrentTranscripts }
+        : {}),
+      ...(config.transcriptRetryAfterSeconds
+        ? { transcriptRetryAfterSeconds: config.transcriptRetryAfterSeconds }
+        : {}),
     },
   )
 }

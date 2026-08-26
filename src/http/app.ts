@@ -7,9 +7,16 @@ import fastify, {
   LogController,
 } from 'fastify'
 
+import { ExecutionController } from '../application/execution-controller.js'
 import { AppError, type AppErrorCode } from '../domain/errors.js'
-import type { Transcript } from '../domain/transcript.js'
+import {
+  type Transcript,
+  type TranscriptOperationOptions,
+  transcriptMetricOutcome,
+  transcriptMetricReason,
+} from '../domain/transcript.js'
 import { type ParsedYouTubeUrl, parseYouTubeUrl } from '../domain/youtube-url.js'
+import { RuntimeMetrics } from '../infrastructure/observability/runtime-metrics.js'
 import {
   buildTranscriptPdfModel,
   type TranscriptPdfModel,
@@ -21,7 +28,11 @@ interface TranscriptRequestBody {
 }
 
 export interface TranscriptApplicationService {
-  getTranscript(parsedUrl: ParsedYouTubeUrl, languages?: readonly string[]): Promise<Transcript>
+  getTranscript(
+    parsedUrl: ParsedYouTubeUrl,
+    languages?: readonly string[],
+    options?: TranscriptOperationOptions,
+  ): Promise<Transcript>
 }
 
 export interface PdfRenderer {
@@ -36,6 +47,10 @@ export interface AppDependencies {
 export interface BuildAppOptions {
   apiAccessKey?: string
   logger?: FastifyServerOptions['logger']
+  maxConcurrentTranscripts?: number
+  transcriptRetryAfterSeconds?: number
+  runtimeMetrics?: RuntimeMetrics
+  executionController?: ExecutionController
 }
 
 const transcriptRequestSchema = {
@@ -59,6 +74,7 @@ const transcriptRequestSchema = {
 
 const publicErrorMessages: Record<AppErrorCode, string> = {
   INVALID_YOUTUBE_URL: 'A valid HTTPS YouTube video URL is required',
+  TRANSCRIPT_CAPACITY_EXCEEDED: 'Transcript capacity is currently exhausted',
   CAPTIONS_UNAVAILABLE: 'No usable captions are available for this video',
   VIDEO_NOT_AVAILABLE: 'The YouTube video is not available',
   YOUTUBE_UPSTREAM_ERROR: 'YouTube captions could not be retrieved',
@@ -122,6 +138,11 @@ function createAuthenticateHook(apiAccessKey: string | undefined) {
 }
 
 export function buildApp(dependencies: AppDependencies, options: BuildAppOptions = {}) {
+  const metrics = options.runtimeMetrics ?? new RuntimeMetrics()
+  const executionController =
+    options.executionController ??
+    new ExecutionController(options.maxConcurrentTranscripts ?? 1, metrics)
+  const retryAfterSeconds = options.transcriptRetryAfterSeconds ?? 30
   const app = fastify({
     ajv: { customOptions: { removeAdditional: false } },
     logController: new LogController({ disableRequestLogging: true }),
@@ -153,6 +174,9 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
 
     if (error instanceof AppError) {
       request.log.warn({ code: error.code, statusCode: error.statusCode }, 'request failed')
+      if (error.publicMetadata?.retryAfterSeconds !== undefined) {
+        reply.header('retry-after', String(error.publicMetadata.retryAfterSeconds))
+      }
       return reply.status(error.statusCode).send({
         error: {
           code: error.code,
@@ -172,19 +196,80 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
 
   app.get('/health', async () => ({ status: 'ok' }))
 
+  app.get('/ready', async (_request, reply) => {
+    if (!executionController.isReady) {
+      return reply.status(503).send({ status: 'not_ready' })
+    }
+    return reply.send({ status: 'ready' })
+  })
+
   const authenticate = createAuthenticateHook(options.apiAccessKey)
+
+  app.get('/metrics', { onRequest: authenticate }, async (_request, reply) => {
+    return reply.type(metrics.contentType).send(await metrics.render())
+  })
+
+  app.addHook('preClose', async () => {
+    executionController.beginShutdown()
+  })
+
+  async function withTranscriptExecution<T>(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    route: 'json' | 'pdf',
+    operation: (operationOptions: TranscriptOperationOptions) => Promise<T>,
+  ): Promise<T | FastifyReply> {
+    const permit = executionController.tryAcquire(route)
+    if (!permit) {
+      return reply
+        .status(429)
+        .header('retry-after', String(retryAfterSeconds))
+        .send({
+          error: {
+            code: 'TRANSCRIPT_CAPACITY_EXCEEDED',
+            message: publicErrorMessages.TRANSCRIPT_CAPACITY_EXCEEDED,
+          },
+        })
+    }
+
+    const clientAbort = new AbortController()
+    const abortClientWork = () => clientAbort.abort()
+    const abortClosedRequest = () => {
+      if (request.raw.aborted) abortClientWork()
+    }
+    request.raw.once('aborted', abortClientWork)
+    request.raw.once('error', abortClientWork)
+    request.raw.once('close', abortClosedRequest)
+    reply.raw.once('close', abortClientWork)
+
+    try {
+      return await operation({
+        signal: AbortSignal.any([permit.signal, clientAbort.signal]),
+        metrics,
+      })
+    } finally {
+      request.raw.removeListener('aborted', abortClientWork)
+      request.raw.removeListener('error', abortClientWork)
+      request.raw.removeListener('close', abortClosedRequest)
+      reply.raw.removeListener('close', abortClientWork)
+      permit.release()
+    }
+  }
 
   app.post<{ Body: TranscriptRequestBody }>(
     '/v1/transcripts',
     { onRequest: authenticate, schema: { body: transcriptRequestSchema } },
-    async (request) => {
+    async (request, reply) => {
       const parsedUrl = parseYouTubeUrl(request.body.url)
-      const transcript = await dependencies.transcriptService.getTranscript(
-        parsedUrl,
-        getLanguages(request.body),
-      )
-      request.log.info({ source: transcript.source }, 'transcript prepared')
-      return transcript
+      return withTranscriptExecution(request, reply, 'json', async (operationOptions) => {
+        const transcript = await dependencies.transcriptService.getTranscript(
+          parsedUrl,
+          getLanguages(request.body),
+          operationOptions,
+        )
+        request.log.info({ source: transcript.source }, 'transcript prepared')
+        return transcript
+      })
     },
   )
 
@@ -193,20 +278,36 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
     { onRequest: authenticate, schema: { body: transcriptRequestSchema } },
     async (request, reply) => {
       const parsedUrl = parseYouTubeUrl(request.body.url)
-      const transcript = await dependencies.transcriptService.getTranscript(
-        parsedUrl,
-        getLanguages(request.body),
-      )
-      const pdf = await dependencies.pdfRenderer.render(buildTranscriptPdfModel(transcript))
-
-      request.log.info({ source: transcript.source }, 'transcript PDF prepared')
-      return reply
-        .type('application/pdf')
-        .header(
-          'content-disposition',
-          `attachment; filename="youtube-transcript-${transcript.videoId}.pdf"`,
+      return withTranscriptExecution(request, reply, 'pdf', async (operationOptions) => {
+        const transcript = await dependencies.transcriptService.getTranscript(
+          parsedUrl,
+          getLanguages(request.body),
+          operationOptions,
         )
-        .send(pdf)
+        const pdfStartedAt = performance.now()
+        let pdf: Buffer
+        try {
+          pdf = await dependencies.pdfRenderer.render(buildTranscriptPdfModel(transcript))
+          metrics.observeStage('pdf', 'success', (performance.now() - pdfStartedAt) / 1_000)
+        } catch (error) {
+          metrics.observeStage(
+            'pdf',
+            transcriptMetricOutcome(error),
+            (performance.now() - pdfStartedAt) / 1_000,
+          )
+          metrics.recordStageFailure('pdf', transcriptMetricReason(error))
+          throw error
+        }
+
+        request.log.info({ source: transcript.source }, 'transcript PDF prepared')
+        return reply
+          .type('application/pdf')
+          .header(
+            'content-disposition',
+            `attachment; filename="youtube-transcript-${transcript.videoId}.pdf"`,
+          )
+          .send(pdf)
+      })
     },
   )
 

@@ -278,7 +278,7 @@ caption-first orchestration, audio fallback, media, and Muse without changing fa
 
 ## Phase 3 Tasks
 
-### T8: Enforce admission, readiness, metrics, and shutdown at the HTTP boundary
+### T8: Enforce admission, readiness, metrics, and shutdown at the HTTP boundary ✅
 
 **What:** Wire the execution controller and metrics into Fastify, share guarded execution between
 JSON/PDF, expose public readiness and protected metrics, forward owned Retry-After, and abort on
@@ -295,15 +295,15 @@ JSON/PDF, expose public readiness and protected metrics, forward owned Retry-Aft
 
 **Done when:**
 
-- [ ] Auth and Fastify validation reject before admission; valid JSON/PDF requests share the exact configured cap.
-- [ ] Overflow returns 429 `TRANSCRIPT_CAPACITY_EXCEEDED` and `Retry-After: 30` before transcript/PDF dependencies.
-- [ ] Success, application error, PDF error, client abort, and shutdown release each permit exactly once.
-- [ ] `/health`, `/ready`, `/openapi.json`, and authenticated `/metrics` bypass transcript admission during saturation.
-- [ ] `/ready` returns exact 200/503 lifecycle bodies; `/metrics` preserves existing fail-closed Bearer behavior and Prometheus content type.
-- [ ] Owned Muse quota Retry-After metadata is forwarded while arbitrary error/provider headers are not.
-- [ ] Integration logs contain only method, route template, status, duration, fixed source/stage/outcome/reason, and no prohibited content.
-- [ ] Integration tests cover held cross-route concurrency, every release path, saturation short-circuit, auth/validation order, operational routes, shutdown/client abort, public headers, and redaction.
-- [ ] `npm test` passes with at least 154 tests and no silent deletions.
+- [x] Auth and Fastify validation reject before admission; valid JSON/PDF requests share the exact configured cap.
+- [x] Overflow returns 429 `TRANSCRIPT_CAPACITY_EXCEEDED` and `Retry-After: 30` before transcript/PDF dependencies.
+- [x] Success, application error, PDF error, client abort, and shutdown release each permit exactly once.
+- [x] `/health`, `/ready`, `/openapi.json`, and authenticated `/metrics` bypass transcript admission during saturation.
+- [x] `/ready` returns exact 200/503 lifecycle bodies; `/metrics` preserves existing fail-closed Bearer behavior and Prometheus content type.
+- [x] Owned Muse quota Retry-After metadata is forwarded while arbitrary error/provider headers are not.
+- [x] Integration logs contain only method, route template, status, duration, fixed source/stage/outcome/reason, and no prohibited content.
+- [x] Integration tests cover held cross-route concurrency, every release path, saturation short-circuit, auth/validation order, operational routes, shutdown/client abort, public headers, and redaction.
+- [x] `npm test` passes with at least 154 tests and no silent deletions.
 
 **Tests:** integration
 **Gate:** full

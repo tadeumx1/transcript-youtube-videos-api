@@ -2,17 +2,29 @@ import { Writable } from 'node:stream'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ExecutionController } from '../../src/application/execution-controller.js'
 import { AppError, type AppErrorCode } from '../../src/domain/errors.js'
-import type { Transcript } from '../../src/domain/transcript.js'
+import type { Transcript, TranscriptOperationOptions } from '../../src/domain/transcript.js'
 import {
   buildApp,
   type PdfRenderer,
   type TranscriptApplicationService,
 } from '../../src/http/app.js'
+import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
 
 const VIDEO_URL = 'https://youtu.be/dQw4w9WgXcQ'
 const API_ACCESS_KEY = 'test-access-key'
 const AUTHORIZATION_HEADER = { authorization: `Bearer ${API_ACCESS_KEY}` }
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, reject, resolve }
+}
 
 const captionTranscript: Transcript = {
   videoId: 'dQw4w9WgXcQ',
@@ -58,6 +70,20 @@ describe('Fastify application', () => {
       { transcriptService: { getTranscript }, pdfRenderer: { render } },
       apiAccessKey ? { apiAccessKey } : {},
     )
+  }
+
+  async function holdTranscriptRequest() {
+    const held = deferred<Transcript>()
+    getTranscript.mockImplementationOnce(async () => held.promise)
+    const app = createTestApp()
+    const response = app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    await vi.waitFor(() => expect(getTranscript).toHaveBeenCalledOnce())
+    return { app, held, response }
   }
 
   it('returns an exact health response without calling dependencies', async () => {
@@ -175,6 +201,10 @@ describe('Fastify application', () => {
         canonicalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       },
       undefined,
+      expect.objectContaining({
+        metrics: expect.any(Object),
+        signal: expect.any(AbortSignal),
+      }),
     )
   })
 
@@ -200,7 +230,302 @@ describe('Fastify application', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual(fallbackTranscript)
-    expect(getTranscript).toHaveBeenCalledWith(expect.anything(), ['pt-BR', 'en'])
+    expect(getTranscript).toHaveBeenCalledWith(
+      expect.anything(),
+      ['pt-BR', 'en'],
+      expect.objectContaining({
+        metrics: expect.any(Object),
+        signal: expect.any(AbortSignal),
+      }),
+    )
+  })
+
+  it('enforces one shared transcript slot across JSON and PDF before dependency work', async () => {
+    const { app, held, response: firstResponse } = await holdTranscriptRequest()
+
+    const overflow = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+
+    expect(overflow.statusCode).toBe(429)
+    expect(overflow.headers['retry-after']).toBe('30')
+    expect(overflow.json()).toEqual({
+      error: {
+        code: 'TRANSCRIPT_CAPACITY_EXCEEDED',
+        message: 'Transcript capacity is currently exhausted',
+      },
+    })
+    expect(getTranscript).toHaveBeenCalledOnce()
+    expect(render).not.toHaveBeenCalled()
+
+    held.resolve(captionTranscript)
+    expect((await firstResponse).statusCode).toBe(200)
+
+    const afterRelease = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    expect(afterRelease.statusCode).toBe(200)
+    expect(getTranscript).toHaveBeenCalledTimes(2)
+    expect(render).toHaveBeenCalledOnce()
+  })
+
+  it('uses the configured admission cap and owned Retry-After value', async () => {
+    const first = deferred<Transcript>()
+    const second = deferred<Transcript>()
+    getTranscript
+      .mockImplementationOnce(async () => first.promise)
+      .mockImplementationOnce(async () => second.promise)
+    const app = buildApp(
+      { transcriptService: { getTranscript }, pdfRenderer: { render } },
+      {
+        apiAccessKey: API_ACCESS_KEY,
+        maxConcurrentTranscripts: 2,
+        transcriptRetryAfterSeconds: 17,
+      },
+    )
+    const firstRequest = app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    const secondRequest = app.inject({
+      method: 'POST',
+      url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    await vi.waitFor(() => expect(getTranscript).toHaveBeenCalledTimes(2))
+
+    const overflow = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+
+    expect(overflow.statusCode).toBe(429)
+    expect(overflow.headers['retry-after']).toBe('17')
+    expect(getTranscript).toHaveBeenCalledTimes(2)
+    first.resolve(captionTranscript)
+    second.resolve(captionTranscript)
+    await Promise.all([firstRequest, secondRequest])
+  })
+
+  it('rejects authentication and validation before admission while saturated', async () => {
+    const { app, held, response } = await holdTranscriptRequest()
+
+    const unauthorized = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts/pdf',
+      payload: { url: VIDEO_URL },
+    })
+    const invalid = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
+      payload: {},
+    })
+
+    expect(unauthorized.statusCode).toBe(401)
+    expect(invalid.statusCode).toBe(400)
+    expect(getTranscript).toHaveBeenCalledOnce()
+    expect(render).not.toHaveBeenCalled()
+
+    held.resolve(captionTranscript)
+    await response
+  })
+
+  it('releases admission after application and PDF failures', async () => {
+    const app = createTestApp()
+    getTranscript.mockRejectedValueOnce(
+      new AppError('YOUTUBE_UPSTREAM_ERROR', 502, 'private provider detail'),
+    )
+
+    const failedTranscript = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    expect(failedTranscript.statusCode).toBe(502)
+
+    render.mockRejectedValueOnce(new AppError('PDF_GENERATION_FAILED', 500, 'private PDF detail'))
+    const failedPdf = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    expect(failedPdf.statusCode).toBe(500)
+
+    const afterFailures = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    expect(afterFailures.statusCode).toBe(200)
+    expect(getTranscript).toHaveBeenCalledTimes(3)
+  })
+
+  it('serves liveness, readiness, and authenticated metrics without transcript admission', async () => {
+    const { app, held, response } = await holdTranscriptRequest()
+
+    const health = await app.inject({ method: 'GET', url: '/health' })
+    const ready = await app.inject({ method: 'GET', url: '/ready' })
+    const metrics = await app.inject({
+      method: 'GET',
+      url: '/metrics',
+      headers: AUTHORIZATION_HEADER,
+    })
+    const openApiBeforeContractTask = await app.inject({ method: 'GET', url: '/openapi.json' })
+
+    expect(health.json()).toEqual({ status: 'ok' })
+    expect(ready.statusCode).toBe(200)
+    expect(ready.json()).toEqual({ status: 'ready' })
+    expect(metrics.statusCode).toBe(200)
+    expect(metrics.headers['content-type']).toBe('text/plain; version=0.0.4; charset=utf-8')
+    expect(metrics.body).toContain('youtube_transcript_active_jobs 1')
+    expect(openApiBeforeContractTask.statusCode).toBe(404)
+    expect(getTranscript).toHaveBeenCalledOnce()
+
+    held.resolve(captionTranscript)
+    await response
+  })
+
+  it('protects metrics with the existing fail-closed Bearer behavior', async () => {
+    const configured = createTestApp()
+    const missingCredential = await configured.inject({ method: 'GET', url: '/metrics' })
+
+    const unconfigured = createTestApp(null)
+    const missingConfiguration = await unconfigured.inject({ method: 'GET', url: '/metrics' })
+
+    expect(missingCredential.statusCode).toBe(401)
+    expect(missingCredential.json()).toEqual({
+      error: { code: 'UNAUTHORIZED', message: 'A valid Bearer token is required' },
+    })
+    expect(missingConfiguration.statusCode).toBe(503)
+    expect(missingConfiguration.json()).toEqual({
+      error: {
+        code: 'API_AUTH_NOT_CONFIGURED',
+        message: 'API authentication is not configured',
+      },
+    })
+    expect(getTranscript).not.toHaveBeenCalled()
+  })
+
+  it('reports not-ready and aborts admitted work when shutdown begins', async () => {
+    let operationOptions: TranscriptOperationOptions | undefined
+    getTranscript.mockImplementationOnce(async (_url, _languages, options) => {
+      operationOptions = options
+      return await new Promise<Transcript>((_resolve, reject) => {
+        options?.signal?.addEventListener(
+          'abort',
+          () => reject(new AppError('AUDIO_PROCESS_ABORTED', 503, 'aborted')),
+          { once: true },
+        )
+      })
+    })
+    const app = createTestApp()
+    const request = app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    await vi.waitFor(() => expect(operationOptions?.signal?.aborted).toBe(false))
+
+    const closing = app.close()
+    await vi.waitFor(() => expect(operationOptions?.signal?.aborted).toBe(true))
+    expect((await request).statusCode).toBe(503)
+    await closing
+  })
+
+  it('returns the exact not-ready response after the lifecycle controller begins shutdown', async () => {
+    const metrics = new RuntimeMetrics()
+    const executionController = new ExecutionController(1, metrics)
+    const app = buildApp(
+      { transcriptService: { getTranscript }, pdfRenderer: { render } },
+      { apiAccessKey: API_ACCESS_KEY, executionController, runtimeMetrics: metrics },
+    )
+
+    executionController.beginShutdown()
+    const response = await app.inject({ method: 'GET', url: '/ready' })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ status: 'not_ready' })
+    expect(getTranscript).not.toHaveBeenCalled()
+  })
+
+  it('aborts and releases work when the client cancels the request', async () => {
+    let operationSignal: AbortSignal | undefined
+    getTranscript.mockImplementationOnce(async (_url, _languages, options) => {
+      operationSignal = options?.signal
+      return await new Promise<Transcript>((_resolve, reject) => {
+        options?.signal?.addEventListener(
+          'abort',
+          () => reject(new AppError('AUDIO_PROCESS_ABORTED', 503, 'aborted')),
+          { once: true },
+        )
+      })
+    })
+    const app = createTestApp()
+    await app.listen({ host: '127.0.0.1', port: 0 })
+    const address = app.server.address()
+    if (!address || typeof address === 'string') throw new Error('Expected a TCP test address')
+    const client = new AbortController()
+    const cancelled = fetch(`http://127.0.0.1:${address.port}/v1/transcripts`, {
+      method: 'POST',
+      headers: {
+        ...AUTHORIZATION_HEADER,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ url: VIDEO_URL }),
+      signal: client.signal,
+    })
+    await vi.waitFor(() => expect(operationSignal?.aborted).toBe(false))
+
+    client.abort()
+    await expect(cancelled).rejects.toThrow()
+    await vi.waitFor(() => expect(operationSignal?.aborted).toBe(true))
+
+    const next = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+    expect(next.statusCode).toBe(200)
+    expect(getTranscript).toHaveBeenCalledTimes(2)
+    await app.close()
+  })
+
+  it('forwards only owned bounded Retry-After metadata from application errors', async () => {
+    const app = createTestApp()
+    getTranscript.mockRejectedValueOnce(
+      new AppError('MUSE_QUOTA_EXCEEDED', 429, 'private provider response', {
+        publicMetadata: { retryAfterSeconds: 90 },
+      }),
+    )
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
+      payload: { url: VIDEO_URL },
+    })
+
+    expect(response.statusCode).toBe(429)
+    expect(response.headers['retry-after']).toBe('90')
+    expect(response.headers.authorization).toBeUndefined()
+    expect(response.body).not.toContain('private provider response')
   })
 
   it('returns a PDF attachment named with the video ID', async () => {
