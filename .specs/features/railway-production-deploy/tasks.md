@@ -91,7 +91,7 @@ T5 → T6
 **Gate:** quick
 **Commit:** `feat(config): load api access credential`
 
-### T2: Protect transcript-producing routes with Bearer authentication
+### T2: Protect transcript-producing routes with Bearer authentication ✅
 
 **What:** Add fail-closed Bearer authentication before both transcript routes while leaving health public.
 **Where:** `src/http/app.ts`
@@ -106,13 +106,13 @@ T5 → T6
 
 **Done when**:
 
-- [ ] `/health` remains public and dependency-free.
-- [ ] Both transcript routes return exact 503/401 error envelopes for missing configuration or invalid authentication before dependency work.
-- [ ] Exact tokens and case-insensitive Bearer schemes continue into existing route validation and success behavior.
-- [ ] Empty, extra-material, malformed, and wrong credentials are rejected.
-- [ ] Logs and responses contain no configured credential or authorization header.
-- [ ] Integration tests cover every authentication acceptance criterion and edge case on both protected routes.
-- [ ] `npm test` passes with no silent test deletions.
+- [x] `/health` remains public and dependency-free.
+- [x] Both transcript routes return exact 503/401 error envelopes for missing configuration or invalid authentication before dependency work.
+- [x] Exact tokens and case-insensitive Bearer schemes continue into existing route validation and success behavior.
+- [x] Empty, extra-material, malformed, and wrong credentials are rejected.
+- [x] Logs and responses contain no configured credential or authorization header.
+- [x] Integration tests cover every authentication acceptance criterion and edge case on both protected routes.
+- [x] `npm run check` passes with 83 tests and no silent test deletions.
 
 **Tests:** integration
 **Gate:** full

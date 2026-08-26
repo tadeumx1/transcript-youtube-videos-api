@@ -104,14 +104,14 @@ transcript content.
 
 | Requirement ID | Story | Planned task | Status |
 | -------------- | ----- | ------------ | ------ |
-| RYSEC-01 | Protected production API | T2 | Planned |
-| RYSEC-02 | Protected production API | T2 | Planned |
-| RYSEC-03 | Protected production API | T2 | Planned |
-| RYSEC-04 | Protected production API | T2 | Planned |
-| RYSEC-05 | Protected production API | T2 | Planned |
+| RYSEC-01 | Protected production API | T2 | Implemented |
+| RYSEC-02 | Protected production API | T2 | Implemented |
+| RYSEC-03 | Protected production API | T2 | Implemented |
+| RYSEC-04 | Protected production API | T2 | Implemented |
+| RYSEC-05 | Protected production API | T2 | Implemented |
 | RYSEC-06 | Protected production API | T1 | Implemented |
-| RYSEC-07 | Edge case | T2 | Planned |
-| RYSEC-08 | Edge case | T2 | Planned |
+| RYSEC-07 | Edge case | T2 | Implemented |
+| RYSEC-08 | Edge case | T2 | Implemented |
 | RYDEP-01 | Railway service | T3, T4 | Planned |
 | RYDEP-02 | Railway service | T3 | Planned |
 | RYDEP-03 | Railway service | T4 | Planned |

@@ -1,4 +1,11 @@
-import fastify, { type FastifyServerOptions, LogController } from 'fastify'
+import { timingSafeEqual } from 'node:crypto'
+
+import fastify, {
+  type FastifyReply,
+  type FastifyRequest,
+  type FastifyServerOptions,
+  LogController,
+} from 'fastify'
 
 import { AppError, type AppErrorCode } from '../domain/errors.js'
 import type { Transcript } from '../domain/transcript.js'
@@ -27,6 +34,7 @@ export interface AppDependencies {
 }
 
 export interface BuildAppOptions {
+  apiAccessKey?: string
   logger?: FastifyServerOptions['logger']
 }
 
@@ -68,6 +76,42 @@ function getLanguages(body: TranscriptRequestBody): readonly string[] | undefine
 
 function isValidationError(error: unknown): error is { validation: unknown } {
   return typeof error === 'object' && error !== null && 'validation' in error
+}
+
+function getBearerCredential(value: string | undefined): string | undefined {
+  return /^Bearer ([^\s]+)$/i.exec(value ?? '')?.[1]
+}
+
+function credentialsMatch(actual: string, expected: string): boolean {
+  const actualBuffer = Buffer.from(actual)
+  const expectedBuffer = Buffer.from(expected)
+  return (
+    actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer)
+  )
+}
+
+function createAuthenticateHook(apiAccessKey: string | undefined) {
+  return async function authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    if (!apiAccessKey) {
+      await reply.status(503).send({
+        error: {
+          code: 'API_AUTH_NOT_CONFIGURED',
+          message: 'API authentication is not configured',
+        },
+      })
+      return
+    }
+
+    const credential = getBearerCredential(request.headers.authorization)
+    if (!credential || !credentialsMatch(credential, apiAccessKey)) {
+      await reply
+        .status(401)
+        .header('www-authenticate', 'Bearer')
+        .send({
+          error: { code: 'UNAUTHORIZED', message: 'A valid Bearer token is required' },
+        })
+    }
+  }
 }
 
 export function buildApp(dependencies: AppDependencies, options: BuildAppOptions = {}) {
@@ -121,9 +165,11 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
 
   app.get('/health', async () => ({ status: 'ok' }))
 
+  const authenticate = createAuthenticateHook(options.apiAccessKey)
+
   app.post<{ Body: TranscriptRequestBody }>(
     '/v1/transcripts',
-    { schema: { body: transcriptRequestSchema } },
+    { onRequest: authenticate, schema: { body: transcriptRequestSchema } },
     async (request) => {
       const parsedUrl = parseYouTubeUrl(request.body.url)
       const transcript = await dependencies.transcriptService.getTranscript(
@@ -140,7 +186,7 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
 
   app.post<{ Body: TranscriptRequestBody }>(
     '/v1/transcripts/pdf',
-    { schema: { body: transcriptRequestSchema } },
+    { onRequest: authenticate, schema: { body: transcriptRequestSchema } },
     async (request, reply) => {
       const parsedUrl = parseYouTubeUrl(request.body.url)
       const transcript = await dependencies.transcriptService.getTranscript(

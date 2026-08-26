@@ -11,6 +11,8 @@ import {
 } from '../../src/http/app.js'
 
 const VIDEO_URL = 'https://youtu.be/dQw4w9WgXcQ'
+const API_ACCESS_KEY = 'test-access-key'
+const AUTHORIZATION_HEADER = { authorization: `Bearer ${API_ACCESS_KEY}` }
 
 const captionTranscript: Transcript = {
   videoId: 'dQw4w9WgXcQ',
@@ -51,12 +53,15 @@ describe('Fastify application', () => {
     render = vi.fn<PdfRenderer['render']>().mockResolvedValue(Buffer.from('%PDF-1.7\nfixture'))
   })
 
-  function createTestApp() {
-    return buildApp({ transcriptService: { getTranscript }, pdfRenderer: { render } })
+  function createTestApp(apiAccessKey: string | null = API_ACCESS_KEY) {
+    return buildApp(
+      { transcriptService: { getTranscript }, pdfRenderer: { render } },
+      apiAccessKey ? { apiAccessKey } : {},
+    )
   }
 
   it('returns an exact health response without calling dependencies', async () => {
-    const app = createTestApp()
+    const app = createTestApp(null)
 
     const response = await app.inject({ method: 'GET', url: '/health' })
 
@@ -66,12 +71,99 @@ describe('Fastify application', () => {
     expect(render).not.toHaveBeenCalled()
   })
 
+  it.each(['/v1/transcripts', '/v1/transcripts/pdf'])(
+    'fails closed when API authentication is not configured on %s',
+    async (url) => {
+      const app = createTestApp(null)
+
+      const response = await app.inject({
+        method: 'POST',
+        url,
+        payload: { url: VIDEO_URL },
+      })
+
+      expect(response.statusCode).toBe(503)
+      expect(response.json()).toEqual({
+        error: {
+          code: 'API_AUTH_NOT_CONFIGURED',
+          message: 'API authentication is not configured',
+        },
+      })
+      expect(getTranscript).not.toHaveBeenCalled()
+      expect(render).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['/v1/transcripts', '/v1/transcripts/pdf'])(
+    'rejects a missing Bearer credential before work on %s',
+    async (url) => {
+      const app = createTestApp()
+
+      const response = await app.inject({
+        method: 'POST',
+        url,
+        payload: { url: VIDEO_URL },
+      })
+
+      expect(response.statusCode).toBe(401)
+      expect(response.headers['www-authenticate']).toBe('Bearer')
+      expect(response.json()).toEqual({
+        error: { code: 'UNAUTHORIZED', message: 'A valid Bearer token is required' },
+      })
+      expect(getTranscript).not.toHaveBeenCalled()
+      expect(render).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ['wrong scheme', 'Basic dGVzdDp0ZXN0'],
+    ['empty token', 'Bearer '],
+    ['wrong token', 'Bearer wrong-access-key'],
+    ['extra token material', `Bearer ${API_ACCESS_KEY} extra`],
+  ])('rejects a %s without calling dependencies', async (_name, authorization) => {
+    const app = createTestApp()
+
+    for (const url of ['/v1/transcripts', '/v1/transcripts/pdf']) {
+      const response = await app.inject({
+        method: 'POST',
+        url,
+        headers: { authorization },
+        payload: { url: VIDEO_URL },
+      })
+
+      expect(response.statusCode).toBe(401)
+      expect(response.json()).toEqual({
+        error: { code: 'UNAUTHORIZED', message: 'A valid Bearer token is required' },
+      })
+    }
+    expect(getTranscript).not.toHaveBeenCalled()
+    expect(render).not.toHaveBeenCalled()
+  })
+
+  it('accepts a case-insensitive Bearer scheme with the exact credential on both routes', async () => {
+    const app = createTestApp()
+
+    for (const url of ['/v1/transcripts', '/v1/transcripts/pdf']) {
+      const response = await app.inject({
+        method: 'POST',
+        url,
+        headers: { authorization: `bEaReR ${API_ACCESS_KEY}` },
+        payload: { url: VIDEO_URL },
+      })
+
+      expect(response.statusCode).toBe(200)
+    }
+    expect(getTranscript).toHaveBeenCalledTimes(2)
+    expect(render).toHaveBeenCalledOnce()
+  })
+
   it('returns the complete unified caption transcript contract', async () => {
     const app = createTestApp()
 
     const response = await app.inject({
       method: 'POST',
       url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
       payload: { url: VIDEO_URL },
     })
 
@@ -102,6 +194,7 @@ describe('Fastify application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
       payload: { url: VIDEO_URL, languages: ['pt-BR', 'en'] },
     })
 
@@ -116,6 +209,7 @@ describe('Fastify application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
       payload: { url: VIDEO_URL },
     })
 
@@ -150,6 +244,7 @@ describe('Fastify application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
       payload,
     })
 
@@ -169,6 +264,7 @@ describe('Fastify application', () => {
       const response = await app.inject({
         method: 'POST',
         url,
+        headers: AUTHORIZATION_HEADER,
         payload: { url: 'https://youtube.example/watch?v=dQw4w9WgXcQ' },
       })
 
@@ -193,6 +289,7 @@ describe('Fastify application', () => {
         const response = await app.inject({
           method: 'POST',
           url,
+          headers: AUTHORIZATION_HEADER,
           payload: { url: VIDEO_URL },
         })
 
@@ -216,6 +313,7 @@ describe('Fastify application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
       payload: { url: VIDEO_URL },
     })
 
@@ -235,6 +333,7 @@ describe('Fastify application', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
       payload: { url: VIDEO_URL },
     })
 
@@ -262,12 +361,13 @@ describe('Fastify application', () => {
     render.mockResolvedValue(Buffer.from('SECRET_PDF_BYTES'))
     const app = buildApp(
       { transcriptService: { getTranscript }, pdfRenderer: { render } },
-      { logger: { level: 'info', stream } },
+      { apiAccessKey: API_ACCESS_KEY, logger: { level: 'info', stream } },
     )
 
     await app.inject({
       method: 'POST',
       url: '/v1/transcripts/pdf',
+      headers: AUTHORIZATION_HEADER,
       payload: { url: VIDEO_URL },
     })
     getTranscript.mockRejectedValue(
@@ -278,6 +378,13 @@ describe('Fastify application', () => {
     await app.inject({
       method: 'POST',
       url: '/v1/transcripts',
+      headers: { authorization: 'Bearer SECRET_WRONG_ACCESS_KEY' },
+      payload: { url: VIDEO_URL },
+    })
+    await app.inject({
+      method: 'POST',
+      url: '/v1/transcripts',
+      headers: AUTHORIZATION_HEADER,
       payload: { url: VIDEO_URL },
     })
     await app.close()
@@ -289,5 +396,7 @@ describe('Fastify application', () => {
     expect(logs).not.toContain('SECRET_PDF_BYTES')
     expect(logs).not.toContain('SECRET_PROVIDER_MESSAGE')
     expect(logs).not.toContain('SECRET_PROVIDER_CAUSE')
+    expect(logs).not.toContain(API_ACCESS_KEY)
+    expect(logs).not.toContain('SECRET_WRONG_ACCESS_KEY')
   })
 })

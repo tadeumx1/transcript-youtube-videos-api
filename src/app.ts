@@ -34,6 +34,9 @@ export function createApplication(config: ApplicationConfig = {}, options: Build
       transcriptService,
       pdfRenderer: new TranscriptPdfRenderer(),
     },
-    options,
+    {
+      ...options,
+      ...(config.apiAccessKey ? { apiAccessKey: config.apiAccessKey } : {}),
+    },
   )
 }
