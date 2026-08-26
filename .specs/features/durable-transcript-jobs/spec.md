@@ -201,13 +201,13 @@ OpenAPI document without credentials.
 | JOB-03 | Submit/retrieve durable jobs | T11, T12 | Completed |
 | JOB-04 | Submit/retrieve durable jobs | T11, T12 | Completed |
 | JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Completed |
-| JOB-06 | Submit/retrieve durable jobs | T12, T13 | Partial (T12 complete) |
+| JOB-06 | Submit/retrieve durable jobs | T12, T13 | Completed |
 | JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Completed |
 | WORK-01 | Durable worker lifecycle | T10, T15 | Partial (T10 complete) |
 | WORK-02 | Durable worker lifecycle | T5, T10 | Completed |
 | WORK-03 | Durable worker lifecycle | T5, T10 | Completed |
 | WORK-04 | Durable worker lifecycle | T2, T10 | Completed |
-| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Partial (T5, T10 complete) |
+| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Partial (T5, T10, T13 complete) |
 | WORK-06 | Durable worker lifecycle | T10 | Completed |
 | WORK-07 | Durable worker lifecycle | T5, T10 | Completed |
 | STORE-01 | Atomic persistent store | T6 | Completed |
@@ -225,13 +225,13 @@ OpenAPI document without credentials.
 | CACHE-05 | Deduplication/cache | T11 | Completed |
 | CACHE-06 | Deduplication/cache | T7, T9 | Completed |
 | CACHE-07 | Deduplication/cache | T8, T11 | Completed |
-| CACHE-08 | Deduplication/cache | T9, T13 | Partial (T9 complete) |
+| CACHE-08 | Deduplication/cache | T9, T13 | Completed |
 | OPS-01 | Durable operations | T3 | Completed |
 | OPS-02 | Durable operations | T16, T17, T18 | Planned |
-| OPS-03 | Durable operations | T13, T15 | Planned |
+| OPS-03 | Durable operations | T13, T15 | Partial (T13 complete) |
 | OPS-04 | Durable operations | T4 | Completed |
 | OPS-05 | Durable operations | T14 | Planned |
-| OPS-06 | Durable operations | T4, T13, T20 | Partial (T4 complete) |
+| OPS-06 | Durable operations | T4, T13, T20 | Partial (T4, T13 complete) |
 | OPS-07 | Durable operations | T3, T17, T18, T19 | Partial (T3 complete) |
 | OPS-08 | Durable operations | T20 | Planned |
 | EDGE-01 | Queue capacity edge case | T11 | Completed |
@@ -239,7 +239,7 @@ OpenAPI document without credentials.
 | EDGE-03 | Uncertain external side effect edge case | T10 | Completed |
 | EDGE-04 | Read/expiry race edge case | T7 | Completed |
 | EDGE-05 | Language identity edge case | T1 | Completed |
-| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Partial (T7, T9 complete) |
+| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Completed |
 | EDGE-07 | Duplicate recovery edge case | T8, T11 | Completed |
 | EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Completed |
 

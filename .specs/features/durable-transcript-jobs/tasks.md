@@ -434,7 +434,7 @@ headers, binary handling, and coordinator delegation.
 **Gate**: full
 **Commit**: `feat(api): add durable job routes`
 
-### T13: Integrate durable lifecycle and synchronous cache
+### T13: Integrate durable lifecycle and synchronous cache ✅
 
 **What**: Wire job routes, coordinator lifecycle/readiness, shared execution controller, and
 best-effort completed-bundle reuse/publication into the existing Fastify application.
@@ -450,13 +450,13 @@ best-effort completed-bundle reuse/publication into the existing Fastify applica
 
 **Done when**:
 
-- [ ] `onReady` awaits coordinator start; readiness requires execution and storage/worker readiness without external calls.
-- [ ] `preClose` marks not-ready, stops claims, aborts active execution, awaits coordinator cleanup, and remains idempotent.
-- [ ] Synchronous verified hit bypasses provider/renderer/admission and returns exact original JSON/PDF bytes.
-- [ ] Synchronous miss preserves auth-before-work, capacity, client abort, error/status, and PDF contracts while publishing a complete bundle best-effort.
-- [ ] A disconnect after job POST never aborts worker work; logs contain only fixed event/state/outcome/reason/status/duration.
-- [ ] Integration tests cover lifecycle order, readiness failure/recovery, sync hit/miss/write-failure, saturation, disconnect independence, prior regressions, and log redaction.
-- [ ] `npm test` passes with at least 228 total tests and no silent deletions.
+- [x] `onReady` awaits coordinator start; readiness requires execution and storage/worker readiness without external calls.
+- [x] `preClose` marks not-ready, stops claims, aborts active execution, awaits coordinator cleanup, and remains idempotent.
+- [x] Synchronous verified hit bypasses provider/renderer/admission and returns exact original JSON/PDF bytes.
+- [x] Synchronous miss preserves auth-before-work, capacity, client abort, error/status, and PDF contracts while publishing a complete bundle best-effort.
+- [x] A disconnect after job POST never aborts worker work; logs contain only fixed event/state/outcome/reason/status/duration.
+- [x] Integration tests cover lifecycle order, readiness failure/recovery, sync hit/miss/write-failure, saturation, disconnect independence, prior regressions, and log redaction.
+- [x] `npm test` passes with at least 228 total tests and no silent deletions.
 
 **Tests**: integration
 **Gate**: full
@@ -682,7 +682,7 @@ boundaries are the only batch boundaries.
 | T10 | One durable-worker component | ✅ Complete |
 | T11 | One job-coordinator component | ✅ Complete |
 | T12 | One job-route plugin | ✅ Complete |
-| T13 | One Fastify integration boundary | ✅ Cohesive lifecycle/cache wiring |
+| T13 | One Fastify integration boundary | ✅ Complete |
 | T14 | One OpenAPI contract extension | ✅ Granular |
 | T15 | One production composition root | ✅ Cohesive dependency graph |
 | T16 | One Railway IaC resource change | ✅ Granular |

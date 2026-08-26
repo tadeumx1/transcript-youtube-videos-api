@@ -6,8 +6,12 @@ import fastify, {
   type FastifyServerOptions,
   LogController,
 } from 'fastify'
-
+import { DurableJobError } from '../application/durable-job-coordinator.js'
 import { ExecutionController } from '../application/execution-controller.js'
+import type {
+  ProducedTranscriptArtifacts,
+  TranscriptArtifactCoordinator,
+} from '../application/transcript-artifact-coordinator.js'
 import { AppError, type AppErrorCode } from '../domain/errors.js'
 import {
   type Transcript,
@@ -15,12 +19,19 @@ import {
   transcriptMetricOutcome,
   transcriptMetricReason,
 } from '../domain/transcript.js'
+import type { NormalizedTranscriptRequest } from '../domain/transcript-request.js'
 import { type ParsedYouTubeUrl, parseYouTubeUrl } from '../domain/youtube-url.js'
 import { RuntimeMetrics } from '../infrastructure/observability/runtime-metrics.js'
 import {
   buildTranscriptPdfModel,
   type TranscriptPdfModel,
 } from '../infrastructure/pdf/transcript-pdf.js'
+import type { ArtifactBundle } from '../infrastructure/storage/file-artifact-store.js'
+import {
+  type JobRouteCoordinator,
+  JobRouteValidationError,
+  registerJobRoutes,
+} from './job-routes.js'
 import {
   healthRouteSchema,
   metricsRouteSchema,
@@ -47,9 +58,22 @@ export interface PdfRenderer {
   render(model: TranscriptPdfModel): Promise<Buffer>
 }
 
+export interface DurableApplicationCoordinator extends JobRouteCoordinator {
+  readonly isReady: boolean
+  start(): Promise<void>
+  stop(): Promise<void>
+}
+
+export type SynchronousArtifactCoordinator = Pick<
+  TranscriptArtifactCoordinator,
+  'prepare' | 'find' | 'produceSync'
+>
+
 export interface AppDependencies {
   transcriptService: TranscriptApplicationService
   pdfRenderer: PdfRenderer
+  jobCoordinator?: DurableApplicationCoordinator
+  artifactCoordinator?: SynchronousArtifactCoordinator
 }
 
 export interface BuildAppOptions {
@@ -84,6 +108,44 @@ const publicErrorMessages: Record<AppErrorCode, string> = {
 
 function getLanguages(body: TranscriptRequestBody): readonly string[] | undefined {
   return body.languages
+}
+
+function prepareArtifactRequest(
+  coordinator: SynchronousArtifactCoordinator | undefined,
+  parsedUrl: ParsedYouTubeUrl,
+  languages: readonly string[] | undefined,
+): NormalizedTranscriptRequest | undefined {
+  if (!coordinator) return undefined
+  try {
+    return coordinator.prepare(parsedUrl, languages)
+  } catch (error) {
+    if (error instanceof TypeError) throw new JobRouteValidationError()
+    throw error
+  }
+}
+
+async function findArtifact(
+  coordinator: SynchronousArtifactCoordinator | undefined,
+  prepared: NormalizedTranscriptRequest | undefined,
+  metrics: RuntimeMetrics,
+): Promise<ArtifactBundle | undefined> {
+  if (!coordinator || !prepared) return undefined
+  try {
+    return await coordinator.find(prepared)
+  } catch {
+    metrics.recordCacheRequest('write_failed')
+    return undefined
+  }
+}
+
+function sendPdf(reply: FastifyReply, transcript: Transcript, pdf: Buffer): FastifyReply {
+  return reply
+    .type('application/pdf')
+    .header(
+      'content-disposition',
+      `attachment; filename="youtube-transcript-${transcript.videoId}.pdf"`,
+    )
+    .send(pdf)
 }
 
 function isValidationError(error: unknown): error is { validation: unknown } {
@@ -178,6 +240,29 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
         })
       }
 
+      if (error instanceof DurableJobError) {
+        request.log.warn({ code: error.code, statusCode: error.statusCode }, 'request failed')
+        if (error.publicMetadata) {
+          reply.header('retry-after', String(error.publicMetadata.retryAfterSeconds))
+        }
+        return reply.status(error.statusCode).send({
+          error: {
+            code: error.code,
+            message: error.message,
+          },
+        })
+      }
+
+      if (error instanceof JobRouteValidationError) {
+        request.log.warn({ code: error.code, statusCode: error.statusCode }, 'request failed')
+        return reply.status(400).send({
+          error: {
+            code: 'INVALID_REQUEST',
+            message: 'Request body validation failed',
+          },
+        })
+      }
+
       request.log.error({ code: 'INTERNAL_SERVER_ERROR', statusCode: 500 }, 'request failed')
       return reply.status(500).send({
         error: {
@@ -190,7 +275,7 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
     app.get('/health', { schema: healthRouteSchema }, async () => ({ status: 'ok' }))
 
     app.get('/ready', { schema: readinessRouteSchema }, async (_request, reply) => {
-      if (!executionController.isReady) {
+      if (!executionController.isReady || dependencies.jobCoordinator?.isReady === false) {
         return reply.status(503).send({ status: 'not_ready' })
       }
       return reply.send({ status: 'ready' })
@@ -198,14 +283,23 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
 
     const authenticate = createAuthenticateHook(options.apiAccessKey)
 
+    if (dependencies.jobCoordinator) {
+      registerJobRoutes(app, dependencies.jobCoordinator, authenticate)
+    }
+
     app.get(
       '/metrics',
       { onRequest: authenticate, schema: metricsRouteSchema },
       async (_request, reply) => reply.type(metrics.contentType).send(await metrics.render()),
     )
 
+    app.addHook('onReady', async () => {
+      await dependencies.jobCoordinator?.start()
+    })
+
     app.addHook('preClose', async () => {
       executionController.beginShutdown()
+      await dependencies.jobCoordinator?.stop()
     })
 
     async function withTranscriptExecution<T>(
@@ -256,12 +350,31 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
       { onRequest: authenticate, schema: transcriptRouteSchema },
       async (request, reply) => {
         const parsedUrl = parseYouTubeUrl(request.body.url)
+        const prepared = prepareArtifactRequest(
+          dependencies.artifactCoordinator,
+          parsedUrl,
+          getLanguages(request.body),
+        )
+        const cached = await findArtifact(dependencies.artifactCoordinator, prepared, metrics)
+        if (cached) {
+          request.log.info({ source: cached.transcript.source }, 'transcript prepared')
+          return cached.transcript
+        }
         return withTranscriptExecution(request, reply, 'json', async (operationOptions) => {
-          const transcript = await dependencies.transcriptService.getTranscript(
-            parsedUrl,
-            getLanguages(request.body),
-            operationOptions,
-          )
+          const produced = prepared
+            ? await dependencies.artifactCoordinator?.produceSync(
+                prepared,
+                'json',
+                operationOptions,
+              )
+            : undefined
+          const transcript = produced
+            ? produced.transcript
+            : await dependencies.transcriptService.getTranscript(
+                parsedUrl,
+                getLanguages(request.body),
+                operationOptions,
+              )
           request.log.info({ source: transcript.source }, 'transcript prepared')
           return transcript
         })
@@ -273,35 +386,50 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
       { onRequest: authenticate, schema: transcriptPdfRouteSchema },
       async (request, reply) => {
         const parsedUrl = parseYouTubeUrl(request.body.url)
+        const prepared = prepareArtifactRequest(
+          dependencies.artifactCoordinator,
+          parsedUrl,
+          getLanguages(request.body),
+        )
+        const cached = await findArtifact(dependencies.artifactCoordinator, prepared, metrics)
+        if (cached) {
+          request.log.info({ source: cached.transcript.source }, 'transcript PDF prepared')
+          return sendPdf(reply, cached.transcript, cached.pdf)
+        }
         return withTranscriptExecution(request, reply, 'pdf', async (operationOptions) => {
-          const transcript = await dependencies.transcriptService.getTranscript(
-            parsedUrl,
-            getLanguages(request.body),
-            operationOptions,
-          )
-          const pdfStartedAt = performance.now()
-          let pdf: Buffer
-          try {
-            pdf = await dependencies.pdfRenderer.render(buildTranscriptPdfModel(transcript))
-            metrics.observeStage('pdf', 'success', (performance.now() - pdfStartedAt) / 1_000)
-          } catch (error) {
-            metrics.observeStage(
+          let result: ProducedTranscriptArtifacts
+          if (prepared && dependencies.artifactCoordinator) {
+            result = await dependencies.artifactCoordinator.produceSync(
+              prepared,
               'pdf',
-              transcriptMetricOutcome(error),
-              (performance.now() - pdfStartedAt) / 1_000,
+              operationOptions,
             )
-            metrics.recordStageFailure('pdf', transcriptMetricReason(error))
-            throw error
+          } else {
+            const transcript = await dependencies.transcriptService.getTranscript(
+              parsedUrl,
+              getLanguages(request.body),
+              operationOptions,
+            )
+            const pdfStartedAt = performance.now()
+            let pdf: Buffer
+            try {
+              pdf = await dependencies.pdfRenderer.render(buildTranscriptPdfModel(transcript))
+              metrics.observeStage('pdf', 'success', (performance.now() - pdfStartedAt) / 1_000)
+            } catch (error) {
+              metrics.observeStage(
+                'pdf',
+                transcriptMetricOutcome(error),
+                (performance.now() - pdfStartedAt) / 1_000,
+              )
+              metrics.recordStageFailure('pdf', transcriptMetricReason(error))
+              throw error
+            }
+            result = { transcript, pdf }
           }
 
-          request.log.info({ source: transcript.source }, 'transcript PDF prepared')
-          return reply
-            .type('application/pdf')
-            .header(
-              'content-disposition',
-              `attachment; filename="youtube-transcript-${transcript.videoId}.pdf"`,
-            )
-            .send(pdf)
+          if (!result.pdf) throw new AppError('PDF_GENERATION_FAILED', 500, 'PDF is unavailable')
+          request.log.info({ source: result.transcript.source }, 'transcript PDF prepared')
+          return sendPdf(reply, result.transcript, result.pdf)
         })
       },
     )
