@@ -11,7 +11,7 @@ commit per task, sequential phase batches, independent verification, and require
 ---
 
 **Design**: `.specs/features/durable-transcript-jobs/design.md`
-**Status**: Verification Fixes Round 1 (automatic after verifier FAIL on 2026-08-26)
+**Status**: Verification Fixes Round 2 (automatic after re-verifier FAIL on 2026-08-26)
 
 ---
 
@@ -807,10 +807,53 @@ later apply approval without mutating remote state.
 
 ---
 
+## Verification Fix Tasks: Round 2
+
+### T29: Normalize malformed manifests as corruption
+
+**What**: Classify strict UUID/SHA validation failures and missing children inside an existing
+artifact as corruption before operational I/O mapping, then invalidate/quarantine and return a miss.
+**Where**: `src/infrastructure/storage/file-artifact-store.ts` and its real-filesystem unit tests
+**Depends on**: T28
+**Requirement**: STORE-03, CACHE-04
+
+**Done when**:
+
+- [ ] Invalid manifest cache key, artifact ID, producer ID, checksum, and missing child all remove the owned pointer first and quarantine under an opaque name.
+- [ ] Cache lookup returns a miss eligible for new work; completed-job read remains sanitized 503.
+- [ ] True EIO remains sanitized 503 without quarantine or pointer deletion.
+- [ ] Real-filesystem tests assert every malformed field, pointer/quarantine order, and unrelated-content preservation.
+- [ ] `npm run test:unit` passes with at least 422 total tests and no silent deletions.
+
+**Tests**: unit/real filesystem
+**Gate**: quick
+**Commit**: `fix(storage): normalize manifest corruption`
+
+### T30: Roll back bundles when pointer publication fails
+
+**What**: Track final-directory publication and remove only the newly published bundle if the cache
+pointer cannot be committed.
+**Where**: `src/infrastructure/storage/file-artifact-store.ts` and its real-filesystem unit tests
+**Depends on**: T29
+**Requirement**: CACHE-07
+
+**Done when**:
+
+- [ ] Injected pointer-write failure leaves no new manifest/JSON/PDF directory and returns the existing sanitized storage failure.
+- [ ] A later equivalent lookup is a clean miss, while any prior/unrelated pointer and bundle remain intact.
+- [ ] Cleanup handles both pre-rename and post-rename failure without deleting content it does not own.
+- [ ] `npm run check` passes with at least 423 total tests and no silent deletions.
+
+**Tests**: unit/real filesystem
+**Gate**: build
+**Commit**: `fix(storage): roll back orphan bundles`
+
+---
+
 ## Phase Execution Map
 
 ```text
-Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7
+Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5 -> Phase 6 -> Phase 7 -> Phase 8
 
 Phase 1: T1 -> T2 -> T3 -> T4 -> T5
 Phase 2: T6 -> T7 -> T8
@@ -819,6 +862,7 @@ Phase 4: T12 -> T13 -> T14
 Phase 5: T15
 Phase 6: T16 -> T17 -> T18 -> T19 -> T20
 Phase 7: T20 -> T21 -> T22 -> T23 -> T24 -> T25 -> T26 -> T27 -> T28
+Phase 8: T28 -> T29 -> T30
 ```
 
 Cross-phase dependencies are declared in task bodies. Execution is strictly sequential; phase
@@ -858,6 +902,8 @@ boundaries are the only batch boundaries.
 | T26 | One full-capacity hit discrimination test | ✅ Complete |
 | T27 | One expiry/resubmission integration scenario | ✅ Complete |
 | T28 | One Railway plan evidence artifact | ✅ Complete |
+| T29 | One malformed-manifest corruption boundary | Verification fix |
+| T30 | One post-rename publication rollback | Verification fix |
 
 ## Diagram-Definition Cross-Check
 
@@ -891,6 +937,8 @@ boundaries are the only batch boundaries.
 | T26 | T25 | T25 -> T26 | ✅ Match |
 | T27 | T26 | T26 -> T27 | ✅ Match |
 | T28 | T27 | T27 -> T28 | ✅ Match |
+| T29 | T28 (verification round) | T28 -> T29 | ✅ Match |
+| T30 | T29 | T29 -> T30 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -924,6 +972,8 @@ boundaries are the only batch boundaries.
 | T26 | Capacity decision order | unit | unit | ✅ OK |
 | T27 | Expiry/resubmission | integration/real temp | integration | ✅ OK |
 | T28 | Railway plan evidence | static/build | existing static/build | ✅ OK |
+| T29 | Manifest corruption classification | unit/real temp | unit | ✅ OK |
+| T30 | Pointer-failure rollback | unit/real temp | unit/build | ✅ OK |
 
 ---
 
@@ -932,7 +982,7 @@ boundaries are the only batch boundaries.
 The user previously selected TLC, Railway, and sequential subagents for the production program.
 Proposed execution mapping:
 
-- T1-T15, T17-T19, and T21-T27: local source/test tools + `tlc-spec-driven`; no MCP or network.
+- T1-T15, T17-T19, T21-T27, and T29-T30: local source/test tools + `tlc-spec-driven`; no MCP or network.
 - T16, T20, and T28: `tlc-spec-driven` + `use-railway`; Railway CLI is read-only (`config plan`) until
   the exact plan receives separate apply approval.
 - T18: local container/static gates; CI remains authoritative if Docker is unavailable.
