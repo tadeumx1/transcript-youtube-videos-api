@@ -225,7 +225,7 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | PROC-01 | Media timeout and cancellation | T1, T4, T5 | Implemented |
 | PROC-02 | Media timeout and cancellation | T4, T5, T7 | Implemented |
 | PROC-03 | Media timeout and cancellation | T1, T4 | Implemented |
-| PROC-04 | Media timeout and cancellation | T4 | Implemented |
+| PROC-04 | Media timeout and cancellation | T4, T12 | Fix task T12 pending |
 | PROC-05 | Media timeout and cancellation | T4 | Implemented |
 | PROC-06 | Media timeout and cancellation | T5, T7 | Implemented |
 | PROC-07 | Media timeout and cancellation edge case | T4 | Implemented |
@@ -254,11 +254,11 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | CI-02 | Continuous integration | T10 | Implemented |
 | CI-03 | Continuous integration | T10 | Implemented |
 | CI-04 | Continuous integration | T10 | Implemented |
-| CI-05 | Continuous integration | T10 | Implemented |
+| CI-05 | Continuous integration | T10, T13 | Fix task T13 pending |
 | CI-06 | Continuous integration | T10 | Implemented |
 | CI-07 | Continuous integration edge case | T10 | Implemented |
 | OPS-01 | YouTube operations runbook | T11 | Implemented |
-| OPS-02 | YouTube operations runbook | T11 | Implemented |
+| OPS-02 | YouTube operations runbook | T11, T14 | Fix task T14 pending |
 | OPS-03 | YouTube operations runbook | T11 | Implemented |
 | OPS-04 | YouTube operations runbook | T11 | Implemented |
 | OPS-05 | YouTube operations runbook | T11 | Implemented |

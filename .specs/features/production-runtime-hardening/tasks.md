@@ -49,8 +49,9 @@ sequential batch delegation, independent verification, and requirement traceabil
 
 ## Execution Plan
 
-Phases run sequentially. The phases pack into two approved TLC worker batches: Phase 1 plus Phase 2
-(seven tasks), then Phase 3 plus Phase 4 (four tasks). A fresh verifier runs after T11.
+Phases run sequentially. The original phases packed into two approved TLC worker batches: Phase 1
+plus Phase 2 (seven tasks), then Phase 3 plus Phase 4 (four tasks). The first verifier found three
+surviving mutants; Phase 5 contains one atomic regression task for each gap.
 
 ### Phase 1: Runtime primitives
 
@@ -74,6 +75,12 @@ T8 -> T9
 
 ```text
 T10 -> T11
+```
+
+### Phase 5: Verifier regression fixes
+
+```text
+T12 -> T13 -> T14
 ```
 
 ---
@@ -397,17 +404,96 @@ policy, backed by a static contract test and linked from the README.
 **Gate:** build
 **Commit:** `docs(operations): add youtube blocking runbook`
 
+## Phase 5 Tasks
+
+### T12: Discriminate AbortSignal listener cleanup
+
+**What:** Add direct evidence that `NodeProcessRunner` removes the exact caller abort listener after
+normal close and after rejection, killing verifier mutant M10.
+**Where:** `test/unit/process-runner.test.ts`
+**Depends on:** T11
+**Reuses:** Existing fake child, fake timers, and process-listener cleanup assertions
+**Requirement:** PROC-04
+
+**Tools:**
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when:**
+
+- [ ] Tests spy on caller-signal listener registration/removal and prove the same listener/options are removed exactly once after success and failure.
+- [ ] The test fails when `removeEventListener('abort', onAbort)` is removed from the runner.
+- [ ] Existing single-settlement, timer, process listener, and stderr listener assertions remain unchanged.
+- [ ] `npm run test:unit` passes with at least 213 tests and no silent deletions.
+
+**Tests:** unit
+**Gate:** quick
+**Commit:** `test(media): assert abort listener cleanup`
+
+### T13: Make CI gates fail closed
+
+**What:** Strengthen the static workflow contract so source and container gates cannot tolerate
+failure through `continue-on-error`, killing verifier mutant M12.
+**Where:** `test/unit/ci-contract.test.ts`
+**Depends on:** T12
+**Reuses:** Parsed workflow fixture and exact source/container step assertions
+**Requirement:** CI-05
+
+**Tools:**
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when:**
+
+- [ ] Every source and container job/step is asserted not to set `continue-on-error: true`.
+- [ ] The contract test fails when `continue-on-error: true` is added to `npm run check` or Docker build.
+- [ ] Existing job names, dependency, permissions, commands, and branch-protection assertions remain unchanged.
+- [ ] `npm run test:unit` passes with at least 214 tests and no silent deletions.
+
+**Tests:** unit/static
+**Gate:** quick
+**Commit:** `test(ci): require fail-closed gates`
+
+### T14: Require transcript-output suppression in diagnostics
+
+**What:** Strengthen the runbook contract so every transcript diagnostic discards its response body,
+killing verifier mutant M9.
+**Where:** `test/unit/youtube-blocking-runbook-contract.test.ts`
+**Depends on:** T13
+**Reuses:** Parsed bounded command blocks and required-stage assertions
+**Requirement:** OPS-02
+
+**Tools:**
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when:**
+
+- [ ] Every command that calls `/v1/transcripts` or `/v1/transcripts/pdf` is identified explicitly.
+- [ ] Each identified transcript command is asserted to include `--output /dev/null` or an equivalent explicit body sink.
+- [ ] The contract test fails when the sink is removed from the runbook command.
+- [ ] Existing timeout, output-bound, placeholder, policy, error-code, and prohibited-guidance assertions remain unchanged.
+- [ ] `npm run check` passes with at least 215 tests and no silent deletions.
+
+**Tests:** unit/static
+**Gate:** build
+**Commit:** `test(operations): require transcript output sink`
+
 ---
 
 ## Phase Execution Map
 
 ```text
-Phase 1 -> Phase 2 -> Phase 3 -> Phase 4
+Phase 1 -> Phase 2 -> Phase 3 -> Phase 4 -> Phase 5
 
 Phase 1: T1 -> T2 -> T3
 Phase 2: T4 -> T5 -> T6 -> T7
 Phase 3: T8 -> T9
 Phase 4: T10 -> T11
+Phase 5: T12 -> T13 -> T14
 ```
 
 Cross-phase dependencies are declared in task bodies. Execution is strictly sequential and the
@@ -430,6 +516,9 @@ approved subagent batches never overlap.
 | T9 | One generated OpenAPI contract | ✅ Granular |
 | T10 | One CI contract | ✅ Granular |
 | T11 | One operator runbook contract | ✅ Granular |
+| T12 | One process-listener regression contract | ✅ Granular |
+| T13 | One CI fail-closed regression contract | ✅ Granular |
+| T14 | One runbook output-suppression regression contract | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -446,6 +535,9 @@ approved subagent batches never overlap.
 | T9 | T8 | T8 -> T9 | ✅ Match |
 | T10 | T9 (cross-phase) | Phase 4 start | ✅ Match; cross-phase implied |
 | T11 | T10 | T10 -> T11 | ✅ Match |
+| T12 | T11 (cross-phase) | Phase 5 start | ✅ Match; cross-phase implied |
+| T13 | T12 | T12 -> T13 | ✅ Match |
+| T14 | T13 | T13 -> T14 | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -462,6 +554,9 @@ approved subagent batches never overlap.
 | T9 | Fastify OpenAPI | integration | integration | ✅ OK |
 | T10 | CI contract | unit/static | unit/static | ✅ OK |
 | T11 | Runbook contract | unit/static | unit/static | ✅ OK |
+| T12 | Process regression contract | unit | unit | ✅ OK |
+| T13 | CI regression contract | unit/static | unit/static | ✅ OK |
+| T14 | Runbook regression contract | unit/static | unit/static | ✅ OK |
 
 ---
 
