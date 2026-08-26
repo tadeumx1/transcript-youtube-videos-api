@@ -406,7 +406,7 @@ reads, result state mapping, worker notification, sweeper, and active ownership 
 
 ## Phase 4 Tasks
 
-### T12: Register authenticated durable job routes
+### T12: Register authenticated durable job routes ✅
 
 **What**: Add the four Fastify job operations as one isolated route component with exact schemas,
 headers, binary handling, and coordinator delegation.
@@ -422,13 +422,13 @@ headers, binary handling, and coordinator delegation.
 
 **Done when**:
 
-- [ ] POST returns exact 202 body, `Location`, and `Retry-After: 2` for miss/joined/hit.
-- [ ] Status returns each exact retained resource; transcript/PDF return exact JSON/bytes/content headers.
-- [ ] Queued/processing/failed/unknown/expired/storage states map to exact 409/404/410/503 codes and owned headers.
-- [ ] Bearer authentication runs before body, UUID, coordinator, repository, or result access; missing config remains fail-closed 503.
-- [ ] Invalid language/UUID gets 400 with zero coordinator/path/provider calls.
-- [ ] Integration tests through Fastify injection cover every route/state/header/content type/auth order/redaction branch.
-- [ ] `npm test` passes with at least 227 total tests and no silent deletions.
+- [x] POST returns exact 202 body, `Location`, and `Retry-After: 2` for miss/joined/hit.
+- [x] Status returns each exact retained resource; transcript/PDF return exact JSON/bytes/content headers.
+- [x] Queued/processing/failed/unknown/expired/storage states map to exact 409/404/410/503 codes and owned headers.
+- [x] Bearer authentication runs before body, UUID, coordinator, repository, or result access; missing config remains fail-closed 503.
+- [x] Invalid language/UUID gets 400 with zero coordinator/path/provider calls.
+- [x] Integration tests through Fastify injection cover every route/state/header/content type/auth order/redaction branch.
+- [x] `npm test` passes with at least 227 total tests and no silent deletions.
 
 **Tests**: integration
 **Gate**: full
@@ -681,7 +681,7 @@ boundaries are the only batch boundaries.
 | T9 | One artifact-coordinator component | ✅ Complete |
 | T10 | One durable-worker component | ✅ Complete |
 | T11 | One job-coordinator component | ✅ Complete |
-| T12 | One job-route plugin | ✅ Cohesive four-operation resource |
+| T12 | One job-route plugin | ✅ Complete |
 | T13 | One Fastify integration boundary | ✅ Cohesive lifecycle/cache wiring |
 | T14 | One OpenAPI contract extension | ✅ Granular |
 | T15 | One production composition root | ✅ Cohesive dependency graph |
