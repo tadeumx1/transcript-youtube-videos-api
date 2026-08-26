@@ -101,7 +101,7 @@ Approved phase-aligned batching proposal:
 
 ## Phase 1 Tasks
 
-### T1: Canonicalize transcript request identity
+### T1: Canonicalize transcript request identity ✅
 
 **What**: Add the deterministic language normalization and versioned SHA-256 cache-key component.
 **Where**: `src/domain/transcript-request.ts`
@@ -116,11 +116,11 @@ Approved phase-aligned batching proposal:
 
 **Done when**:
 
-- [ ] Omitted languages normalize exactly to `pt-BR`, `pt`, `en`; equivalent case deduplicates to the same key; post-canonicalization duplicates reject before other work.
-- [ ] Preference order changes the key; URL variants with the same canonical video ID do not.
-- [ ] The preimage includes exact schema/policy versions and never appears in the public normalized result.
-- [ ] Unit tests assert exact keys/properties for defaults, case, duplicates, order, version, and invalid tags.
-- [ ] `npm run test:unit` passes with at least 167 tests and no silent deletions.
+- [x] Omitted languages normalize exactly to `pt-BR`, `pt`, `en`; equivalent case deduplicates to the same key; post-canonicalization duplicates reject before other work.
+- [x] Preference order changes the key; URL variants with the same canonical video ID do not.
+- [x] The preimage includes exact schema/policy versions and never appears in the public normalized result.
+- [x] Unit tests assert exact keys/properties for defaults, case, duplicates, order, version, and invalid tags.
+- [x] `npm run test:unit` passes with at least 167 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -670,7 +670,7 @@ boundaries are the only batch boundaries.
 
 | Task | Scope | Status |
 | ---- | ----- | ------ |
-| T1 | One request-identity component | ✅ Granular |
+| T1 | One request-identity component | ✅ Complete |
 | T2 | One durable-job domain component | ✅ Granular |
 | T3 | One runtime-config extension | ✅ Granular |
 | T4 | One metrics-registry extension | ✅ Granular |

@@ -218,8 +218,8 @@ OpenAPI document without credentials.
 | STORE-06 | Atomic persistent store | T7, T15 | Planned |
 | STORE-07 | Atomic persistent store | T7, T8 | Planned |
 | STORE-08 | Atomic persistent store | T6, T7, T8 | Planned |
-| CACHE-01 | Deduplication/cache | T1 | Planned |
-| CACHE-02 | Deduplication/cache | T1 | Planned |
+| CACHE-01 | Deduplication/cache | T1 | Completed |
+| CACHE-02 | Deduplication/cache | T1 | Completed |
 | CACHE-03 | Deduplication/cache | T11 | Planned |
 | CACHE-04 | Deduplication/cache | T11 | Planned |
 | CACHE-05 | Deduplication/cache | T11 | Planned |
@@ -238,7 +238,7 @@ OpenAPI document without credentials.
 | EDGE-02 | Partial publication edge case | T7, T10 | Planned |
 | EDGE-03 | Uncertain external side effect edge case | T10 | Planned |
 | EDGE-04 | Read/expiry race edge case | T7 | Planned |
-| EDGE-05 | Language identity edge case | T1 | Planned |
+| EDGE-05 | Language identity edge case | T1 | Completed |
 | EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Planned |
 | EDGE-07 | Duplicate recovery edge case | T8, T11 | Planned |
 | EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Planned |
