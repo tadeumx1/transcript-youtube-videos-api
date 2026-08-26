@@ -41,9 +41,7 @@ const transcript: Transcript = {
 }
 
 function createFixture() {
-  const getTranscript = vi
-    .fn<TranscriptProducer['getTranscript']>()
-    .mockResolvedValue(transcript)
+  const getTranscript = vi.fn<TranscriptProducer['getTranscript']>().mockResolvedValue(transcript)
   const render = vi.fn().mockResolvedValue(pdf)
   const find = vi.fn<TranscriptArtifactStore['find']>().mockResolvedValue(undefined)
   const publishBundle = vi
@@ -274,9 +272,9 @@ describe('TranscriptArtifactCoordinator', () => {
     const error = new AppError('MUSE_TRANSCRIPTION_FAILED', 502, 'provider body secret')
     fixture.getTranscript.mockRejectedValue(error)
 
-    await expect(
-      fixture.coordinator.produceRequired({ jobId, request: prepared }),
-    ).rejects.toBe(error)
+    await expect(fixture.coordinator.produceRequired({ jobId, request: prepared })).rejects.toBe(
+      error,
+    )
 
     expect(fixture.saveWorkTranscript).not.toHaveBeenCalled()
     expect(fixture.render).not.toHaveBeenCalled()

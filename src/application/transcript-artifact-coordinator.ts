@@ -1,13 +1,13 @@
 import {
-  type NormalizedTranscriptRequest,
-  normalizeTranscriptRequest,
-} from '../domain/transcript-request.js'
-import {
   type Transcript,
   type TranscriptOperationOptions,
   transcriptMetricOutcome,
   transcriptMetricReason,
 } from '../domain/transcript.js'
+import {
+  type NormalizedTranscriptRequest,
+  normalizeTranscriptRequest,
+} from '../domain/transcript-request.js'
 import type { ParsedYouTubeUrl } from '../domain/youtube-url.js'
 import {
   buildTranscriptPdfModel,
@@ -89,10 +89,7 @@ export class TranscriptArtifactCoordinator {
     this.#monotonicNow = options.monotonicNow ?? (() => performance.now())
   }
 
-  prepare(
-    parsedUrl: ParsedYouTubeUrl,
-    languages?: readonly string[],
-  ): NormalizedTranscriptRequest {
+  prepare(parsedUrl: ParsedYouTubeUrl, languages?: readonly string[]): NormalizedTranscriptRequest {
     return normalizeTranscriptRequest(parsedUrl, languages)
   }
 
@@ -143,22 +140,14 @@ export class TranscriptArtifactCoordinator {
       videoId: prepared.videoId,
       canonicalUrl: prepared.canonicalUrl,
     }
-    return this.#transcriptProducer.getTranscript(
-      parsedUrl,
-      prepared.languages,
-      operationOptions,
-    )
+    return this.#transcriptProducer.getTranscript(parsedUrl, prepared.languages, operationOptions)
   }
 
   async #renderPdf(transcript: Transcript): Promise<Buffer> {
     const startedAt = this.#monotonicNow()
     try {
       const pdf = await this.#pdfRenderer.render(buildTranscriptPdfModel(transcript))
-      this.#metrics.observeStage(
-        'pdf',
-        'success',
-        (this.#monotonicNow() - startedAt) / 1_000,
-      )
+      this.#metrics.observeStage('pdf', 'success', (this.#monotonicNow() - startedAt) / 1_000)
       return pdf
     } catch (error) {
       this.#metrics.observeStage(
