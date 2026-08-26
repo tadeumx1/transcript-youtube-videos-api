@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -19,7 +19,11 @@ import {
 } from '../../src/domain/job.js'
 import type { Transcript, TranscriptOperationOptions } from '../../src/domain/transcript.js'
 import { normalizeTranscriptRequest } from '../../src/domain/transcript-request.js'
-import { FileArtifactStore } from '../../src/infrastructure/storage/file-artifact-store.js'
+import { createStoragePaths } from '../../src/infrastructure/storage/atomic-file-writer.js'
+import {
+  FileArtifactStore,
+  nodeArtifactStoreFileOperations,
+} from '../../src/infrastructure/storage/file-artifact-store.js'
 
 const roots: string[] = []
 const now = new Date('2026-08-26T12:00:00.000Z')
@@ -28,6 +32,10 @@ const artifactExpiresAt = '2026-09-02T12:00:00.000Z'
 const jobId = '28f5f7d2-f1de-4b27-92df-28c0e30607f8'
 const artifactId = 'f43a8406-46ba-4f8d-9de2-c768e6f69659'
 const temporaryId = '0740ad03-e775-47bb-a0a1-a525f0491690'
+const unrelatedJobId = 'ef1e02cb-9f68-41e0-bc40-c1425052108f'
+const unrelatedArtifactId = 'de99ce88-f43c-4881-8ff4-cd68c1d4c359'
+const unrelatedTemporaryId = '7ff2f0e7-2a7c-4fb1-a40c-0524bf484e4e'
+const unrelatedCacheKey = 'b'.repeat(64)
 const request = normalizeTranscriptRequest({
   videoId: 'dQw4w9WgXcQ',
   canonicalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -143,13 +151,21 @@ function createFixture(records = [queued()]) {
     producerJobId: jobId,
     expiresAt: artifactExpiresAt,
   })
+  const cleanupWorkTranscript = vi.fn().mockResolvedValue(undefined)
+  const invalidateBundle = vi.fn().mockResolvedValue(undefined)
   const render = vi.fn().mockResolvedValue(pdf)
   const metrics = createMetrics()
   const worker = new DurableJobWorker({
     repository,
     executionController: { waitForPermit },
     artifactCoordinator: { produceRequired },
-    artifactStore: { find, recoverWorkTranscript, publishBundle },
+    artifactStore: {
+      find,
+      recoverWorkTranscript,
+      publishBundle,
+      cleanupWorkTranscript,
+      invalidateBundle,
+    },
     pdfRenderer: { render },
     metrics,
     failedJobTtlSeconds: 86_400,
@@ -159,6 +175,8 @@ function createFixture(records = [queued()]) {
   })
   return {
     find,
+    cleanupWorkTranscript,
+    invalidateBundle,
     metrics,
     permitController,
     produceRequired,
@@ -281,6 +299,134 @@ describe('DurableJobWorker', () => {
     )
     expect(fixture.release).toHaveBeenCalledOnce()
     expect(fixture.metrics.observeJobDuration).toHaveBeenCalledExactlyOnceWith('failed', 0)
+  })
+
+  it('removes private work after a successful terminal transition on a real filesystem', async () => {
+    const root = await temporaryRoot()
+    const paths = createStoragePaths(root)
+    const ids = [artifactId, temporaryId]
+    const store = new FileArtifactStore({ root, createId: () => ids.shift() ?? temporaryId })
+    await store.saveWorkTranscript(jobId, transcript)
+    const reference = await store.publishBundle({
+      cacheKey: request.cacheKey,
+      producerJobId: jobId,
+      transcript,
+      pdf,
+      createdAt: now.toISOString(),
+      expiresAt: artifactExpiresAt,
+    })
+    const fixture = createFixture()
+    fixture.produceRequired.mockResolvedValue(reference)
+    const worker = new DurableJobWorker({
+      repository: fixture.repository,
+      executionController: { waitForPermit: fixture.waitForPermit },
+      artifactCoordinator: { produceRequired: fixture.produceRequired },
+      artifactStore: store,
+      pdfRenderer: { render: fixture.render },
+      metrics: fixture.metrics,
+      failedJobTtlSeconds: 86_400,
+      artifactTtlSeconds: 604_800,
+      now: () => now,
+      monotonicNow: () => 5_000,
+    })
+
+    worker.start()
+    worker.notify()
+    await vi.waitFor(() =>
+      expect(fixture.repository.records.get(jobId)).toMatchObject({ status: 'completed' }),
+    )
+    await worker.stop()
+
+    await expect(readFile(join(paths.work(jobId), 'manifest.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+    await expect(store.find(request.cacheKey, now)).resolves.toMatchObject({ transcript, pdf })
+  })
+
+  it('cleans private work and rolls back a failed completion before persisting failure', async () => {
+    const root = await temporaryRoot()
+    const paths = createStoragePaths(root)
+    const events: string[] = []
+    const operations = {
+      ...nodeArtifactStoreFileOperations,
+      async remove(path: string, recursive?: boolean) {
+        if (path === paths.work(jobId)) events.push('remove:work')
+        if (path === paths.cache(request.cacheKey)) events.push('remove:pointer')
+        if (path === paths.artifact(artifactId)) events.push('remove:bundle')
+        await nodeArtifactStoreFileOperations.remove(path, recursive)
+      },
+    }
+    const ids = [artifactId, temporaryId, unrelatedArtifactId, unrelatedTemporaryId]
+    const store = new FileArtifactStore({
+      root,
+      operations,
+      createId: () => ids.shift() ?? unrelatedTemporaryId,
+    })
+    await store.saveWorkTranscript(jobId, transcript)
+    await store.saveWorkTranscript(unrelatedJobId, transcript)
+    const reference = await store.publishBundle({
+      cacheKey: request.cacheKey,
+      producerJobId: jobId,
+      transcript,
+      pdf,
+      createdAt: now.toISOString(),
+      expiresAt: artifactExpiresAt,
+    })
+    await store.publishBundle({
+      cacheKey: unrelatedCacheKey,
+      producerJobId: unrelatedJobId,
+      transcript,
+      pdf,
+      createdAt: now.toISOString(),
+      expiresAt: artifactExpiresAt,
+    })
+    const fixture = createFixture()
+    fixture.produceRequired.mockResolvedValue(reference)
+    const transition = fixture.repository.transition.bind(fixture.repository)
+    fixture.repository.transition = vi.fn(async (id, revision, change) => {
+      events.push(`transition:${change.type}`)
+      if (change.type === 'complete') throw new Error('injected completion failure')
+      return transition(id, revision, change)
+    })
+    const worker = new DurableJobWorker({
+      repository: fixture.repository,
+      executionController: { waitForPermit: fixture.waitForPermit },
+      artifactCoordinator: { produceRequired: fixture.produceRequired },
+      artifactStore: store,
+      pdfRenderer: { render: fixture.render },
+      metrics: fixture.metrics,
+      failedJobTtlSeconds: 86_400,
+      artifactTtlSeconds: 604_800,
+      now: () => now,
+      monotonicNow: () => 5_000,
+    })
+
+    worker.start()
+    worker.notify()
+    await vi.waitFor(() =>
+      expect(fixture.repository.records.get(jobId)).toMatchObject({ status: 'failed' }),
+    )
+    await worker.stop()
+
+    expect(events).toEqual([
+      'transition:start',
+      'transition:complete',
+      'remove:pointer',
+      'remove:bundle',
+      'remove:work',
+      'transition:fail',
+    ])
+    await expect(readFile(join(paths.work(jobId), 'manifest.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+    await expect(readFile(paths.cache(request.cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(readFile(join(paths.artifact(artifactId), 'manifest.json'))).rejects.toMatchObject(
+      {
+        code: 'ENOENT',
+      },
+    )
+    await expect(store.find(unrelatedCacheKey, now)).resolves.toMatchObject({ transcript, pdf })
+    await expect(store.recoverWorkTranscript(unrelatedJobId)).resolves.toEqual(transcript)
   })
 
   it('reconciles a complete bundle to completed without provider or PDF work', async () => {

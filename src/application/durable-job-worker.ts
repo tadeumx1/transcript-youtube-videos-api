@@ -51,6 +51,8 @@ export interface DurableWorkerArtifactStore {
   find(cacheKey: string, now: Date): Promise<ArtifactBundle | undefined>
   recoverWorkTranscript(jobId: string): Promise<Transcript | undefined>
   publishBundle(input: PublishArtifactInput): Promise<ArtifactReference>
+  cleanupWorkTranscript(jobId: string, cacheKey: string): Promise<void>
+  invalidateBundle(reference: ArtifactReference): Promise<void>
 }
 
 export interface DurableWorkerPdfRenderer {
@@ -163,14 +165,14 @@ export class DurableJobWorker {
 
       const complete = await this.#artifactStore.find(current.request.cacheKey, this.#now())
       if (complete) {
-        await this.#complete(current, complete.reference)
+        await this.#completePublished(current, complete.reference)
         this.#metrics.recordJobRecovery('completed')
         continue
       }
 
       const transcript = await this.#artifactStore.recoverWorkTranscript(current.jobId)
       if (!transcript) {
-        await this.#fail(current, createPublicJobFailure('JOB_INTERRUPTED'))
+        await this.#failTerminal(current, createPublicJobFailure('JOB_INTERRUPTED'))
         this.#metrics.recordJobRecovery('interrupted')
         continue
       }
@@ -186,11 +188,11 @@ export class DurableJobWorker {
           createdAt: at.toISOString(),
           expiresAt: addSeconds(at, this.#artifactTtlSeconds),
         })
-        await this.#complete(current, reference)
+        await this.#completePublished(current, reference)
         this.#metrics.recordJobRecovery('pdf_resumed')
       } catch (error) {
         if (!(error instanceof AppError)) throw error
-        await this.#fail(current, sanitizedFailure(error, false))
+        await this.#failTerminal(current, sanitizedFailure(error, false))
         this.#metrics.recordJobRecovery('interrupted')
       }
     }
@@ -241,13 +243,13 @@ export class DurableJobWorker {
         { jobId: claimed.jobId, request: claimed.request },
         options,
       )
-      await this.#complete(claimed, reference)
+      await this.#completePublished(claimed, reference)
       this.#metrics.observeJobDuration('completed', (this.#monotonicNow() - startedAt) / 1_000)
       return true
     } catch (error) {
       if (!claimed) return false
       const failure = sanitizedFailure(error, stopSignal.aborted || permit.signal.aborted)
-      await this.#fail(claimed, failure).catch(() => undefined)
+      await this.#failTerminal(claimed, failure).catch(() => undefined)
       this.#metrics.observeJobDuration(
         failure.code === 'JOB_INTERRUPTED' ? 'interrupted' : 'failed',
         (this.#monotonicNow() - startedAt) / 1_000,
@@ -266,6 +268,29 @@ export class DurableJobWorker {
       expiresAt: reference.expiresAt,
       artifactId: reference.artifactId,
     })
+  }
+
+  async #completePublished(
+    job: TranscriptJobRecord,
+    reference: ArtifactReference,
+  ): Promise<TranscriptJobRecord> {
+    let completed: TranscriptJobRecord
+    try {
+      completed = await this.#complete(job, reference)
+    } catch (error) {
+      await this.#artifactStore.invalidateBundle(reference)
+      throw error
+    }
+    await this.#artifactStore.cleanupWorkTranscript(job.jobId, job.request.cacheKey)
+    return completed
+  }
+
+  async #failTerminal(
+    job: TranscriptJobRecord,
+    failure: PublicJobFailure,
+  ): Promise<TranscriptJobRecord> {
+    await this.#artifactStore.cleanupWorkTranscript(job.jobId, job.request.cacheKey)
+    return this.#fail(job, failure)
   }
 
   #fail(job: TranscriptJobRecord, failure: PublicJobFailure): Promise<TranscriptJobRecord> {

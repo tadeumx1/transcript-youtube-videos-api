@@ -456,6 +456,39 @@ export class FileArtifactStore {
     }
   }
 
+  async cleanupWorkTranscript(jobId: string, cacheKey: string): Promise<void> {
+    const id = assertJobId(jobId)
+    const key = assertSha256(cacheKey)
+    await this.#withKey(key, async () => {
+      try {
+        await this.#operations.remove(this.#paths.work(id), true)
+      } catch {
+        this.#storageFailure()
+      }
+    })
+  }
+
+  async invalidateBundle(reference: ArtifactReference): Promise<void> {
+    const key = assertSha256(reference.cacheKey)
+    const artifactId = assertJobId(reference.artifactId)
+    await this.#withKey(key, async () => {
+      const pointerPath = this.#paths.cache(key)
+      try {
+        const pointer = parsePointer(await this.#readJson(pointerPath))
+        if (pointer.cacheKey === key && pointer.artifactId === artifactId) {
+          await this.#operations.remove(pointerPath)
+        }
+        await this.#operations.remove(this.#paths.artifact(artifactId), true)
+      } catch (error) {
+        if (isMissing(error)) {
+          await this.#operations.remove(this.#paths.artifact(artifactId), true)
+          return
+        }
+        this.#storageFailure()
+      }
+    })
+  }
+
   async expire(reference: ArtifactReference): Promise<void> {
     const key = assertSha256(reference.cacheKey)
     assertJobId(reference.artifactId)

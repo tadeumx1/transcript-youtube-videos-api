@@ -653,7 +653,7 @@ single-Volume topology, redeploy downtime, interrupted-work policy, backup risk,
 These tasks are scoped only to the ranked gaps in `validation.md`. They run sequentially and are
 followed by a fresh independent verification.
 
-### T21: Clean private work and roll back failed publications
+### T21: Clean private work and roll back failed publications ✅
 
 **What**: Remove verified private work after every terminal path and prevent a bundle/cache pointer
 from surviving when the producer cannot persist `completed`.
@@ -664,10 +664,10 @@ from surviving when the producer cannot persist `completed`.
 
 **Done when**:
 
-- [ ] Success and terminal failure remove only the validated private work directory under the per-key lock.
-- [ ] A completion-transition failure invalidates the just-published pointer/bundle before persisting failed state, so failed producers never become cache hits.
-- [ ] Real-filesystem tests assert cleanup, rollback ordering, no unrelated deletion, and zero surviving cache/work content.
-- [ ] `npm run test:unit` passes with at least 413 total tests and no silent deletions.
+- [x] Success and terminal failure remove only the validated private work directory under the per-key lock.
+- [x] A completion-transition failure invalidates the just-published pointer/bundle before persisting failed state, so failed producers never become cache hits.
+- [x] Real-filesystem tests assert cleanup, rollback ordering, no unrelated deletion, and zero surviving cache/work content.
+- [x] `npm run test:unit` passes with at least 413 total tests and no silent deletions.
 
 **Tests**: unit/real filesystem
 **Gate**: quick
@@ -850,7 +850,7 @@ boundaries are the only batch boundaries.
 | T18 | One Docker runtime integration | ✅ Complete |
 | T19 | One ignore-policy change | ✅ Complete |
 | T20 | One operator/developer documentation contract | ✅ Complete |
-| T21 | One durable-publication cleanup boundary | Verification fix |
+| T21 | One durable-publication cleanup boundary | ✅ Complete |
 | T22 | One durable-submit storage error boundary | Verification fix |
 | T23 | One completed-artifact quarantine path | Verification fix |
 | T24 | One lifecycle-gauge synchronization path | Verification fix |

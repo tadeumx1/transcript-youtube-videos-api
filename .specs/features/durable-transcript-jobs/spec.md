@@ -209,7 +209,7 @@ OpenAPI document without credentials.
 | WORK-04 | Durable worker lifecycle | T2, T10 | Completed |
 | WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Completed |
 | WORK-06 | Durable worker lifecycle | T10, T25 | Needs Fix |
-| WORK-07 | Durable worker lifecycle | T5, T10, T21 | Needs Fix |
+| WORK-07 | Durable worker lifecycle | T5, T10, T21 | Completed |
 | STORE-01 | Atomic persistent store | T6 | Completed |
 | STORE-02 | Atomic persistent store | T7 | Completed |
 | STORE-03 | Atomic persistent store | T7, T23 | Needs Fix |
@@ -221,7 +221,7 @@ OpenAPI document without credentials.
 | CACHE-01 | Deduplication/cache | T1 | Completed |
 | CACHE-02 | Deduplication/cache | T1 | Completed |
 | CACHE-03 | Deduplication/cache | T11 | Completed |
-| CACHE-04 | Deduplication/cache | T11, T21 | Needs Fix |
+| CACHE-04 | Deduplication/cache | T11, T21 | Completed |
 | CACHE-05 | Deduplication/cache | T11, T26 | Needs Fix |
 | CACHE-06 | Deduplication/cache | T7, T9 | Completed |
 | CACHE-07 | Deduplication/cache | T8, T11, T27 | Needs Fix |
