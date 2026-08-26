@@ -165,7 +165,7 @@ T5 → T6
 **Gate:** build
 **Commit:** `chore(railway): define service deployment`
 
-### T5: Document authenticated local and Railway operation
+### T5: Document authenticated local and Railway operation ✅
 
 **What:** Update operator documentation and curl examples for access-key authentication and Railway limitations.
 **Where:** `README.md`
@@ -180,11 +180,11 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Configuration lists `API_ACCESS_KEY` and explains fail-closed protected routes.
-- [ ] JSON and PDF curl examples use a Bearer token without embedding a real secret.
-- [ ] Railway deployment, variable, domain, and verification behavior is documented.
-- [ ] Synchronous timeout, YouTube datacenter blocking, and later hardening tasks remain explicit.
-- [ ] `npm run check` passes.
+- [x] Configuration lists `API_ACCESS_KEY` and explains fail-closed protected routes.
+- [x] JSON and PDF curl examples use a Bearer token without embedding a real secret.
+- [x] Railway deployment, variable, domain, and verification behavior is documented.
+- [x] Synchronous timeout, YouTube datacenter blocking, and later hardening tasks remain explicit.
+- [x] `npm run check` passes with 83 tests.
 
 **Tests:** none - documentation uses the build gate per matrix
 **Gate:** build

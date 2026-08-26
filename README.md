@@ -57,6 +57,7 @@ Preencha somente o arquivo `.env`, que já está ignorado pelo Git:
 
 ```dotenv
 OPENCODE_API_KEY=sua-chave-do-opencode-go
+API_ACCESS_KEY=um-token-longo-e-aleatorio
 ```
 
 Os scripts `dev` e `start` carregam o `.env` da raiz quando ele existe. Variáveis fornecidas pelo
@@ -67,10 +68,15 @@ ambiente da hospedagem também são aceitas.
 | `HOST` | não | `0.0.0.0` | Endereço em que o Fastify escuta. |
 | `PORT` | não | `3000` | Porta TCP, de 1 a 65535. |
 | `OPENCODE_API_KEY` | apenas no fallback | vazia | Chave do workspace OpenCode Go. |
+| `API_ACCESS_KEY` | sim para transcrever | vazia | Token Bearer que protege os dois endpoints de transcrição. |
 | `YT_DLP_PATH` | não | `yt-dlp` | Caminho do executável `yt-dlp`. |
 | `FFMPEG_PATH` | não | `ffmpeg` | Caminho do executável FFmpeg. |
 
-Nunca envie `OPENCODE_API_KEY` no body, em commits ou ao cliente da API.
+`GET /health` continua público. Se `API_ACCESS_KEY` estiver vazio, os endpoints de transcrição
+falham fechados com HTTP 503; eles nunca ficam públicos por acidente.
+
+Nunca envie `OPENCODE_API_KEY` no body, em commits ou ao cliente da API. Envie `API_ACCESS_KEY`
+somente no header `Authorization` e trate-o como credencial de produção.
 
 ## Executar
 
@@ -119,6 +125,7 @@ Resposta:
 
 ```bash
 curl -X POST http://localhost:3000/v1/transcripts \
+  -H "authorization: Bearer $API_ACCESS_KEY" \
   -H 'content-type: application/json' \
   -d '{
     "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -156,6 +163,7 @@ até 10 minutos, não o tempo exato de cada palavra.
 
 ```bash
 curl -X POST http://localhost:3000/v1/transcripts/pdf \
+  -H "authorization: Bearer $API_ACCESS_KEY" \
   -H 'content-type: application/json' \
   -d '{"url":"https://youtu.be/dQw4w9WgXcQ"}' \
   --output transcript.pdf
@@ -180,6 +188,7 @@ Erros têm o formato:
 
 | HTTP | Código | Significado |
 | --- | --- | --- |
+| 401 | `UNAUTHORIZED` | Bearer token ausente, malformado ou incorreto. |
 | 400 | `INVALID_REQUEST` | Body ausente, campo desconhecido ou idiomas inválidos. |
 | 400 | `INVALID_YOUTUBE_URL` | URL não suportada ou ID inválido. |
 | 404 | `VIDEO_NOT_AVAILABLE` | Vídeo privado, restrito ou indisponível. |
@@ -190,9 +199,42 @@ Erros têm o formato:
 | 502 | `AUDIO_CHUNK_TOO_LARGE` | Um bloco ultrapassou o limite interno de 8 MiB. |
 | 502 | `MUSE_TRANSCRIPTION_FAILED` | O OpenCode Go ou o Muse não concluiu a transcrição. |
 | 500 | `PDF_GENERATION_FAILED` | Não foi possível renderizar o PDF. |
+| 503 | `API_AUTH_NOT_CONFIGURED` | `API_ACCESS_KEY` não foi configurada no servidor. |
 
 Não há retry automático. Uma falha interrompe a requisição para evitar consumo duplicado da
 franquia e amplificação de bloqueios do YouTube.
+
+## Railway
+
+O arquivo `railway.json` seleciona o Dockerfile, configura `/health` como health check, permite até
+300 segundos para a imagem ficar saudável e limita reinícios por falha. O container e o Fastify usam
+a variável `PORT` fornecida pelo Railway.
+
+No primeiro deploy, execute na raiz do projeto:
+
+```bash
+railway up
+```
+
+Depois configure os dois segredos no serviço. Passe os valores por stdin para não gravá-los no
+histórico do shell:
+
+```bash
+printf '%s' "$OPENCODE_API_KEY" | railway variable set OPENCODE_API_KEY --stdin --service transcript-youtube-videos-api
+printf '%s' "$API_ACCESS_KEY" | railway variable set API_ACCESS_KEY --stdin --service transcript-youtube-videos-api
+```
+
+Uma alteração de variável dispara novo deploy. Gere o domínio público e confirme o estado:
+
+```bash
+railway domain --service transcript-youtube-videos-api --json
+railway deployment list --service transcript-youtube-videos-api --json
+```
+
+Use o domínio retornado nos mesmos exemplos de `curl`. Primeiro confirme `/health` sem credencial;
+em seguida confirme que um `POST /v1/transcripts` sem Bearer retorna 401 antes de testar a chamada
+autenticada. O valor real de `API_ACCESS_KEY` deve permanecer apenas no gerenciador de segredos e
+nos clientes autorizados.
 
 ## Privacidade e limitações
 
@@ -203,8 +245,10 @@ franquia e amplificação de bloqueios do YouTube.
   fila assíncrona é recomendada para produção em escala.
 - O YouTube pode bloquear IPs de datacenter, exigir login, aplicar rate limit ou alterar endpoints.
   Esta versão aceita somente vídeos públicos acessíveis sem cookies e não contorna restrições.
-- Autenticação da API, quotas próprias, rate limiting e ingestão no banco vetorial/RAG estão fora
-  deste MVP e devem ser adicionados antes de exposição pública.
+- Um Bearer token protege os endpoints, mas limite de concorrência, quotas por cliente, fila
+  assíncrona e ingestão no banco vetorial/RAG ainda não foram implementados.
+- Um `/health` bem-sucedido prova que a API está online; não prova que o YouTube aceitará requisições
+  originadas do IP do Railway. Erros do provedor devem ser diagnosticados separadamente.
 
 ## Qualidade
 
