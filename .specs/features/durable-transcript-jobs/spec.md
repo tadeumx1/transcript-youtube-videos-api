@@ -210,14 +210,14 @@ OpenAPI document without credentials.
 | WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Partial (T5 complete) |
 | WORK-06 | Durable worker lifecycle | T10 | Planned |
 | WORK-07 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
-| STORE-01 | Atomic persistent store | T6 | Planned |
+| STORE-01 | Atomic persistent store | T6 | Completed |
 | STORE-02 | Atomic persistent store | T7 | Planned |
 | STORE-03 | Atomic persistent store | T7 | Planned |
 | STORE-04 | Atomic persistent store | T7 | Planned |
 | STORE-05 | Atomic persistent store | T8 | Planned |
 | STORE-06 | Atomic persistent store | T7, T15 | Planned |
 | STORE-07 | Atomic persistent store | T7, T8 | Planned |
-| STORE-08 | Atomic persistent store | T6, T7, T8 | Planned |
+| STORE-08 | Atomic persistent store | T6, T7, T8 | Partial (T6 complete) |
 | CACHE-01 | Deduplication/cache | T1 | Completed |
 | CACHE-02 | Deduplication/cache | T1 | Completed |
 | CACHE-03 | Deduplication/cache | T11 | Planned |
@@ -241,7 +241,7 @@ OpenAPI document without credentials.
 | EDGE-05 | Language identity edge case | T1 | Completed |
 | EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Planned |
 | EDGE-07 | Duplicate recovery edge case | T8, T11 | Planned |
-| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2 complete) |
+| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2, T6 complete) |
 
 **Coverage:** 46 total requirements, 46 listed, 0 unmapped after Tasks assigns implementation phases.
 

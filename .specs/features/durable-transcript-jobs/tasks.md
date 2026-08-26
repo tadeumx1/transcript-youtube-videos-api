@@ -234,7 +234,7 @@ families and closed label mappings.
 
 ## Phase 2 Tasks
 
-### T6: Publish mutable files atomically
+### T6: Publish mutable files atomically ✅
 
 **What**: Implement the same-filesystem write/sync/close/rename/directory-sync primitive and strict
 safe path helpers used by every persistent component.
@@ -250,11 +250,11 @@ safe path helpers used by every persistent component.
 
 **Done when**:
 
-- [ ] Files and directories become visible only after content/file/directory sync and atomic rename complete.
-- [ ] Failure at write, sync, close, rename, or directory-sync never exposes a final partial file and cleans only its owned opaque temporary.
-- [ ] Path helpers accept only strict UUID/SHA-256 inputs, use two-character shards, remain under the configured root, and never follow request-derived traversal.
-- [ ] Real-temp-directory tests and injected filesystem failures assert exact bytes, ordering, cleanup, confinement, and no symlink/request-path escape.
-- [ ] `npm run test:unit` passes with at least 172 tests and no silent deletions.
+- [x] Files and directories become visible only after content/file/directory sync and atomic rename complete.
+- [x] Failure at write, sync, close, rename, or directory-sync never exposes a final partial file and cleans only its owned opaque temporary.
+- [x] Path helpers accept only strict UUID/SHA-256 inputs, use two-character shards, remain under the configured root, and never follow request-derived traversal.
+- [x] Real-temp-directory tests and injected filesystem failures assert exact bytes, ordering, cleanup, confinement, and no symlink/request-path escape.
+- [x] `npm run test:unit` passes with at least 172 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -675,7 +675,7 @@ boundaries are the only batch boundaries.
 | T3 | One runtime-config extension | ✅ Complete |
 | T4 | One metrics-registry extension | ✅ Complete |
 | T5 | One execution-controller extension | ✅ Complete |
-| T6 | One atomic-writer component | ✅ Granular |
+| T6 | One atomic-writer component | ✅ Complete |
 | T7 | One artifact-store component | ✅ Cohesive storage boundary |
 | T8 | One job-repository component | ✅ Cohesive repository boundary |
 | T9 | One artifact-coordinator component | ✅ Granular |
