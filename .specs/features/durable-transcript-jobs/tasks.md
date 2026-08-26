@@ -545,7 +545,7 @@ topology, and preserved secrets to TypeScript IaC without applying it.
 **Gate**: build
 **Commit**: `chore(railway): mount transcript volume`
 
-### T17: Add the non-root Volume entrypoint
+### T17: Add the non-root Volume entrypoint ✅
 
 **What**: Add a strict POSIX entrypoint that fixes only `/data` ownership when root, then immediately
 executes the application as `node` through `gosu`.
@@ -561,10 +561,10 @@ executes the application as `node` through `gosu`.
 
 **Done when**:
 
-- [ ] Script uses `set -eu`, never prints environment/path/credentials, never recursively chowns content, and only handles fixed `/data`.
-- [ ] Root path creates/chowns the mount root then `exec gosu node`; non-root path directly execs the command.
-- [ ] Static/shell tests prove syntax, executable bit, fixed path, privilege-drop command, argument preservation, and absence of recursive/destructive operations.
-- [ ] `npm run check` passes with at least 232 total tests and no silent deletions.
+- [x] Script uses `set -eu`, never prints environment/path/credentials, never recursively chowns content, and only handles fixed `/data`.
+- [x] Root path creates/chowns the mount root then `exec gosu node`; non-root path directly execs the command.
+- [x] Static/shell tests prove syntax, executable bit, fixed path, privilege-drop command, argument preservation, and absence of recursive/destructive operations.
+- [x] `npm run check` passes with at least 232 total tests and no silent deletions.
 
 **Tests**: unit/static
 **Gate**: build
@@ -686,7 +686,7 @@ boundaries are the only batch boundaries.
 | T14 | One OpenAPI contract extension | ✅ Complete |
 | T15 | One production composition root | ✅ Complete |
 | T16 | One Railway IaC resource change | ✅ Complete |
-| T17 | One container entrypoint | ✅ Granular |
+| T17 | One container entrypoint | ✅ Complete |
 | T18 | One Docker runtime integration | ✅ Granular |
 | T19 | One ignore-policy change | ✅ Granular |
 | T20 | One operator/developer documentation contract | ✅ Granular |
