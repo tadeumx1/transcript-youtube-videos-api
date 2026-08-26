@@ -14,6 +14,11 @@ const REASONS = new Set([
   'aborted',
   'unavailable',
 ])
+const JOB_SUBMISSION_DISPOSITIONS = new Set(['miss', 'joined', 'hit', 'rejected'])
+const DURABLE_JOB_STATUSES = new Set(['queued', 'processing'])
+const DURABLE_JOB_OUTCOMES = new Set(['completed', 'failed', 'interrupted'])
+const CACHE_OUTCOMES = new Set(['hit', 'miss', 'expired', 'corrupt', 'write_failed'])
+const RECOVERY_OUTCOMES = new Set(['completed', 'pdf_resumed', 'interrupted', 'duplicate'])
 
 function allowed(value: string, values: ReadonlySet<string>): string {
   return values.has(value) ? value : 'unknown'
@@ -26,6 +31,12 @@ export class RuntimeMetrics {
   readonly #transcriptResults: Counter<'source'>
   readonly #stageDuration: Histogram<'stage' | 'outcome'>
   readonly #stageFailures: Counter<'stage' | 'reason'>
+  readonly #jobSubmissions: Counter<'disposition'>
+  readonly #durableJobs: Gauge<'status'>
+  readonly #jobDuration: Histogram<'outcome'>
+  readonly #cacheRequests: Counter<'outcome'>
+  readonly #jobRecoveries: Counter<'outcome'>
+  readonly #storageHealthy: Gauge
 
   constructor() {
     this.#activeJobs = new Gauge({
@@ -57,7 +68,45 @@ export class RuntimeMetrics {
       labelNames: ['stage', 'reason'],
       registers: [this.#registry],
     })
+    this.#jobSubmissions = new Counter({
+      name: 'youtube_transcript_job_submissions_total',
+      help: 'Number of durable transcript job submissions by disposition.',
+      labelNames: ['disposition'],
+      registers: [this.#registry],
+    })
+    this.#durableJobs = new Gauge({
+      name: 'youtube_transcript_jobs_current',
+      help: 'Current durable transcript jobs by active state.',
+      labelNames: ['status'],
+      registers: [this.#registry],
+    })
+    this.#jobDuration = new Histogram({
+      name: 'youtube_transcript_job_duration_seconds',
+      help: 'Durable transcript job terminal duration in seconds.',
+      labelNames: ['outcome'],
+      registers: [this.#registry],
+    })
+    this.#cacheRequests = new Counter({
+      name: 'youtube_transcript_cache_requests_total',
+      help: 'Number of transcript artifact cache requests by outcome.',
+      labelNames: ['outcome'],
+      registers: [this.#registry],
+    })
+    this.#jobRecoveries = new Counter({
+      name: 'youtube_transcript_job_recoveries_total',
+      help: 'Number of durable transcript job recoveries by outcome.',
+      labelNames: ['outcome'],
+      registers: [this.#registry],
+    })
+    this.#storageHealthy = new Gauge({
+      name: 'youtube_transcript_storage_healthy',
+      help: 'Whether durable transcript storage is healthy.',
+      registers: [this.#registry],
+    })
     this.#activeJobs.set(0)
+    this.#durableJobs.set({ status: 'queued' }, 0)
+    this.#durableJobs.set({ status: 'processing' }, 0)
+    this.#storageHealthy.set(0)
   }
 
   get contentType(): string {
@@ -88,6 +137,32 @@ export class RuntimeMetrics {
       stage: allowed(stage, STAGES),
       reason: allowed(reason, REASONS),
     })
+  }
+
+  recordJobSubmission(disposition: string): void {
+    this.#jobSubmissions.inc({
+      disposition: allowed(disposition, JOB_SUBMISSION_DISPOSITIONS),
+    })
+  }
+
+  setDurableJobs(status: string, count: number): void {
+    this.#durableJobs.set({ status: allowed(status, DURABLE_JOB_STATUSES) }, count)
+  }
+
+  observeJobDuration(outcome: string, seconds: number): void {
+    this.#jobDuration.observe({ outcome: allowed(outcome, DURABLE_JOB_OUTCOMES) }, seconds)
+  }
+
+  recordCacheRequest(outcome: string): void {
+    this.#cacheRequests.inc({ outcome: allowed(outcome, CACHE_OUTCOMES) })
+  }
+
+  recordJobRecovery(outcome: string): void {
+    this.#jobRecoveries.inc({ outcome: allowed(outcome, RECOVERY_OUTCOMES) })
+  }
+
+  setStorageHealthy(healthy: boolean): void {
+    this.#storageHealthy.set(healthy ? 1 : 0)
   }
 
   render(): Promise<string> {

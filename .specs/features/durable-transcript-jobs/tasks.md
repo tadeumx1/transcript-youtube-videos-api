@@ -179,7 +179,7 @@ configuration with the approved defaults and bounds.
 **Gate**: quick
 **Commit**: `feat(config): add durable storage settings`
 
-### T4: Observe durable jobs, cache, recovery, and storage
+### T4: Observe durable jobs, cache, recovery, and storage ✅
 
 **What**: Extend the isolated Prometheus registry with the six approved job/cache/storage metric
 families and closed label mappings.
@@ -195,11 +195,11 @@ families and closed label mappings.
 
 **Done when**:
 
-- [ ] Exact metric names/types and label enums match the design; queued/processing gauges and storage-health gauge initialize to zero.
-- [ ] Submission, current state, terminal duration, cache, recovery, and health updates render exact values.
-- [ ] Every unknown value maps to `unknown`; method signatures accept no identifier/path/content label.
-- [ ] Rendered metrics exclude job/video/cache IDs, URLs, languages, paths, content, credentials, and exception text.
-- [ ] `npm run test:unit` passes with at least 170 tests and no silent deletions.
+- [x] Exact metric names/types and label enums match the design; queued/processing gauges and storage-health gauge initialize to zero.
+- [x] Submission, current state, terminal duration, cache, recovery, and health updates render exact values.
+- [x] Every unknown value maps to `unknown`; method signatures accept no identifier/path/content label.
+- [x] Rendered metrics exclude job/video/cache IDs, URLs, languages, paths, content, credentials, and exception text.
+- [x] `npm run test:unit` passes with at least 170 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -673,7 +673,7 @@ boundaries are the only batch boundaries.
 | T1 | One request-identity component | ✅ Complete |
 | T2 | One durable-job domain component | ✅ Complete |
 | T3 | One runtime-config extension | ✅ Complete |
-| T4 | One metrics-registry extension | ✅ Granular |
+| T4 | One metrics-registry extension | ✅ Complete |
 | T5 | One execution-controller extension | ✅ Granular |
 | T6 | One atomic-writer component | ✅ Granular |
 | T7 | One artifact-store component | ✅ Cohesive storage boundary |
