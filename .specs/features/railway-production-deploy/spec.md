@@ -109,7 +109,7 @@ transcript content.
 | RYSEC-03 | Protected production API | T2 | Planned |
 | RYSEC-04 | Protected production API | T2 | Planned |
 | RYSEC-05 | Protected production API | T2 | Planned |
-| RYSEC-06 | Protected production API | T1 | Planned |
+| RYSEC-06 | Protected production API | T1 | Implemented |
 | RYSEC-07 | Edge case | T2 | Planned |
 | RYSEC-08 | Edge case | T2 | Planned |
 | RYDEP-01 | Railway service | T3, T4 | Planned |

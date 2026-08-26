@@ -7,20 +7,23 @@ describe('loadConfig', () => {
     expect(
       loadConfig({
         OPENCODE_API_KEY: '  opencode-test-key  ',
+        API_ACCESS_KEY: '  access-test-key  ',
         HOST: '127.0.0.1',
         PORT: '4321',
       }),
     ).toMatchObject({
       openCodeApiKey: 'opencode-test-key',
+      apiAccessKey: 'access-test-key',
       host: '127.0.0.1',
       port: 4321,
     })
   })
 
   it('omits the provider credential when OPENCODE_API_KEY is blank', () => {
-    const config = loadConfig({ OPENCODE_API_KEY: '   ' })
+    const config = loadConfig({ OPENCODE_API_KEY: '   ', API_ACCESS_KEY: '   ' })
 
     expect(config).not.toHaveProperty('openCodeApiKey')
+    expect(config).not.toHaveProperty('apiAccessKey')
     expect(config).toMatchObject({
       host: '0.0.0.0',
       port: 3000,

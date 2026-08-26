@@ -22,6 +22,7 @@ function parsePort(value: string | undefined): number {
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): RuntimeConfig {
   const openCodeApiKey = optionalValue(environment.OPENCODE_API_KEY)
+  const apiAccessKey = optionalValue(environment.API_ACCESS_KEY)
 
   return {
     host: optionalValue(environment.HOST) ?? '0.0.0.0',
@@ -29,5 +30,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Runtim
     ytDlpPath: optionalValue(environment.YT_DLP_PATH) ?? 'yt-dlp',
     ffmpegPath: optionalValue(environment.FFMPEG_PATH) ?? 'ffmpeg',
     ...(openCodeApiKey ? { openCodeApiKey } : {}),
+    ...(apiAccessKey ? { apiAccessKey } : {}),
   }
 }

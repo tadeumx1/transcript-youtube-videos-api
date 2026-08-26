@@ -12,6 +12,7 @@ import { YouTubeCaptionProvider } from './infrastructure/youtube/youtube-caption
 
 export interface ApplicationConfig {
   openCodeApiKey?: string
+  apiAccessKey?: string
   ytDlpPath?: string
   ffmpegPath?: string
 }

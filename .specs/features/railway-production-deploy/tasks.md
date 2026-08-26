@@ -66,7 +66,7 @@ T5 → T6
 
 ## Task Breakdown
 
-### T1: Load the production API access credential
+### T1: Load the production API access credential ✅
 
 **What:** Extend runtime configuration and application composition with a trimmed, server-only `API_ACCESS_KEY`.
 **Where:** `src/config.ts`
@@ -81,11 +81,11 @@ T5 → T6
 
 **Done when**:
 
-- [ ] `API_ACCESS_KEY` is trimmed and exposed only as `apiAccessKey` in runtime/application configuration.
-- [ ] Blank values remain absent and cannot accidentally become a valid credential.
-- [ ] `.env.example` documents a placeholder without a real secret.
-- [ ] Configuration unit tests cover configured and blank access keys.
-- [ ] `npm run test:unit` passes with no silent test deletions.
+- [x] `API_ACCESS_KEY` is trimmed and exposed only as `apiAccessKey` in runtime/application configuration.
+- [x] Blank values remain absent and cannot accidentally become a valid credential.
+- [x] `.env.example` documents a placeholder without a real secret.
+- [x] Configuration unit tests cover configured and blank access keys.
+- [x] `npm run test:unit` passes with 53 tests and no silent test deletions.
 
 **Tests:** unit
 **Gate:** quick
