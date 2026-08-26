@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 11,
+  "next_id": 13,
   "lessons": [
     {
       "id": "L-001",
@@ -184,6 +184,42 @@
       ],
       "created": "2026-08-26T23:27:05Z",
       "last_seen": "2026-08-26T23:27:05Z"
+    },
+    {
+      "id": "L-011",
+      "key": "ac_gap::normalize strict manifest validation failures into corruption before mapping operational storage errors",
+      "text": "Normalize strict manifest validation failures into corruption before mapping operational storage errors",
+      "signal": "ac_gap",
+      "scope": "storage",
+      "status": "candidate",
+      "features": [
+        "durable-transcript-jobs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "STORE-03/CACHE-04 (storage)"
+      ],
+      "created": "2026-08-26T23:59:01Z",
+      "last_seen": "2026-08-26T23:59:01Z"
+    },
+    {
+      "id": "L-012",
+      "key": "ac_gap::track post rename publication state so pointer failures remove only the newly published bundle",
+      "text": "Track post-rename publication state so pointer failures remove only the newly published bundle",
+      "signal": "ac_gap",
+      "scope": "storage",
+      "status": "candidate",
+      "features": [
+        "durable-transcript-jobs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CACHE-07 (storage)"
+      ],
+      "created": "2026-08-26T23:59:01Z",
+      "last_seen": "2026-08-26T23:59:01Z"
     }
   ]
 }

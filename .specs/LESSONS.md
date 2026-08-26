@@ -74,6 +74,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: WORK-07/STORE-03/CACHE-04 (storage)
 - last seen: 2026-08-26T23:27:05Z
 
+### L-011 - Normalize strict manifest validation failures into corruption before mapping operational storage errors
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `storage` · harmful: 0
+- features: durable-transcript-jobs
+- evidence: STORE-03/CACHE-04 (storage)
+- last seen: 2026-08-26T23:59:01Z
+
+### L-012 - Track post-rename publication state so pointer failures remove only the newly published bundle
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `storage` · harmful: 0
+- features: durable-transcript-jobs
+- evidence: CACHE-07 (storage)
+- last seen: 2026-08-26T23:59:01Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
