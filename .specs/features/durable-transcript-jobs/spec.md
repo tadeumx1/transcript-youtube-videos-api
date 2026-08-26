@@ -211,19 +211,19 @@ OpenAPI document without credentials.
 | WORK-06 | Durable worker lifecycle | T10 | Planned |
 | WORK-07 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
 | STORE-01 | Atomic persistent store | T6 | Completed |
-| STORE-02 | Atomic persistent store | T7 | Planned |
-| STORE-03 | Atomic persistent store | T7 | Planned |
-| STORE-04 | Atomic persistent store | T7 | Planned |
+| STORE-02 | Atomic persistent store | T7 | Completed |
+| STORE-03 | Atomic persistent store | T7 | Completed |
+| STORE-04 | Atomic persistent store | T7 | Completed |
 | STORE-05 | Atomic persistent store | T8 | Planned |
-| STORE-06 | Atomic persistent store | T7, T15 | Planned |
-| STORE-07 | Atomic persistent store | T7, T8 | Planned |
-| STORE-08 | Atomic persistent store | T6, T7, T8 | Partial (T6 complete) |
+| STORE-06 | Atomic persistent store | T7, T15 | Partial (T7 complete) |
+| STORE-07 | Atomic persistent store | T7, T8 | Partial (T7 complete) |
+| STORE-08 | Atomic persistent store | T6, T7, T8 | Partial (T6, T7 complete) |
 | CACHE-01 | Deduplication/cache | T1 | Completed |
 | CACHE-02 | Deduplication/cache | T1 | Completed |
 | CACHE-03 | Deduplication/cache | T11 | Planned |
 | CACHE-04 | Deduplication/cache | T11 | Planned |
 | CACHE-05 | Deduplication/cache | T11 | Planned |
-| CACHE-06 | Deduplication/cache | T7, T9 | Planned |
+| CACHE-06 | Deduplication/cache | T7, T9 | Partial (T7 complete) |
 | CACHE-07 | Deduplication/cache | T8, T11 | Planned |
 | CACHE-08 | Deduplication/cache | T9, T13 | Planned |
 | OPS-01 | Durable operations | T3 | Completed |
@@ -235,13 +235,13 @@ OpenAPI document without credentials.
 | OPS-07 | Durable operations | T3, T17, T18, T19 | Partial (T3 complete) |
 | OPS-08 | Durable operations | T20 | Planned |
 | EDGE-01 | Queue capacity edge case | T11 | Planned |
-| EDGE-02 | Partial publication edge case | T7, T10 | Planned |
+| EDGE-02 | Partial publication edge case | T7, T10 | Partial (T7 complete) |
 | EDGE-03 | Uncertain external side effect edge case | T10 | Planned |
-| EDGE-04 | Read/expiry race edge case | T7 | Planned |
+| EDGE-04 | Read/expiry race edge case | T7 | Completed |
 | EDGE-05 | Language identity edge case | T1 | Completed |
-| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Planned |
+| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Partial (T7 complete) |
 | EDGE-07 | Duplicate recovery edge case | T8, T11 | Planned |
-| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2, T6 complete) |
+| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2, T6, T7 complete) |
 
 **Coverage:** 46 total requirements, 46 listed, 0 unmapped after Tasks assigns implementation phases.
 

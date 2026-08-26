@@ -260,7 +260,7 @@ safe path helpers used by every persistent component.
 **Gate**: quick
 **Commit**: `feat(storage): write files atomically`
 
-### T7: Persist and verify immutable transcript bundles
+### T7: Persist and verify immutable transcript bundles ✅
 
 **What**: Implement the file artifact store for full JSON/PDF bundles, cache pointers, partial worker
 transcripts, checksums, quarantine, per-key locks, health probes, and expiry.
@@ -276,14 +276,14 @@ transcripts, checksums, quarantine, per-key locks, health probes, and expiry.
 
 **Done when**:
 
-- [ ] A bundle pointer is published only after immutable manifest/transcript/PDF sizes and checksums are durable and verified.
-- [ ] Cache reads return exact original metadata/bytes; expired, partial, checksum/size/schema-corrupt content is never a hit and is quarantined under an opaque name.
-- [ ] Completed-job reads map missing/corrupt references to sanitized `JOB_STORAGE_UNAVAILABLE` without retranscription.
-- [ ] Partial worker transcript save/recovery verifies its checksum and never publishes a cache pointer.
-- [ ] Per-key locks serialize read/publish/expiry so responses are complete or absent, never partial; expiry removes the pointer first.
-- [ ] Read-only/full/probe failures mark health false without content/path leakage and a later successful bounded probe recovers it.
-- [ ] Real-filesystem tests cover publication order, exact manifest, corruption, expiry race, partial recovery, `ENOSPC`, health recovery, and confinement.
-- [ ] `npm run test:unit` passes with at least 173 tests and no silent deletions.
+- [x] A bundle pointer is published only after immutable manifest/transcript/PDF sizes and checksums are durable and verified.
+- [x] Cache reads return exact original metadata/bytes; expired, partial, checksum/size/schema-corrupt content is never a hit and is quarantined under an opaque name.
+- [x] Completed-job reads map missing/corrupt references to sanitized `JOB_STORAGE_UNAVAILABLE` without retranscription.
+- [x] Partial worker transcript save/recovery verifies its checksum and never publishes a cache pointer.
+- [x] Per-key locks serialize read/publish/expiry so responses are complete or absent, never partial; expiry removes the pointer first.
+- [x] Read-only/full/probe failures mark health false without content/path leakage and a later successful bounded probe recovers it.
+- [x] Real-filesystem tests cover publication order, exact manifest, corruption, expiry race, partial recovery, `ENOSPC`, health recovery, and confinement.
+- [x] `npm run test:unit` passes with at least 173 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -676,7 +676,7 @@ boundaries are the only batch boundaries.
 | T4 | One metrics-registry extension | ✅ Complete |
 | T5 | One execution-controller extension | ✅ Complete |
 | T6 | One atomic-writer component | ✅ Complete |
-| T7 | One artifact-store component | ✅ Cohesive storage boundary |
+| T7 | One artifact-store component | ✅ Complete |
 | T8 | One job-repository component | ✅ Cohesive repository boundary |
 | T9 | One artifact-coordinator component | ✅ Granular |
 | T10 | One durable-worker component | ✅ Cohesive lifecycle boundary |

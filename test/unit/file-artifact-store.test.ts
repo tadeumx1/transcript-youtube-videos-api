@@ -1,0 +1,346 @@
+import { createHash } from 'node:crypto'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { basename, join } from 'node:path'
+
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import type { Transcript } from '../../src/domain/transcript.js'
+import {
+  AtomicFileWriter,
+  createStoragePaths,
+} from '../../src/infrastructure/storage/atomic-file-writer.js'
+import {
+  ArtifactStorageError,
+  type ArtifactStoreAtomicWriter,
+  type ArtifactStoreFileOperations,
+  FileArtifactStore,
+  nodeArtifactStoreFileOperations,
+} from '../../src/infrastructure/storage/file-artifact-store.js'
+
+const roots: string[] = []
+const jobId = '28f5f7d2-f1de-4b27-92df-28c0e30607f8'
+const artifactId = 'f43a8406-46ba-4f8d-9de2-c768e6f69659'
+const cacheKey = 'a'.repeat(64)
+const createdAt = '2026-08-26T12:00:00.000Z'
+const expiresAt = '2026-09-02T12:00:00.000Z'
+const pdf = Buffer.from('%PDF exact cached bytes')
+const transcript: Transcript = {
+  videoId: 'dQw4w9WgXcQ',
+  sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  source: 'youtube_captions',
+  language: 'pt-BR',
+  isGenerated: false,
+  timestampPrecision: 'caption',
+  extractedAt: '2026-08-26T11:59:00.000Z',
+  text: 'Carro nacional completo.',
+  segments: [{ text: 'Carro nacional completo.', startSeconds: 0, durationSeconds: 2.5 }],
+}
+
+async function temporaryRoot(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'artifact-store-'))
+  roots.push(root)
+  return root
+}
+
+function sha256(bytes: Uint8Array): string {
+  return createHash('sha256').update(bytes).digest('hex')
+}
+
+function publishingInput() {
+  return { cacheKey, producerJobId: jobId, transcript, pdf, createdAt, expiresAt }
+}
+
+function tracedWriter(root: string, events: string[]): ArtifactStoreAtomicWriter {
+  const writer = new AtomicFileWriter(root)
+  return {
+    async write(path, bytes) {
+      events.push(`write:${basename(path)}`)
+      await writer.write(path, bytes)
+    },
+    async writeJson(path, value) {
+      events.push(`json:${basename(path)}`)
+      await writer.writeJson(path, value)
+    },
+    async publishDirectory(temporary, target) {
+      events.push(`publish:${basename(target)}`)
+      await writer.publishDirectory(temporary, target)
+    },
+  }
+}
+
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })))
+})
+
+describe('FileArtifactStore', () => {
+  it('publishes verified immutable content and manifest before the cache pointer', async () => {
+    const root = await temporaryRoot()
+    const events: string[] = []
+    const store = new FileArtifactStore({
+      root,
+      writer: tracedWriter(root, events),
+      createId: () => artifactId,
+    })
+
+    const reference = await store.publishBundle(publishingInput())
+
+    expect(reference).toEqual({ artifactId, cacheKey, producerJobId: jobId, expiresAt })
+    expect(events).toEqual([
+      'write:transcript.json',
+      'write:transcript.pdf',
+      'json:manifest.json',
+      `publish:${artifactId}`,
+      `json:${cacheKey}.json`,
+    ])
+    const paths = createStoragePaths(root)
+    const artifactPath = paths.artifact(artifactId)
+    const transcriptBytes = Buffer.from(JSON.stringify(transcript))
+    expect(JSON.parse(await readFile(join(artifactPath, 'manifest.json'), 'utf8'))).toEqual({
+      schemaVersion: 1,
+      artifactId,
+      cacheKey,
+      producerJobId: jobId,
+      cacheSchemaVersion: 1,
+      transcriptPolicyVersion: 1,
+      createdAt,
+      expiresAt,
+      transcript: { bytes: transcriptBytes.length, sha256: sha256(transcriptBytes) },
+      pdf: { bytes: pdf.length, sha256: sha256(pdf) },
+    })
+    expect(JSON.parse(await readFile(paths.cache(cacheKey), 'utf8'))).toEqual({
+      schemaVersion: 1,
+      cacheKey,
+      artifactId,
+      expiresAt,
+    })
+  })
+
+  it('returns every original transcript field and byte-identical PDF without sliding expiry', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    await store.publishBundle(publishingInput())
+    const pointerBefore = await readFile(createStoragePaths(root).cache(cacheKey), 'utf8')
+
+    const bundle = await store.find(cacheKey, new Date('2026-08-27T00:00:00.000Z'))
+
+    expect(bundle?.transcript).toEqual(transcript)
+    expect(bundle?.pdf.equals(pdf)).toBe(true)
+    expect(bundle?.manifest.expiresAt).toBe(expiresAt)
+    expect(await readFile(createStoragePaths(root).cache(cacheKey), 'utf8')).toBe(pointerBefore)
+  })
+
+  it.each(['schema', 'size', 'checksum', 'partial'] as const)(
+    'never returns and opaquely quarantines a %s-corrupt cache bundle',
+    async (corruption) => {
+      const root = await temporaryRoot()
+      const store = new FileArtifactStore({ root, createId: () => artifactId })
+      await store.publishBundle(publishingInput())
+      const paths = createStoragePaths(root)
+      const artifactPath = paths.artifact(artifactId)
+      const manifestPath = join(artifactPath, 'manifest.json')
+      const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+      if (corruption === 'schema') manifest.schemaVersion = 2
+      if (corruption === 'size') manifest.transcript.bytes += 1
+      if (corruption === 'checksum') {
+        await writeFile(join(artifactPath, 'transcript.json'), Buffer.from('tampered'))
+      }
+      if (corruption === 'partial') await rm(join(artifactPath, 'transcript.pdf'))
+      if (corruption === 'schema' || corruption === 'size') {
+        await writeFile(manifestPath, JSON.stringify(manifest))
+      }
+
+      await expect(store.find(cacheKey, new Date(createdAt))).resolves.toBeUndefined()
+      await expect(readFile(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+      const quarantine = await readdir(join(root, 'v1/quarantine'))
+      expect(quarantine).toEqual([`${artifactId}.invalid`])
+      expect(quarantine.join('')).not.toMatch(/dQw4w9WgXcQ|Carro|a{64}/)
+    },
+  )
+
+  it('maps a corrupt completed-job reference to one sanitized storage error', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    const reference = await store.publishBundle(publishingInput())
+    await writeFile(
+      join(createStoragePaths(root).artifact(artifactId), 'transcript.pdf'),
+      Buffer.from('corrupt'),
+    )
+
+    await expect(store.readForJob(reference)).rejects.toEqual(
+      expect.objectContaining({
+        name: 'ArtifactStorageError',
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+  })
+
+  it('maps a missing completed-job reference to the same sanitized storage error', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    const reference = await store.publishBundle(publishingInput())
+    await rm(createStoragePaths(root).artifact(artifactId), { recursive: true })
+
+    await expect(store.readForJob(reference)).rejects.toEqual(
+      expect.objectContaining({
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+  })
+
+  it('persists and verifies a partial worker transcript without publishing a cache pointer', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+
+    const reference = await store.saveWorkTranscript(jobId, transcript)
+
+    expect(reference).toEqual({
+      jobId,
+      transcript: {
+        bytes: Buffer.byteLength(JSON.stringify(transcript)),
+        sha256: sha256(Buffer.from(JSON.stringify(transcript))),
+      },
+    })
+    await expect(store.recoverWorkTranscript(jobId)).resolves.toEqual(transcript)
+    await expect(readFile(createStoragePaths(root).cache(cacheKey))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+  })
+
+  it('rejects corrupt partial work and quarantines it without publishing a cache pointer', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    await store.saveWorkTranscript(jobId, transcript)
+    await writeFile(
+      join(createStoragePaths(root).work(jobId), 'transcript.json'),
+      Buffer.from('corrupt'),
+    )
+
+    await expect(store.recoverWorkTranscript(jobId)).resolves.toBeUndefined()
+    expect(await readdir(join(root, 'v1/quarantine'))).toEqual([`${artifactId}.invalid`])
+  })
+
+  it('expires the pointer and complete content at the fixed boundary', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    await store.publishBundle(publishingInput())
+    const paths = createStoragePaths(root)
+
+    await expect(store.find(cacheKey, new Date('2026-09-02T11:59:59.999Z'))).resolves.toBeDefined()
+    await expect(store.find(cacheKey, new Date(expiresAt))).resolves.toBeUndefined()
+    await expect(readFile(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(readFile(join(paths.artifact(artifactId), 'manifest.json'))).rejects.toMatchObject(
+      {
+        code: 'ENOENT',
+      },
+    )
+  })
+
+  it('serializes a complete read before expiry under the same cache-key lock', async () => {
+    const root = await temporaryRoot()
+    const initial = new FileArtifactStore({ root, createId: () => artifactId })
+    const reference = await initial.publishBundle(publishingInput())
+    let releaseRead: (() => void) | undefined
+    let announceRead: (() => void) | undefined
+    const readStarted = new Promise<void>((resolve) => {
+      announceRead = resolve
+    })
+    const continueRead = new Promise<void>((resolve) => {
+      releaseRead = resolve
+    })
+    let blocked = false
+    const operations: ArtifactStoreFileOperations = {
+      ...nodeArtifactStoreFileOperations,
+      async readFile(path) {
+        if (!blocked && path.includes('/artifacts/') && basename(path) === 'transcript.json') {
+          blocked = true
+          announceRead?.()
+          await continueRead
+        }
+        return nodeArtifactStoreFileOperations.readFile(path)
+      },
+    }
+    const store = new FileArtifactStore({ root, operations, createId: () => artifactId })
+    const reading = store.readForJob(reference)
+    await readStarted
+    let expiryFinished = false
+    const expiring = store.expire(reference).then(() => {
+      expiryFinished = true
+    })
+
+    await Promise.resolve()
+    expect(expiryFinished).toBe(false)
+    releaseRead?.()
+    await expect(reading).resolves.toEqual(
+      expect.objectContaining({ transcript, pdf: expect.any(Buffer) }),
+    )
+    await expiring
+    expect(expiryFinished).toBe(true)
+  })
+
+  it.each(['ENOSPC', 'EROFS'] as const)(
+    'maps %s publication/probe failure to sanitized unhealthy storage and recovers on probe',
+    async (code) => {
+      const root = await temporaryRoot()
+      const delegate = new AtomicFileWriter(root)
+      let failureCode: string | undefined = code
+      const fail = () => {
+        if (failureCode) throw Object.assign(new Error('sensitive path /data/private'), { code })
+      }
+      const writer: ArtifactStoreAtomicWriter = {
+        async write(path, bytes) {
+          fail()
+          await delegate.write(path, bytes)
+        },
+        async writeJson(path, value) {
+          fail()
+          await delegate.writeJson(path, value)
+        },
+        async publishDirectory(temporary, target) {
+          fail()
+          await delegate.publishDirectory(temporary, target)
+        },
+      }
+      const metrics = { setStorageHealthy: vi.fn<(healthy: boolean) => void>() }
+      const store = new FileArtifactStore({ root, writer, metrics, createId: () => artifactId })
+
+      await expect(store.publishBundle(publishingInput())).rejects.toBeInstanceOf(
+        ArtifactStorageError,
+      )
+      await expect(store.probe()).resolves.toBe(false)
+      failureCode = undefined
+      await expect(store.probe()).resolves.toBe(true)
+      expect(metrics.setStorageHealthy.mock.calls).toEqual([[false], [false], [true]])
+      expect(JSON.stringify(metrics.setStorageHealthy.mock.calls)).not.toContain('/data/private')
+    },
+  )
+
+  it('rejects invalid cache/job/artifact identifiers before filesystem access', async () => {
+    const root = await temporaryRoot()
+    const readFileSpy = vi.fn(nodeArtifactStoreFileOperations.readFile)
+    const store = new FileArtifactStore({
+      root,
+      operations: { ...nodeArtifactStoreFileOperations, readFile: readFileSpy },
+    })
+
+    await expect(store.find('../secret', new Date())).rejects.toThrowError(
+      'A valid SHA-256 key is required',
+    )
+    await expect(store.recoverWorkTranscript('../../etc/passwd')).rejects.toThrowError(
+      'A valid transcript job ID is required',
+    )
+    await expect(
+      store.readForJob({
+        cacheKey,
+        artifactId: '../artifact',
+        producerJobId: jobId,
+        expiresAt,
+      }),
+    ).rejects.toThrowError('A valid transcript job ID is required')
+    expect(readFileSpy).not.toHaveBeenCalled()
+  })
+})
