@@ -1,0 +1,196 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OpenAPI contract > keeps a stable snapshot of public component schemas 1`] = `
+{
+  "Error": {
+    "additionalProperties": false,
+    "properties": {
+      "error": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "INVALID_YOUTUBE_URL",
+              "TRANSCRIPT_CAPACITY_EXCEEDED",
+              "CAPTIONS_UNAVAILABLE",
+              "VIDEO_NOT_AVAILABLE",
+              "YOUTUBE_UPSTREAM_ERROR",
+              "AUDIO_FALLBACK_NOT_CONFIGURED",
+              "AUDIO_TOOL_UNAVAILABLE",
+              "AUDIO_EXTRACTION_FAILED",
+              "AUDIO_PROCESS_TIMEOUT",
+              "AUDIO_PROCESS_ABORTED",
+              "AUDIO_CHUNK_TOO_LARGE",
+              "MUSE_TRANSCRIPTION_FAILED",
+              "MUSE_AUTHENTICATION_FAILED",
+              "MUSE_QUOTA_EXCEEDED",
+              "MUSE_TIMEOUT",
+              "MUSE_UPSTREAM_UNAVAILABLE",
+              "MUSE_INVALID_RESPONSE",
+              "PDF_GENERATION_FAILED",
+              "API_AUTH_NOT_CONFIGURED",
+              "UNAUTHORIZED",
+              "INVALID_REQUEST",
+              "INTERNAL_SERVER_ERROR",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "code",
+          "message",
+        ],
+        "type": "object",
+      },
+    },
+    "required": [
+      "error",
+    ],
+    "type": "object",
+  },
+  "Health": {
+    "additionalProperties": false,
+    "properties": {
+      "status": {
+        "enum": [
+          "ok",
+        ],
+        "type": "string",
+      },
+    },
+    "required": [
+      "status",
+    ],
+    "type": "object",
+  },
+  "Readiness": {
+    "additionalProperties": false,
+    "properties": {
+      "status": {
+        "enum": [
+          "ready",
+          "not_ready",
+        ],
+        "type": "string",
+      },
+    },
+    "required": [
+      "status",
+    ],
+    "type": "object",
+  },
+  "Transcript": {
+    "additionalProperties": false,
+    "properties": {
+      "extractedAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+      "isGenerated": {
+        "type": "boolean",
+      },
+      "language": {
+        "type": "string",
+      },
+      "segments": {
+        "items": {
+          "$ref": "#/components/schemas/TranscriptSegment",
+        },
+        "type": "array",
+      },
+      "source": {
+        "enum": [
+          "youtube_captions",
+          "muse_transcription",
+        ],
+        "type": "string",
+      },
+      "sourceUrl": {
+        "format": "uri",
+        "type": "string",
+      },
+      "text": {
+        "type": "string",
+      },
+      "timestampPrecision": {
+        "enum": [
+          "caption",
+          "chunk",
+        ],
+        "type": "string",
+      },
+      "videoId": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "videoId",
+      "sourceUrl",
+      "source",
+      "language",
+      "isGenerated",
+      "timestampPrecision",
+      "extractedAt",
+      "text",
+      "segments",
+    ],
+    "type": "object",
+  },
+  "TranscriptRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "languages": {
+        "items": {
+          "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+          "type": "string",
+        },
+        "maxItems": 5,
+        "minItems": 1,
+        "type": "array",
+        "uniqueItems": true,
+      },
+      "url": {
+        "maxLength": 2048,
+        "minLength": 1,
+        "type": "string",
+      },
+    },
+    "required": [
+      "url",
+    ],
+    "type": "object",
+  },
+  "TranscriptSegment": {
+    "additionalProperties": false,
+    "properties": {
+      "durationSeconds": {
+        "anyOf": [
+          {
+            "minimum": 0,
+            "type": "number",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "startSeconds": {
+        "minimum": 0,
+        "type": "number",
+      },
+      "text": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "text",
+      "startSeconds",
+      "durationSeconds",
+    ],
+    "type": "object",
+  },
+}
+`;

@@ -309,7 +309,7 @@ JSON/PDF, expose public readiness and protected metrics, forward owned Retry-Aft
 **Gate:** full
 **Commit:** `feat(api): enforce runtime capacity and readiness`
 
-### T9: Generate and validate the OpenAPI 3.1 contract
+### T9: Generate and validate the OpenAPI 3.1 contract ✅
 
 **What:** Register complete shared route/response schemas and serve a versioned OpenAPI 3.1 document
 whose operations match every in-scope Fastify route.
@@ -325,12 +325,12 @@ whose operations match every in-scope Fastify route.
 
 **Done when:**
 
-- [ ] `@fastify/swagger` 9.8.1 and `@readme/openapi-parser` 8.0.0 are pinned at runtime/dev scope respectively.
-- [ ] `/openapi.json` returns OpenAPI 3.1.0 and API version 1.0.0 without production servers or values.
-- [ ] All five in-scope paths and methods describe exact bodies, media types, success/error statuses, schemas, and security boundaries.
-- [ ] Transcript fields/enums, segments, readiness, metrics, Bearer auth, and every stable public error code are represented.
-- [ ] Parser validation, stable schema snapshot, route parity, security, secret absence, and no-runtime-config tests pass.
-- [ ] `npm test` passes with at least 162 tests and no silent deletions.
+- [x] `@fastify/swagger` 9.8.1 and `@readme/openapi-parser` 8.0.0 are pinned at runtime/dev scope respectively.
+- [x] `/openapi.json` returns OpenAPI 3.1.0 and API version 1.0.0 without production servers or values.
+- [x] All five in-scope paths and methods describe exact bodies, media types, success/error statuses, schemas, and security boundaries.
+- [x] Transcript fields/enums, segments, readiness, metrics, Bearer auth, and every stable public error code are represented.
+- [x] Parser validation, stable schema snapshot, route parity, security, secret absence, and no-runtime-config tests pass.
+- [x] `npm test` passes with at least 162 tests and no silent deletions.
 
 **Tests:** integration
 **Gate:** full

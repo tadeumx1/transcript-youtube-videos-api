@@ -243,13 +243,13 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | OBS-05 | Observability and readiness | T2, T7, T8 | Implemented |
 | OBS-06 | Observability and readiness | T7, T8 | Implemented |
 | OBS-07 | Observability and readiness edge case | T2 | Implemented |
-| API-01 | OpenAPI contract | T9 | In Tasks |
-| API-02 | OpenAPI contract | T9 | In Tasks |
-| API-03 | OpenAPI contract | T9 | In Tasks |
-| API-04 | OpenAPI contract | T9 | In Tasks |
-| API-05 | OpenAPI contract | T9 | In Tasks |
-| API-06 | OpenAPI contract | T9 | In Tasks |
-| API-07 | OpenAPI contract edge case | T9 | In Tasks |
+| API-01 | OpenAPI contract | T9 | Implemented |
+| API-02 | OpenAPI contract | T9 | Implemented |
+| API-03 | OpenAPI contract | T9 | Implemented |
+| API-04 | OpenAPI contract | T9 | Implemented |
+| API-05 | OpenAPI contract | T9 | Implemented |
+| API-06 | OpenAPI contract | T9 | Implemented |
+| API-07 | OpenAPI contract edge case | T9 | Implemented |
 | CI-01 | Continuous integration | T10 | In Tasks |
 | CI-02 | Continuous integration | T10 | In Tasks |
 | CI-03 | Continuous integration | T10 | In Tasks |

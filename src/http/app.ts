@@ -21,6 +21,14 @@ import {
   buildTranscriptPdfModel,
   type TranscriptPdfModel,
 } from '../infrastructure/pdf/transcript-pdf.js'
+import {
+  healthRouteSchema,
+  metricsRouteSchema,
+  readinessRouteSchema,
+  registerOpenApi,
+  transcriptPdfRouteSchema,
+  transcriptRouteSchema,
+} from './openapi.js'
 
 interface TranscriptRequestBody {
   url: string
@@ -52,25 +60,6 @@ export interface BuildAppOptions {
   runtimeMetrics?: RuntimeMetrics
   executionController?: ExecutionController
 }
-
-const transcriptRequestSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['url'],
-  properties: {
-    url: { type: 'string', minLength: 1, maxLength: 2048 },
-    languages: {
-      type: 'array',
-      minItems: 1,
-      maxItems: 5,
-      uniqueItems: true,
-      items: {
-        type: 'string',
-        pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$',
-      },
-    },
-  },
-} as const
 
 const publicErrorMessages: Record<AppErrorCode, string> = {
   INVALID_YOUTUBE_URL: 'A valid HTTPS YouTube video URL is required',
@@ -148,168 +137,175 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
     logController: new LogController({ disableRequestLogging: true }),
     logger: options.logger ?? false,
   })
+  registerOpenApi(app)
 
-  app.addHook('onResponse', async (request, reply) => {
-    request.log.info(
-      {
-        method: request.method,
-        route: request.routeOptions.url,
-        statusCode: reply.statusCode,
-        durationMs: Math.round(reply.elapsedTime),
-      },
-      'request completed',
-    )
-  })
+  app.after((pluginError) => {
+    if (pluginError) throw pluginError
 
-  app.setErrorHandler((error, request, reply) => {
-    if (isValidationError(error)) {
-      request.log.warn({ code: 'INVALID_REQUEST', statusCode: 400 }, 'request failed')
-      return reply.status(400).send({
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'Request body validation failed',
+    app.addHook('onResponse', async (request, reply) => {
+      request.log.info(
+        {
+          method: request.method,
+          route: request.routeOptions.url,
+          statusCode: reply.statusCode,
+          durationMs: Math.round(reply.elapsedTime),
         },
-      })
-    }
-
-    if (error instanceof AppError) {
-      request.log.warn({ code: error.code, statusCode: error.statusCode }, 'request failed')
-      if (error.publicMetadata?.retryAfterSeconds !== undefined) {
-        reply.header('retry-after', String(error.publicMetadata.retryAfterSeconds))
-      }
-      return reply.status(error.statusCode).send({
-        error: {
-          code: error.code,
-          message: publicErrorMessages[error.code],
-        },
-      })
-    }
-
-    request.log.error({ code: 'INTERNAL_SERVER_ERROR', statusCode: 500 }, 'request failed')
-    return reply.status(500).send({
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'An unexpected error occurred',
-      },
+        'request completed',
+      )
     })
-  })
 
-  app.get('/health', async () => ({ status: 'ok' }))
-
-  app.get('/ready', async (_request, reply) => {
-    if (!executionController.isReady) {
-      return reply.status(503).send({ status: 'not_ready' })
-    }
-    return reply.send({ status: 'ready' })
-  })
-
-  const authenticate = createAuthenticateHook(options.apiAccessKey)
-
-  app.get('/metrics', { onRequest: authenticate }, async (_request, reply) => {
-    return reply.type(metrics.contentType).send(await metrics.render())
-  })
-
-  app.addHook('preClose', async () => {
-    executionController.beginShutdown()
-  })
-
-  async function withTranscriptExecution<T>(
-    request: FastifyRequest,
-    reply: FastifyReply,
-    route: 'json' | 'pdf',
-    operation: (operationOptions: TranscriptOperationOptions) => Promise<T>,
-  ): Promise<T | FastifyReply> {
-    const permit = executionController.tryAcquire(route)
-    if (!permit) {
-      return reply
-        .status(429)
-        .header('retry-after', String(retryAfterSeconds))
-        .send({
+    app.setErrorHandler((error, request, reply) => {
+      if (isValidationError(error)) {
+        request.log.warn({ code: 'INVALID_REQUEST', statusCode: 400 }, 'request failed')
+        return reply.status(400).send({
           error: {
-            code: 'TRANSCRIPT_CAPACITY_EXCEEDED',
-            message: publicErrorMessages.TRANSCRIPT_CAPACITY_EXCEEDED,
+            code: 'INVALID_REQUEST',
+            message: 'Request body validation failed',
           },
         })
-    }
+      }
 
-    const clientAbort = new AbortController()
-    const abortClientWork = () => clientAbort.abort()
-    const abortClosedRequest = () => {
-      if (request.raw.aborted) abortClientWork()
-    }
-    request.raw.once('aborted', abortClientWork)
-    request.raw.once('error', abortClientWork)
-    request.raw.once('close', abortClosedRequest)
-    reply.raw.once('close', abortClientWork)
-
-    try {
-      return await operation({
-        signal: AbortSignal.any([permit.signal, clientAbort.signal]),
-        metrics,
-      })
-    } finally {
-      request.raw.removeListener('aborted', abortClientWork)
-      request.raw.removeListener('error', abortClientWork)
-      request.raw.removeListener('close', abortClosedRequest)
-      reply.raw.removeListener('close', abortClientWork)
-      permit.release()
-    }
-  }
-
-  app.post<{ Body: TranscriptRequestBody }>(
-    '/v1/transcripts',
-    { onRequest: authenticate, schema: { body: transcriptRequestSchema } },
-    async (request, reply) => {
-      const parsedUrl = parseYouTubeUrl(request.body.url)
-      return withTranscriptExecution(request, reply, 'json', async (operationOptions) => {
-        const transcript = await dependencies.transcriptService.getTranscript(
-          parsedUrl,
-          getLanguages(request.body),
-          operationOptions,
-        )
-        request.log.info({ source: transcript.source }, 'transcript prepared')
-        return transcript
-      })
-    },
-  )
-
-  app.post<{ Body: TranscriptRequestBody }>(
-    '/v1/transcripts/pdf',
-    { onRequest: authenticate, schema: { body: transcriptRequestSchema } },
-    async (request, reply) => {
-      const parsedUrl = parseYouTubeUrl(request.body.url)
-      return withTranscriptExecution(request, reply, 'pdf', async (operationOptions) => {
-        const transcript = await dependencies.transcriptService.getTranscript(
-          parsedUrl,
-          getLanguages(request.body),
-          operationOptions,
-        )
-        const pdfStartedAt = performance.now()
-        let pdf: Buffer
-        try {
-          pdf = await dependencies.pdfRenderer.render(buildTranscriptPdfModel(transcript))
-          metrics.observeStage('pdf', 'success', (performance.now() - pdfStartedAt) / 1_000)
-        } catch (error) {
-          metrics.observeStage(
-            'pdf',
-            transcriptMetricOutcome(error),
-            (performance.now() - pdfStartedAt) / 1_000,
-          )
-          metrics.recordStageFailure('pdf', transcriptMetricReason(error))
-          throw error
+      if (error instanceof AppError) {
+        request.log.warn({ code: error.code, statusCode: error.statusCode }, 'request failed')
+        if (error.publicMetadata?.retryAfterSeconds !== undefined) {
+          reply.header('retry-after', String(error.publicMetadata.retryAfterSeconds))
         }
+        return reply.status(error.statusCode).send({
+          error: {
+            code: error.code,
+            message: publicErrorMessages[error.code],
+          },
+        })
+      }
 
-        request.log.info({ source: transcript.source }, 'transcript PDF prepared')
-        return reply
-          .type('application/pdf')
-          .header(
-            'content-disposition',
-            `attachment; filename="youtube-transcript-${transcript.videoId}.pdf"`,
-          )
-          .send(pdf)
+      request.log.error({ code: 'INTERNAL_SERVER_ERROR', statusCode: 500 }, 'request failed')
+      return reply.status(500).send({
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected error occurred',
+        },
       })
-    },
-  )
+    })
+
+    app.get('/health', { schema: healthRouteSchema }, async () => ({ status: 'ok' }))
+
+    app.get('/ready', { schema: readinessRouteSchema }, async (_request, reply) => {
+      if (!executionController.isReady) {
+        return reply.status(503).send({ status: 'not_ready' })
+      }
+      return reply.send({ status: 'ready' })
+    })
+
+    const authenticate = createAuthenticateHook(options.apiAccessKey)
+
+    app.get(
+      '/metrics',
+      { onRequest: authenticate, schema: metricsRouteSchema },
+      async (_request, reply) => reply.type(metrics.contentType).send(await metrics.render()),
+    )
+
+    app.addHook('preClose', async () => {
+      executionController.beginShutdown()
+    })
+
+    async function withTranscriptExecution<T>(
+      request: FastifyRequest,
+      reply: FastifyReply,
+      route: 'json' | 'pdf',
+      operation: (operationOptions: TranscriptOperationOptions) => Promise<T>,
+    ): Promise<T | FastifyReply> {
+      const permit = executionController.tryAcquire(route)
+      if (!permit) {
+        return reply
+          .status(429)
+          .header('retry-after', String(retryAfterSeconds))
+          .send({
+            error: {
+              code: 'TRANSCRIPT_CAPACITY_EXCEEDED',
+              message: publicErrorMessages.TRANSCRIPT_CAPACITY_EXCEEDED,
+            },
+          })
+      }
+
+      const clientAbort = new AbortController()
+      const abortClientWork = () => clientAbort.abort()
+      const abortClosedRequest = () => {
+        if (request.raw.aborted) abortClientWork()
+      }
+      request.raw.once('aborted', abortClientWork)
+      request.raw.once('error', abortClientWork)
+      request.raw.once('close', abortClosedRequest)
+      reply.raw.once('close', abortClientWork)
+
+      try {
+        return await operation({
+          signal: AbortSignal.any([permit.signal, clientAbort.signal]),
+          metrics,
+        })
+      } finally {
+        request.raw.removeListener('aborted', abortClientWork)
+        request.raw.removeListener('error', abortClientWork)
+        request.raw.removeListener('close', abortClosedRequest)
+        reply.raw.removeListener('close', abortClientWork)
+        permit.release()
+      }
+    }
+
+    app.post<{ Body: TranscriptRequestBody }>(
+      '/v1/transcripts',
+      { onRequest: authenticate, schema: transcriptRouteSchema },
+      async (request, reply) => {
+        const parsedUrl = parseYouTubeUrl(request.body.url)
+        return withTranscriptExecution(request, reply, 'json', async (operationOptions) => {
+          const transcript = await dependencies.transcriptService.getTranscript(
+            parsedUrl,
+            getLanguages(request.body),
+            operationOptions,
+          )
+          request.log.info({ source: transcript.source }, 'transcript prepared')
+          return transcript
+        })
+      },
+    )
+
+    app.post<{ Body: TranscriptRequestBody }>(
+      '/v1/transcripts/pdf',
+      { onRequest: authenticate, schema: transcriptPdfRouteSchema },
+      async (request, reply) => {
+        const parsedUrl = parseYouTubeUrl(request.body.url)
+        return withTranscriptExecution(request, reply, 'pdf', async (operationOptions) => {
+          const transcript = await dependencies.transcriptService.getTranscript(
+            parsedUrl,
+            getLanguages(request.body),
+            operationOptions,
+          )
+          const pdfStartedAt = performance.now()
+          let pdf: Buffer
+          try {
+            pdf = await dependencies.pdfRenderer.render(buildTranscriptPdfModel(transcript))
+            metrics.observeStage('pdf', 'success', (performance.now() - pdfStartedAt) / 1_000)
+          } catch (error) {
+            metrics.observeStage(
+              'pdf',
+              transcriptMetricOutcome(error),
+              (performance.now() - pdfStartedAt) / 1_000,
+            )
+            metrics.recordStageFailure('pdf', transcriptMetricReason(error))
+            throw error
+          }
+
+          request.log.info({ source: transcript.source }, 'transcript PDF prepared')
+          return reply
+            .type('application/pdf')
+            .header(
+              'content-disposition',
+              `attachment; filename="youtube-transcript-${transcript.videoId}.pdf"`,
+            )
+            .send(pdf)
+        })
+      },
+    )
+  })
 
   return app
 }

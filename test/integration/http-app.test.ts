@@ -393,7 +393,7 @@ describe('Fastify application', () => {
     expect(metrics.statusCode).toBe(200)
     expect(metrics.headers['content-type']).toBe('text/plain; version=0.0.4; charset=utf-8')
     expect(metrics.body).toContain('youtube_transcript_active_jobs 1')
-    expect(openApiBeforeContractTask.statusCode).toBe(404)
+    expect(openApiBeforeContractTask.statusCode).toBe(200)
     expect(getTranscript).toHaveBeenCalledOnce()
 
     held.resolve(captionTranscript)
