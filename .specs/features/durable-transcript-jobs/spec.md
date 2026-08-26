@@ -204,12 +204,12 @@ OpenAPI document without credentials.
 | JOB-06 | Submit/retrieve durable jobs | T12, T13 | Planned |
 | JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Partial (T2 complete) |
 | WORK-01 | Durable worker lifecycle | T10, T15 | Planned |
-| WORK-02 | Durable worker lifecycle | T5, T10 | Planned |
-| WORK-03 | Durable worker lifecycle | T5, T10 | Planned |
+| WORK-02 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
+| WORK-03 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
 | WORK-04 | Durable worker lifecycle | T2, T10 | Partial (T2 complete) |
-| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Planned |
+| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Partial (T5 complete) |
 | WORK-06 | Durable worker lifecycle | T10 | Planned |
-| WORK-07 | Durable worker lifecycle | T5, T10 | Planned |
+| WORK-07 | Durable worker lifecycle | T5, T10 | Partial (T5 complete) |
 | STORE-01 | Atomic persistent store | T6 | Planned |
 | STORE-02 | Atomic persistent store | T7 | Planned |
 | STORE-03 | Atomic persistent store | T7 | Planned |

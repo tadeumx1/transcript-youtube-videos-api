@@ -205,7 +205,7 @@ families and closed label mappings.
 **Gate**: quick
 **Commit**: `feat(metrics): observe durable job lifecycle`
 
-### T5: Wait for shared execution capacity without rejection
+### T5: Wait for shared execution capacity without rejection ✅
 
 **What**: Add an abortable FIFO `waitForPermit` path to `ExecutionController` while preserving exact
 `tryAcquire` behavior for synchronous HTTP.
@@ -221,12 +221,12 @@ families and closed label mappings.
 
 **Done when**:
 
-- [ ] Available capacity resolves immediately; saturated waiters resolve in FIFO order only after an exact permit release.
-- [ ] Waiting neither increments capacity-rejection metrics nor changes the active gauge before admission.
-- [ ] Caller abort removes the exact listener/waiter and resolves without a permit; release and abort races settle once.
-- [ ] Shutdown resolves all waiters without permits, aborts active permits once, and leaves zero listeners/waiters.
-- [ ] Existing `tryAcquire` overflow, readiness, and idempotent-release tests remain unchanged.
-- [ ] `npm run test:unit` passes with at least 171 tests and no silent deletions.
+- [x] Available capacity resolves immediately; saturated waiters resolve in FIFO order only after an exact permit release.
+- [x] Waiting neither increments capacity-rejection metrics nor changes the active gauge before admission.
+- [x] Caller abort removes the exact listener/waiter and resolves without a permit; release and abort races settle once.
+- [x] Shutdown resolves all waiters without permits, aborts active permits once, and leaves zero listeners/waiters.
+- [x] Existing `tryAcquire` overflow, readiness, and idempotent-release tests remain unchanged.
+- [x] `npm run test:unit` passes with at least 171 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -674,7 +674,7 @@ boundaries are the only batch boundaries.
 | T2 | One durable-job domain component | ✅ Complete |
 | T3 | One runtime-config extension | ✅ Complete |
 | T4 | One metrics-registry extension | ✅ Complete |
-| T5 | One execution-controller extension | ✅ Granular |
+| T5 | One execution-controller extension | ✅ Complete |
 | T6 | One atomic-writer component | ✅ Granular |
 | T7 | One artifact-store component | ✅ Cohesive storage boundary |
 | T8 | One job-repository component | ✅ Cohesive repository boundary |
