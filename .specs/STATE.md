@@ -40,11 +40,11 @@
 
 ## Handoff
 
-- **Feature:** youtube-transcript-pdf
-- **Phase:** Validate complete
-- **Completed:** Hybrid captions/OpenAI transcript API, PDF output, runtime packaging, 68-test gate, and independent 32/32 PASS verification
-- **In progress:** None
-- **Next step:** Configure API Platform billing and `OPENAI_API_KEY`; optionally build and smoke-test the image on a host with Docker
-- **Blockers:** None for source delivery; Docker was unavailable for an image-build verification
-- **Uncommitted files:** Validation and final traceability bookkeeping pending commit
-- **Branch:** `main`
+- **Feature**: muse-audio-fallback
+- **Phase / Task**: Validate complete
+- **Completed**: Captions-first Muse fallback, OpenCode Go configuration, local PDF flow, 74-test gate, 10/10 AC PASS, and 3/3 killed mutations
+- **In-progress** (file:line): none
+- **Next step**: Run a real captionless YouTube request in Docker or a host with `yt-dlp` and FFmpeg; then choose the RAG storage layer
+- **Blockers**: none for source delivery; the current host lacks `yt-dlp` and FFmpeg for a full video smoke test
+- **Uncommitted files**: none after the validation bookkeeping commit
+- **Branch**: `main`
