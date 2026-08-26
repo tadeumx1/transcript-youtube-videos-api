@@ -750,7 +750,7 @@ exact local rendering/publication assertions.
 **Gate**: quick
 **Commit**: `test(jobs): prohibit provider recovery calls`
 
-### T26: Prove completed hits bypass queue capacity
+### T26: Prove completed hits bypass queue capacity ✅
 
 **What**: Add the missing full-capacity completed-hit decision-order test.
 **Where**: `test/unit/durable-job-coordinator.test.ts`
@@ -759,10 +759,10 @@ exact local rendering/publication assertions.
 
 **Done when**:
 
-- [ ] A verified completed bundle at exact queue capacity returns `hit` with the same retained job ID.
-- [ ] No job create, provider work, or worker notification occurs.
-- [ ] Moving the capacity check before cache lookup fails the test.
-- [ ] `npm run test:unit` passes with at least 417 total tests and no silent deletions.
+- [x] A verified completed bundle at exact queue capacity returns `hit` with the same retained job ID.
+- [x] No job create, provider work, or worker notification occurs.
+- [x] Moving the capacity check before cache lookup fails the test.
+- [x] `npm run test:unit` passes with at least 417 total tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -855,7 +855,7 @@ boundaries are the only batch boundaries.
 | T23 | One completed-artifact quarantine path | ✅ Complete |
 | T24 | One lifecycle-gauge synchronization path | ✅ Complete |
 | T25 | One recovery non-call discrimination test | ✅ Complete |
-| T26 | One full-capacity hit discrimination test | Verification fix |
+| T26 | One full-capacity hit discrimination test | ✅ Complete |
 | T27 | One expiry/resubmission integration scenario | Verification fix |
 | T28 | One Railway plan evidence artifact | Verification fix |
 

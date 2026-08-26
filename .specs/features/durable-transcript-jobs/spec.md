@@ -222,7 +222,7 @@ OpenAPI document without credentials.
 | CACHE-02 | Deduplication/cache | T1 | Completed |
 | CACHE-03 | Deduplication/cache | T11 | Completed |
 | CACHE-04 | Deduplication/cache | T11, T21 | Completed |
-| CACHE-05 | Deduplication/cache | T11, T26 | Needs Fix |
+| CACHE-05 | Deduplication/cache | T11, T26 | Completed |
 | CACHE-06 | Deduplication/cache | T7, T9 | Completed |
 | CACHE-07 | Deduplication/cache | T8, T11, T27 | Needs Fix |
 | CACHE-08 | Deduplication/cache | T9, T13 | Completed |
@@ -234,7 +234,7 @@ OpenAPI document without credentials.
 | OPS-06 | Durable operations | T4, T13, T20 | Completed |
 | OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Completed |
 | OPS-08 | Durable operations | T20 | Completed |
-| EDGE-01 | Queue capacity edge case | T11, T26 | Needs Fix |
+| EDGE-01 | Queue capacity edge case | T11, T26 | Completed |
 | EDGE-02 | Partial publication edge case | T7, T10, T25 | Completed |
 | EDGE-03 | Uncertain external side effect edge case | T10 | Completed |
 | EDGE-04 | Read/expiry race edge case | T7 | Completed |

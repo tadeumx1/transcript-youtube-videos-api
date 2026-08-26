@@ -275,6 +275,33 @@ describe('DurableJobCoordinator', () => {
     expect(fixture.metrics.recordJobSubmission).toHaveBeenCalledExactlyOnceWith('hit')
   })
 
+  it('returns a verified completed hit at exact queue capacity without new work', async () => {
+    const fixture = createFixture([completed(), queuedOther(secondJobId)])
+    fixture.find.mockResolvedValue(artifactBundle(jobId))
+    const saturated = new DurableJobCoordinator({
+      repository: fixture.repository,
+      artifactCoordinator: { prepare: vi.fn(), find: fixture.find },
+      artifactStore: { readForJob: fixture.readForJob, probe: fixture.probe },
+      worker: fixture.worker,
+      metrics: fixture.metrics,
+      maxQueuedJobs: 1,
+      sweepIntervalMs: 60_000,
+      now: () => now,
+      createId: () => secondJobId,
+    })
+
+    await expect(saturated.submit(request)).resolves.toMatchObject({
+      jobId,
+      status: 'completed',
+      disposition: 'hit',
+    })
+    expect(fixture.repository.activeCount).toBe(1)
+    expect(fixture.find).toHaveBeenCalledExactlyOnceWith(request)
+    expect(fixture.repository.create).not.toHaveBeenCalled()
+    expect(fixture.worker.notify).not.toHaveBeenCalled()
+    expect(fixture.metrics.recordJobSubmission).toHaveBeenCalledExactlyOnceWith('hit')
+  })
+
   it('creates one immediate completed hit for a verified synchronous bundle without capacity', async () => {
     const fixture = createFixture([queuedOther()])
     fixture.find.mockResolvedValue(artifactBundle(null))
