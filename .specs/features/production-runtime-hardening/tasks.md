@@ -82,7 +82,7 @@ T10 -> T11
 
 ## Phase 1 Tasks
 
-### T1: Parse bounded runtime hardening configuration
+### T1: Parse bounded runtime hardening configuration ✅
 
 **What:** Add strict environment parsing for transcript capacity, Retry-After, media timeouts,
 termination grace, and Muse timeout with the approved defaults and bounds.
@@ -98,12 +98,12 @@ termination grace, and Muse timeout with the approved defaults and bounds.
 
 **Done when:**
 
-- [ ] Missing variables resolve to capacity 1, Retry-After 30 seconds, yt-dlp 300000 ms, FFmpeg 900000 ms, process grace 5000 ms, and Muse 300000 ms.
-- [ ] Capacity accepts only integers 1-32; every duration accepts only the documented positive bounded range.
-- [ ] Invalid values fail startup with the variable name but never echo the raw value.
-- [ ] `.env.example` and README configuration tables include the new variables without secrets.
-- [ ] Unit tests cover every default, minimum, maximum, malformed, fractional, zero, negative, and out-of-range branch.
-- [ ] `npm run test:unit` passes with at least 93 tests and no silent deletions.
+- [x] Missing variables resolve to capacity 1, Retry-After 30 seconds, yt-dlp 300000 ms, FFmpeg 900000 ms, process grace 5000 ms, and Muse 300000 ms.
+- [x] Capacity accepts only integers 1-32; every duration accepts only the documented positive bounded range.
+- [x] Invalid values fail startup with the variable name but never echo the raw value.
+- [x] `.env.example` and README configuration tables include the new variables without secrets.
+- [x] Unit tests cover every default, minimum, maximum, malformed, fractional, zero, negative, and out-of-range branch.
+- [x] `npm run test:unit` passes with at least 93 tests and no silent deletions.
 
 **Tests:** unit
 **Gate:** quick

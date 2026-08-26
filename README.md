@@ -71,6 +71,12 @@ ambiente da hospedagem também são aceitas.
 | `API_ACCESS_KEY` | sim para transcrever | vazia | Token Bearer que protege os dois endpoints de transcrição. |
 | `YT_DLP_PATH` | não | `yt-dlp` | Caminho do executável `yt-dlp`. |
 | `FFMPEG_PATH` | não | `ffmpeg` | Caminho do executável FFmpeg. |
+| `MAX_CONCURRENT_TRANSCRIPTS` | não | `1` | Máximo global de transcrições simultâneas, de 1 a 32. |
+| `TRANSCRIPT_RETRY_AFTER_SECONDS` | não | `30` | Espera indicada quando a capacidade está cheia, de 1 a 3600 segundos. |
+| `YT_DLP_TIMEOUT_MS` | não | `300000` | Limite do download, de 1 a 3600000 milissegundos. |
+| `FFMPEG_TIMEOUT_MS` | não | `900000` | Limite da conversão, de 1 a 3600000 milissegundos. |
+| `PROCESS_TERMINATION_GRACE_MS` | não | `5000` | Espera entre `SIGTERM` e `SIGKILL`, de 1 a 60000 milissegundos. |
+| `MUSE_TIMEOUT_MS` | não | `300000` | Limite de uma requisição ao Muse, de 1 a 3600000 milissegundos. |
 
 `GET /health` continua público. Se `API_ACCESS_KEY` estiver vazio, os endpoints de transcrição
 falham fechados com HTTP 503; eles nunca ficam públicos por acidente.

@@ -220,18 +220,18 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | HARD-02 | Bounded transcript work | T3, T8 | In Tasks |
 | HARD-03 | Bounded transcript work | T3, T8 | In Tasks |
 | HARD-04 | Bounded transcript work | T3, T8 | In Tasks |
-| HARD-05 | Bounded transcript work | T1 | In Tasks |
+| HARD-05 | Bounded transcript work | T1 | Implemented |
 | HARD-06 | Bounded transcript work edge case | T8 | In Tasks |
-| PROC-01 | Media timeout and cancellation | T1, T4, T5 | In Tasks |
+| PROC-01 | Media timeout and cancellation | T1, T4, T5 | Partial: T1 complete |
 | PROC-02 | Media timeout and cancellation | T4, T5, T7 | In Tasks |
-| PROC-03 | Media timeout and cancellation | T1, T4 | In Tasks |
+| PROC-03 | Media timeout and cancellation | T1, T4 | Partial: T1 complete |
 | PROC-04 | Media timeout and cancellation | T4 | In Tasks |
 | PROC-05 | Media timeout and cancellation | T4 | In Tasks |
 | PROC-06 | Media timeout and cancellation | T5, T7 | In Tasks |
 | PROC-07 | Media timeout and cancellation edge case | T4 | In Tasks |
 | PROV-01 | Muse failure classification | T6 | In Tasks |
 | PROV-02 | Muse failure classification | T6, T8 | In Tasks |
-| PROV-03 | Muse failure classification | T1, T6 | In Tasks |
+| PROV-03 | Muse failure classification | T1, T6 | Partial: T1 complete |
 | PROV-04 | Muse failure classification | T6 | In Tasks |
 | PROV-05 | Muse failure classification | T6 | In Tasks |
 | PROV-06 | Muse failure classification | T6 | In Tasks |
