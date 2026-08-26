@@ -491,7 +491,7 @@ operations while retaining every existing operation and security boundary.
 
 ## Phase 5 Tasks
 
-### T15: Compose the production durable runtime
+### T15: Compose the production durable runtime ✅
 
 **What**: Instantiate one metrics/controller/store/repository/artifact coordinator/worker/job
 coordinator graph from runtime config and inject it into Fastify.
@@ -507,12 +507,12 @@ coordinator graph from runtime config and inject it into Fastify.
 
 **Done when**:
 
-- [ ] Production composition creates exactly one shared RuntimeMetrics, ExecutionController, repository, artifact store, renderer, worker, and coordinator.
-- [ ] Every config value reaches the owning component exactly; local default data root is created only through startup initialization.
-- [ ] Startup storage failure prevents durable readiness/listen with sanitized logs; runtime health degradation keeps `/health` available and `/ready` not-ready.
-- [ ] Shutdown uses the Fastify lifecycle once and `server.ts` needs no duplicate worker/storage shutdown path.
-- [ ] Integration tests use a real temporary root with fake provider/renderer to prove startup, durable restart persistence, one worker, result retrieval, and clean close without network credentials.
-- [ ] `npm test` passes with at least 230 total tests and no silent deletions.
+- [x] Production composition creates exactly one shared RuntimeMetrics, ExecutionController, repository, artifact store, renderer, worker, and coordinator.
+- [x] Every config value reaches the owning component exactly; local default data root is created only through startup initialization.
+- [x] Startup storage failure prevents durable readiness/listen with sanitized logs; runtime health degradation keeps `/health` available and `/ready` not-ready.
+- [x] Shutdown uses the Fastify lifecycle once and `server.ts` needs no duplicate worker/storage shutdown path.
+- [x] Integration tests use a real temporary root with fake provider/renderer to prove startup, durable restart persistence, one worker, result retrieval, and clean close without network credentials.
+- [x] `npm test` passes with at least 230 total tests and no silent deletions.
 
 **Tests**: integration
 **Gate**: full
@@ -684,7 +684,7 @@ boundaries are the only batch boundaries.
 | T12 | One job-route plugin | ✅ Complete |
 | T13 | One Fastify integration boundary | ✅ Complete |
 | T14 | One OpenAPI contract extension | ✅ Complete |
-| T15 | One production composition root | ✅ Cohesive dependency graph |
+| T15 | One production composition root | ✅ Complete |
 | T16 | One Railway IaC resource change | ✅ Granular |
 | T17 | One container entrypoint | ✅ Granular |
 | T18 | One Docker runtime integration | ✅ Granular |

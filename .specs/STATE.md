@@ -86,10 +86,10 @@
 ## Handoff
 
 - **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
-- **Phase / Task**: Execute / Batch 1 complete, Batch 2 T9 next
-- **Completed**: approved planning and Batch 1 Phases 1-2, T1-T8, with domain/runtime foundations and atomic file-backed artifact/job storage
+- **Phase / Task**: Execute / Batch 2 complete, Batch 3 T16 next
+- **Completed**: approved planning and Batch 1-2 Phases 1-5, T1-T15, with durable storage, worker, cache, authenticated job API, OpenAPI 1.1, and production composition
 - **In-progress** (file:line): none
-- **Next step**: dispatch sequential Batch 2 for Phases 3-5, T9-T15
+- **Next step**: dispatch sequential Batch 3 for Phase 6, T16-T20
 - **Blockers**: none
-- **Uncommitted files**: none after the T8 atomic commit
+- **Uncommitted files**: none after the T15 atomic commit
 - **Branch**: `main`

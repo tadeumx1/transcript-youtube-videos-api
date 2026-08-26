@@ -203,11 +203,11 @@ OpenAPI document without credentials.
 | JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Completed |
 | JOB-06 | Submit/retrieve durable jobs | T12, T13 | Completed |
 | JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Completed |
-| WORK-01 | Durable worker lifecycle | T10, T15 | Partial (T10 complete) |
+| WORK-01 | Durable worker lifecycle | T10, T15 | Completed |
 | WORK-02 | Durable worker lifecycle | T5, T10 | Completed |
 | WORK-03 | Durable worker lifecycle | T5, T10 | Completed |
 | WORK-04 | Durable worker lifecycle | T2, T10 | Completed |
-| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Partial (T5, T10, T13 complete) |
+| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Completed |
 | WORK-06 | Durable worker lifecycle | T10 | Completed |
 | WORK-07 | Durable worker lifecycle | T5, T10 | Completed |
 | STORE-01 | Atomic persistent store | T6 | Completed |
@@ -215,7 +215,7 @@ OpenAPI document without credentials.
 | STORE-03 | Atomic persistent store | T7 | Completed |
 | STORE-04 | Atomic persistent store | T7 | Completed |
 | STORE-05 | Atomic persistent store | T8 | Completed |
-| STORE-06 | Atomic persistent store | T7, T15 | Partial (T7 complete) |
+| STORE-06 | Atomic persistent store | T7, T15 | Completed |
 | STORE-07 | Atomic persistent store | T7, T8 | Completed |
 | STORE-08 | Atomic persistent store | T6, T7, T8 | Completed |
 | CACHE-01 | Deduplication/cache | T1 | Completed |
@@ -228,11 +228,11 @@ OpenAPI document without credentials.
 | CACHE-08 | Deduplication/cache | T9, T13 | Completed |
 | OPS-01 | Durable operations | T3 | Completed |
 | OPS-02 | Durable operations | T16, T17, T18 | Planned |
-| OPS-03 | Durable operations | T13, T15 | Partial (T13 complete) |
+| OPS-03 | Durable operations | T13, T15 | Completed |
 | OPS-04 | Durable operations | T4 | Completed |
 | OPS-05 | Durable operations | T14 | Completed |
 | OPS-06 | Durable operations | T4, T13, T20 | Partial (T4, T13 complete) |
-| OPS-07 | Durable operations | T3, T17, T18, T19 | Partial (T3 complete) |
+| OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Partial (T3, T15 complete) |
 | OPS-08 | Durable operations | T20 | Planned |
 | EDGE-01 | Queue capacity edge case | T11 | Completed |
 | EDGE-02 | Partial publication edge case | T7, T10 | Completed |
