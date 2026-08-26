@@ -206,9 +206,17 @@ franquia e amplificação de bloqueios do YouTube.
 
 ## Railway
 
-O arquivo `railway.json` seleciona o Dockerfile, configura `/health` como health check, permite até
-300 segundos para a imagem ficar saudável e limita reinícios por falha. O container e o Fastify usam
-a variável `PORT` fornecida pelo Railway.
+O arquivo `.railway/railway.ts` mantém o projeto e o serviço no Infrastructure as Code atual do
+Railway. Ele configura `/health` como health check e permite até 300 segundos para a imagem ficar
+saudável. O serviço usa o Dockerfile da raiz e a política padrão limitada de reinício por falha. O
+container e o Fastify usam a variável `PORT` fornecida pelo Railway.
+
+Para revisar mudanças de infraestrutura antes de aplicá-las:
+
+```bash
+railway config plan
+railway config apply
+```
 
 No primeiro deploy, execute na raiz do projeto:
 

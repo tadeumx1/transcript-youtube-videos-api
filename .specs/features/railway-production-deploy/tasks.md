@@ -190,7 +190,7 @@ T6 → T7
 **Gate:** build
 **Commit:** `docs(api): document authenticated railway use`
 
-### T6: Migrate Railway configuration to current Infrastructure as Code
+### T6: Migrate Railway configuration to current Infrastructure as Code ✅
 
 **What:** Replace deprecated Config as Code with the current TypeScript Railway IaC project definition.
 **Where:** `.railway/railway.ts`
@@ -205,11 +205,11 @@ T6 → T7
 
 **Done when**:
 
-- [ ] The official pinned `railway` TypeScript SDK is a development dependency.
-- [ ] `.railway/railway.ts` owns the existing project/service and configures `/health` with a 300-second timeout.
-- [ ] Deprecated `railway.json` is removed and the remote legacy config-file setting is cleared by the migration command.
-- [ ] `railway config plan` reports no destructive changes before apply and no remaining drift afterward.
-- [ ] `npm run check` passes.
+- [x] The official `railway` TypeScript SDK is pinned to 3.11.0 as a development dependency.
+- [x] `.railway/railway.ts` owns the existing project/service, Dockerfile builder, `/health`, and 300-second timeout.
+- [x] Deprecated `railway.json` is removed and the remote legacy config-file setting is empty.
+- [x] Migration/apply contained only safe updates and the final `railway config plan --json` reports `No changes.`
+- [x] `npm run check` passes with 83 tests.
 
 **Tests:** none - Railway IaC uses plan/apply evidence and the build gate per matrix
 **Gate:** build

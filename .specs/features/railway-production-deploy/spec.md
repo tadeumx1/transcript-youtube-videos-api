@@ -112,9 +112,9 @@ transcript content.
 | RYSEC-06 | Protected production API | T1 | Implemented |
 | RYSEC-07 | Edge case | T2 | Implemented |
 | RYSEC-08 | Edge case | T2 | Implemented |
-| RYDEP-01 | Railway service | T3, T4, T6 | In progress |
+| RYDEP-01 | Railway service | T3, T4, T6 | Implemented |
 | RYDEP-02 | Railway service | T3 | Implemented |
-| RYDEP-03 | Railway service | T4, T6 | In progress |
+| RYDEP-03 | Railway service | T4, T6 | Implemented |
 | RYDEP-04 | Railway service | T7 | Planned |
 | RYDEP-05 | Railway service | T7 | Planned |
 | RYDEP-06 | Railway service | T7 | Planned |
