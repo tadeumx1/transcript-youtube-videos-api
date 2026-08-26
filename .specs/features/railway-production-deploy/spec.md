@@ -5,13 +5,13 @@
 The transcript API is ready locally, but exposing its synchronous YouTube and Muse processing on a
 public Railway domain without access control would let unknown callers consume CPU, bandwidth, and
 the owner's OpenCode Go quota. The service needs a secure deployment contract, protected transcript
-routes, Railway health checks, sealed provider credentials, and reproducible operational evidence.
+routes, Railway health checks, Railway-managed provider credentials, and reproducible operational evidence.
 
 ## Goals
 
 - [ ] Protect every transcript-producing endpoint with one server-managed Bearer token.
 - [ ] Package the container and service configuration for Railway's dynamic runtime port.
-- [ ] Deploy the service with sealed OpenCode and API access credentials.
+- [ ] Deploy the service with OpenCode and API access credentials stored as Railway variables.
 - [ ] Verify health, authentication, JSON, and PDF behavior through the public Railway domain.
 - [ ] Record separately prioritized production-hardening tasks discovered during the audit.
 
@@ -115,12 +115,12 @@ transcript content.
 | RYDEP-01 | Railway service | T3, T4, T6 | Implemented |
 | RYDEP-02 | Railway service | T3 | Implemented |
 | RYDEP-03 | Railway service | T4, T6 | Implemented |
-| RYDEP-04 | Railway service | T7 | Planned |
-| RYDEP-05 | Railway service | T7 | Planned |
-| RYDEP-06 | Railway service | T7 | Planned |
-| RYDEP-07 | Railway service | T7 | Planned |
-| RYDEP-08 | Edge case | T7 | Planned |
-| RYDEP-09 | Edge case | T7 | Planned |
+| RYDEP-04 | Railway service | T7 | Implemented |
+| RYDEP-05 | Railway service | T7 | Implemented |
+| RYDEP-06 | Railway service | T7 | Implemented |
+| RYDEP-07 | Railway service | T7 | Implemented |
+| RYDEP-08 | Edge case | T7 | Implemented |
+| RYDEP-09 | Edge case | T7 | Implemented |
 
 **Coverage:** 17 total, 17 mapped to planned tasks, 0 unmapped.
 

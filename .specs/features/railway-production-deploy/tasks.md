@@ -215,9 +215,9 @@ T6 → T7
 **Gate:** build
 **Commit:** `chore(railway): migrate service configuration to iac`
 
-### T7: Deploy and verify the public Railway service
+### T7: Deploy and verify the public Railway service ✅
 
-**What:** Provision/link the Railway service, set sealed credentials, deploy, generate a domain, and verify its public contract.
+**What:** Provision/link the Railway service, set Railway-managed credentials, deploy, generate a domain, and verify its public contract.
 **Where:** `.specs/features/railway-production-deploy/validation.md`
 **Depends on:** T6
 **Reuses:** Root `.env` OpenCode credential, Railway IaC, Dockerfile, and authenticated route contract
@@ -230,13 +230,13 @@ T6 → T7
 
 **Done when**:
 
-- [ ] The service variables contain non-empty `OPENCODE_API_KEY` and a generated high-entropy `API_ACCESS_KEY` without values in evidence.
-- [ ] The scoped Railway deployment reaches terminal `SUCCESS`.
-- [ ] A Railway-provided public domain is active.
-- [ ] Public health returns exact HTTP 200 and unauthenticated transcript returns exact HTTP 401.
-- [ ] Authenticated caption JSON returns HTTP 200 with the unified contract without capturing transcript text.
-- [ ] Authenticated PDF returns HTTP 200, `application/pdf`, and the PDF signature without retaining its payload.
-- [ ] `npm run check` passes before independent verification.
+- [x] The service variables contain non-empty `OPENCODE_API_KEY` and a generated high-entropy `API_ACCESS_KEY` without values in evidence.
+- [x] Deployment `b30f931e-3f97-4f1b-a635-f46db5512d86` reached terminal `SUCCESS`.
+- [x] The Railway-provided public domain is active.
+- [x] Public health returns exact HTTP 200 and unauthenticated transcript returns exact HTTP 401.
+- [x] Authenticated caption JSON returns HTTP 200 with the unified contract without capturing transcript text.
+- [x] Authenticated PDF returns HTTP 200, `application/pdf`, and the `%PDF` signature without retaining its payload.
+- [x] `npm run check` passes with 83 tests before independent verification.
 
 **Tests:** none - external deployment state uses scoped CLI/HTTP evidence and the build gate per matrix
 **Gate:** build

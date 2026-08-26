@@ -244,6 +244,10 @@ em seguida confirme que um `POST /v1/transcripts` sem Bearer retorna 401 antes d
 autenticada. O valor real de `API_ACCESS_KEY` deve permanecer apenas no gerenciador de segredos e
 nos clientes autorizados.
 
+Depois de copiar `API_ACCESS_KEY` para um gerenciador de senhas, você pode usar a ação **Seal** na
+aba Variables do Railway. O seal é irreversível e impede recuperar o valor pelo painel ou CLI, então
+faça isso somente depois de confirmar que o cliente autorizado guardou o token.
+
 ## Privacidade e limitações
 
 - Áudio e blocos ficam em um diretório temporário exclusivo da requisição e são removidos em um
