@@ -692,7 +692,7 @@ degrade storage readiness, and perform no record/provider work.
 **Gate**: full
 **Commit**: `fix(jobs): sanitize submission storage failures`
 
-### T23: Quarantine corrupt completed-job artifacts
+### T23: Quarantine corrupt completed-job artifacts ✅
 
 **What**: Distinguish verified corruption from operational I/O during completed-job reads,
 invalidate its pointer, quarantine content under an opaque name, and still expose only sanitized 503.
@@ -702,10 +702,10 @@ invalidate its pointer, quarantine content under an opaque name, and still expos
 
 **Done when**:
 
-- [ ] Corrupt completed content is never returned and its cache pointer is removed before quarantine.
-- [ ] Quarantine naming contains no job/cache/video/content data and unrelated artifacts remain untouched.
-- [ ] Missing/operational I/O retains the existing sanitized 503 contract without false quarantine.
-- [ ] `npm run test:unit` passes with at least 415 total tests and no silent deletions.
+- [x] Corrupt completed content is never returned and its cache pointer is removed before quarantine.
+- [x] Quarantine naming contains no job/cache/video/content data and unrelated artifacts remain untouched.
+- [x] Missing/operational I/O retains the existing sanitized 503 contract without false quarantine.
+- [x] `npm run test:unit` passes with at least 415 total tests and no silent deletions.
 
 **Tests**: unit/real filesystem
 **Gate**: quick
@@ -852,7 +852,7 @@ boundaries are the only batch boundaries.
 | T20 | One operator/developer documentation contract | ✅ Complete |
 | T21 | One durable-publication cleanup boundary | ✅ Complete |
 | T22 | One durable-submit storage error boundary | ✅ Complete |
-| T23 | One completed-artifact quarantine path | Verification fix |
+| T23 | One completed-artifact quarantine path | ✅ Complete |
 | T24 | One lifecycle-gauge synchronization path | Verification fix |
 | T25 | One recovery non-call discrimination test | Verification fix |
 | T26 | One full-capacity hit discrimination test | Verification fix |

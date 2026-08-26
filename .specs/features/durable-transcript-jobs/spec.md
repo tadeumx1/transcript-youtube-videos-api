@@ -212,7 +212,7 @@ OpenAPI document without credentials.
 | WORK-07 | Durable worker lifecycle | T5, T10, T21 | Completed |
 | STORE-01 | Atomic persistent store | T6 | Completed |
 | STORE-02 | Atomic persistent store | T7 | Completed |
-| STORE-03 | Atomic persistent store | T7, T23 | Needs Fix |
+| STORE-03 | Atomic persistent store | T7, T23 | Completed |
 | STORE-04 | Atomic persistent store | T7 | Completed |
 | STORE-05 | Atomic persistent store | T8 | Completed |
 | STORE-06 | Atomic persistent store | T7, T15, T22 | Completed |

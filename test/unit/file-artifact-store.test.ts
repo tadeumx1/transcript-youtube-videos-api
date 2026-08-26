@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 
@@ -21,7 +21,13 @@ import {
 const roots: string[] = []
 const jobId = '28f5f7d2-f1de-4b27-92df-28c0e30607f8'
 const artifactId = 'f43a8406-46ba-4f8d-9de2-c768e6f69659'
+const temporaryId = '0740ad03-e775-47bb-a0a1-a525f0491690'
+const quarantineId = 'ef1e02cb-9f68-41e0-bc40-c1425052108f'
+const unrelatedJobId = 'de99ce88-f43c-4881-8ff4-cd68c1d4c359'
+const unrelatedArtifactId = '7ff2f0e7-2a7c-4fb1-a40c-0524bf484e4e'
+const unrelatedTemporaryId = '8b8d9b12-ed59-469a-838b-44a2fcc017db'
 const cacheKey = 'a'.repeat(64)
+const unrelatedCacheKey = 'b'.repeat(64)
 const createdAt = '2026-08-26T12:00:00.000Z'
 const expiresAt = '2026-09-02T12:00:00.000Z'
 const pdf = Buffer.from('%PDF exact cached bytes')
@@ -134,7 +140,8 @@ describe('FileArtifactStore', () => {
     'never returns and opaquely quarantines a %s-corrupt cache bundle',
     async (corruption) => {
       const root = await temporaryRoot()
-      const store = new FileArtifactStore({ root, createId: () => artifactId })
+      const ids = [artifactId, temporaryId, quarantineId]
+      const store = new FileArtifactStore({ root, createId: () => ids.shift() ?? quarantineId })
       await store.publishBundle(publishingInput())
       const paths = createStoragePaths(root)
       const artifactPath = paths.artifact(artifactId)
@@ -153,19 +160,39 @@ describe('FileArtifactStore', () => {
       await expect(store.find(cacheKey, new Date(createdAt))).resolves.toBeUndefined()
       await expect(readFile(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
       const quarantine = await readdir(join(root, 'v1/quarantine'))
-      expect(quarantine).toEqual([`${artifactId}.invalid`])
+      expect(quarantine).toEqual([`${quarantineId}.invalid`])
       expect(quarantine.join('')).not.toMatch(/dQw4w9WgXcQ|Carro|a{64}/)
     },
   )
 
-  it('maps a corrupt completed-job reference to one sanitized storage error', async () => {
+  it('removes the pointer before opaquely quarantining a corrupt completed-job artifact', async () => {
     const root = await temporaryRoot()
-    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    const paths = createStoragePaths(root)
+    const events: string[] = []
+    const operations: ArtifactStoreFileOperations = {
+      ...nodeArtifactStoreFileOperations,
+      async remove(path, recursive) {
+        if (path === paths.cache(cacheKey)) events.push('remove:pointer')
+        await nodeArtifactStoreFileOperations.remove(path, recursive)
+      },
+      async rename(from, to) {
+        if (from === paths.artifact(artifactId)) events.push(`quarantine:${basename(to)}`)
+        await nodeArtifactStoreFileOperations.rename(from, to)
+      },
+    }
+    const ids = [artifactId, temporaryId, unrelatedArtifactId, unrelatedTemporaryId, quarantineId]
+    const store = new FileArtifactStore({
+      root,
+      operations,
+      createId: () => ids.shift() ?? quarantineId,
+    })
     const reference = await store.publishBundle(publishingInput())
-    await writeFile(
-      join(createStoragePaths(root).artifact(artifactId), 'transcript.pdf'),
-      Buffer.from('corrupt'),
-    )
+    await store.publishBundle({
+      ...publishingInput(),
+      cacheKey: unrelatedCacheKey,
+      producerJobId: unrelatedJobId,
+    })
+    await writeFile(join(paths.artifact(artifactId), 'transcript.pdf'), Buffer.from('corrupt'))
 
     await expect(store.readForJob(reference)).rejects.toEqual(
       expect.objectContaining({
@@ -175,6 +202,16 @@ describe('FileArtifactStore', () => {
         message: 'Transcript job storage is unavailable',
       }),
     )
+    expect(events).toEqual(['remove:pointer', `quarantine:${quarantineId}.invalid`])
+    await expect(access(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+    expect(await readdir(join(root, 'v1/quarantine'))).toEqual([`${quarantineId}.invalid`])
+    expect((await readdir(join(root, 'v1/quarantine'))).join('')).not.toMatch(
+      new RegExp(`${jobId}|${artifactId}|${cacheKey}|dQw4w9WgXcQ|Carro`),
+    )
+    await expect(store.find(unrelatedCacheKey, new Date(createdAt))).resolves.toMatchObject({
+      transcript,
+      pdf,
+    })
   })
 
   it('maps a missing completed-job reference to the same sanitized storage error', async () => {
@@ -190,6 +227,35 @@ describe('FileArtifactStore', () => {
         message: 'Transcript job storage is unavailable',
       }),
     )
+    await expect(readFile(createStoragePaths(root).cache(cacheKey))).resolves.toBeDefined()
+    await expect(access(join(root, 'v1/quarantine'))).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('keeps the pointer and avoids quarantine for operational completed-read I/O failure', async () => {
+    const root = await temporaryRoot()
+    const initial = new FileArtifactStore({ root, createId: () => artifactId })
+    const reference = await initial.publishBundle(publishingInput())
+    const paths = createStoragePaths(root)
+    const operations: ArtifactStoreFileOperations = {
+      ...nodeArtifactStoreFileOperations,
+      async readFile(path) {
+        if (path.endsWith('transcript.pdf')) {
+          throw Object.assign(new Error('/data/private operational failure'), { code: 'EIO' })
+        }
+        return nodeArtifactStoreFileOperations.readFile(path)
+      },
+    }
+    const store = new FileArtifactStore({ root, operations, createId: () => quarantineId })
+
+    await expect(store.readForJob(reference)).rejects.toEqual(
+      expect.objectContaining({
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+    await expect(readFile(paths.cache(cacheKey))).resolves.toBeDefined()
+    await expect(access(join(root, 'v1/quarantine'))).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
   it('persists and verifies a partial worker transcript without publishing a cache pointer', async () => {

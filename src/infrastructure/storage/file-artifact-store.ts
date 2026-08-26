@@ -116,6 +116,7 @@ export class ArtifactStorageError extends Error {
 }
 
 class CorruptArtifactError extends Error {}
+class MissingArtifactError extends Error {}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -390,7 +391,7 @@ export class FileArtifactStore {
       try {
         return await this.#readBundle(reference)
       } catch (error) {
-        if (error instanceof CorruptArtifactError) {
+        if (error instanceof CorruptArtifactError || error instanceof MissingArtifactError) {
           await this.#operations.remove(pointerPath)
           await this.#quarantine(this.#paths.artifact(pointer.artifactId))
           return undefined
@@ -406,7 +407,15 @@ export class FileArtifactStore {
     return this.#withKey(key, async () => {
       try {
         return await this.#readBundle(reference)
-      } catch {
+      } catch (error) {
+        if (error instanceof CorruptArtifactError) {
+          try {
+            await this.#removePointerIfOwned(reference)
+            await this.#quarantine(this.#paths.artifact(reference.artifactId))
+          } catch {
+            this.#setHealthy(false)
+          }
+        }
         throw new ArtifactStorageError()
       }
     })
@@ -514,7 +523,7 @@ export class FileArtifactStore {
     try {
       manifestValue = await this.#readJson(join(artifactPath, 'manifest.json'))
     } catch (error) {
-      if (isMissing(error)) throw new CorruptArtifactError()
+      if (isMissing(error)) throw new MissingArtifactError()
       throw error
     }
     const manifest = parseManifest(manifestValue)
@@ -534,7 +543,7 @@ export class FileArtifactStore {
         this.#operations.readFile(join(artifactPath, 'transcript.pdf')),
       ])
     } catch (error) {
-      if (isMissing(error)) throw new CorruptArtifactError()
+      if (isMissing(error)) throw new MissingArtifactError()
       throw error
     }
     this.#verifyBytes(transcriptBytes, manifest.transcript)
@@ -581,6 +590,20 @@ export class FileArtifactStore {
       await this.#operations.remove(this.#paths.artifact(reference.artifactId), true)
     } catch {
       this.#storageFailure()
+    }
+  }
+
+  async #removePointerIfOwned(
+    reference: Pick<ArtifactReference, 'artifactId' | 'cacheKey'>,
+  ): Promise<void> {
+    const pointerPath = this.#paths.cache(reference.cacheKey)
+    try {
+      const pointer = parsePointer(await this.#readJson(pointerPath))
+      if (pointer.cacheKey === reference.cacheKey && pointer.artifactId === reference.artifactId) {
+        await this.#operations.remove(pointerPath)
+      }
+    } catch (error) {
+      if (!isMissing(error)) throw error
     }
   }
 
