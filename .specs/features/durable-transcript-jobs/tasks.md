@@ -595,7 +595,7 @@ and remove direct `USER node` startup without running the final Node process as 
 **Gate**: container
 **Commit**: `chore(container): enable volume permissions`
 
-### T19: Ignore local durable state
+### T19: Ignore local durable state ✅
 
 **What**: Exclude the approved `.data/` local durable root from version control and enforce it with a
 static repository contract.
@@ -611,9 +611,9 @@ static repository contract.
 
 **Done when**:
 
-- [ ] `.data/` is ignored exactly while specs, fixtures, and unrelated paths remain trackable.
-- [ ] Static test uses `git check-ignore` and proves representative job/artifact content cannot enter version control.
-- [ ] `npm run check` passes with at least 234 total tests and no silent deletions.
+- [x] `.data/` is ignored exactly while specs, fixtures, and unrelated paths remain trackable.
+- [x] Static test uses `git check-ignore` and proves representative job/artifact content cannot enter version control.
+- [x] `npm run check` passes with at least 234 total tests and no silent deletions.
 
 **Tests**: unit/static
 **Gate**: build
@@ -688,7 +688,7 @@ boundaries are the only batch boundaries.
 | T16 | One Railway IaC resource change | ✅ Complete |
 | T17 | One container entrypoint | ✅ Complete |
 | T18 | One Docker runtime integration | ✅ Complete |
-| T19 | One ignore-policy change | ✅ Granular |
+| T19 | One ignore-policy change | ✅ Complete |
 | T20 | One operator/developer documentation contract | ✅ Granular |
 
 ## Diagram-Definition Cross-Check

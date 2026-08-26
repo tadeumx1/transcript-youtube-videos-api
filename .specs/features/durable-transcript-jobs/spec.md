@@ -232,7 +232,7 @@ OpenAPI document without credentials.
 | OPS-04 | Durable operations | T4 | Completed |
 | OPS-05 | Durable operations | T14 | Completed |
 | OPS-06 | Durable operations | T4, T13, T20 | Partial (T4, T13 complete) |
-| OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Partial (T3, T15, T17, T18 complete) |
+| OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Completed |
 | OPS-08 | Durable operations | T20 | Planned |
 | EDGE-01 | Queue capacity edge case | T11 | Completed |
 | EDGE-02 | Partial publication edge case | T7, T10 | Completed |
