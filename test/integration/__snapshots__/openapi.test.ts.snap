@@ -32,6 +32,13 @@ exports[`OpenAPI contract > keeps a stable snapshot of public component schemas 
               "UNAUTHORIZED",
               "INVALID_REQUEST",
               "INTERNAL_SERVER_ERROR",
+              "JOB_QUEUE_CAPACITY_EXCEEDED",
+              "JOB_NOT_FOUND",
+              "JOB_NOT_COMPLETED",
+              "JOB_FAILED",
+              "JOB_EXPIRED",
+              "JOB_INTERRUPTED",
+              "JOB_STORAGE_UNAVAILABLE",
             ],
             "type": "string",
           },
@@ -63,6 +70,119 @@ exports[`OpenAPI contract > keeps a stable snapshot of public component schemas 
     },
     "required": [
       "status",
+    ],
+    "type": "object",
+  },
+  "JobFailure": {
+    "additionalProperties": false,
+    "properties": {
+      "code": {
+        "enum": [
+          "CAPTIONS_UNAVAILABLE",
+          "VIDEO_NOT_AVAILABLE",
+          "YOUTUBE_UPSTREAM_ERROR",
+          "AUDIO_FALLBACK_NOT_CONFIGURED",
+          "AUDIO_TOOL_UNAVAILABLE",
+          "AUDIO_EXTRACTION_FAILED",
+          "AUDIO_PROCESS_TIMEOUT",
+          "AUDIO_PROCESS_ABORTED",
+          "AUDIO_CHUNK_TOO_LARGE",
+          "MUSE_TRANSCRIPTION_FAILED",
+          "MUSE_AUTHENTICATION_FAILED",
+          "MUSE_QUOTA_EXCEEDED",
+          "MUSE_TIMEOUT",
+          "MUSE_UPSTREAM_UNAVAILABLE",
+          "MUSE_INVALID_RESPONSE",
+          "PDF_GENERATION_FAILED",
+          "JOB_INTERRUPTED",
+        ],
+        "type": "string",
+      },
+      "message": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "code",
+      "message",
+    ],
+    "type": "object",
+  },
+  "JobLinks": {
+    "additionalProperties": false,
+    "properties": {
+      "pdf": {
+        "type": "string",
+      },
+      "status": {
+        "type": "string",
+      },
+      "transcript": {
+        "type": "string",
+      },
+    },
+    "required": [
+      "status",
+      "transcript",
+      "pdf",
+    ],
+    "type": "object",
+  },
+  "JobSubmission": {
+    "additionalProperties": false,
+    "properties": {
+      "createdAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+      "disposition": {
+        "enum": [
+          "miss",
+          "joined",
+          "hit",
+        ],
+        "type": "string",
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "jobId": {
+        "format": "uuid",
+        "type": "string",
+      },
+      "links": {
+        "$ref": "#/components/schemas/JobLinks",
+      },
+      "status": {
+        "enum": [
+          "queued",
+          "processing",
+          "completed",
+          "failed",
+        ],
+        "type": "string",
+      },
+      "updatedAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+    },
+    "required": [
+      "jobId",
+      "status",
+      "disposition",
+      "createdAt",
+      "updatedAt",
+      "expiresAt",
+      "links",
     ],
     "type": "object",
   },
@@ -136,6 +256,90 @@ exports[`OpenAPI contract > keeps a stable snapshot of public component schemas 
       "extractedAt",
       "text",
       "segments",
+    ],
+    "type": "object",
+  },
+  "TranscriptJob": {
+    "additionalProperties": false,
+    "properties": {
+      "completedAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "createdAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "failure": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JobFailure",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "jobId": {
+        "format": "uuid",
+        "type": "string",
+      },
+      "links": {
+        "$ref": "#/components/schemas/JobLinks",
+      },
+      "startedAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "status": {
+        "enum": [
+          "queued",
+          "processing",
+          "completed",
+          "failed",
+        ],
+        "type": "string",
+      },
+      "updatedAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+    },
+    "required": [
+      "jobId",
+      "status",
+      "createdAt",
+      "updatedAt",
+      "startedAt",
+      "completedAt",
+      "expiresAt",
+      "failure",
+      "links",
     ],
     "type": "object",
   },

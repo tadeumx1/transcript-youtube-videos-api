@@ -462,7 +462,7 @@ best-effort completed-bundle reuse/publication into the existing Fastify applica
 **Gate**: full
 **Commit**: `feat(api): integrate durable jobs and cache`
 
-### T14: Publish the additive OpenAPI 1.1 contract
+### T14: Publish the additive OpenAPI 1.1 contract ✅
 
 **What**: Extend OpenAPI schemas, public error catalog, and route parity for all four durable job
 operations while retaining every existing operation and security boundary.
@@ -478,12 +478,12 @@ operations while retaining every existing operation and security boundary.
 
 **Done when**:
 
-- [ ] API version is exactly 1.1.0 and nine actual in-scope operations match documented methods/paths.
-- [ ] Job submission/resource/failure/link/status, UUID parameter, Location/Retry-After, Transcript, and binary PDF schemas are exact.
-- [ ] Every specified 202/200/400/401/404/409/410/429/503 response and stable code is represented.
-- [ ] All job operations require Bearer; health/readiness/OpenAPI stay public; production values/content/paths remain absent.
-- [ ] Parser, snapshot, route parity, security, schema, status, header, and secret-absence tests pass.
-- [ ] `npm test` passes with at least 229 total tests and no silent deletions.
+- [x] API version is exactly 1.1.0 and nine actual in-scope operations match documented methods/paths.
+- [x] Job submission/resource/failure/link/status, UUID parameter, Location/Retry-After, Transcript, and binary PDF schemas are exact.
+- [x] Every specified 202/200/400/401/404/409/410/429/503 response and stable code is represented.
+- [x] All job operations require Bearer; health/readiness/OpenAPI stay public; production values/content/paths remain absent.
+- [x] Parser, snapshot, route parity, security, schema, status, header, and secret-absence tests pass.
+- [x] `npm test` passes with at least 229 total tests and no silent deletions.
 
 **Tests**: integration/static
 **Gate**: full
@@ -683,7 +683,7 @@ boundaries are the only batch boundaries.
 | T11 | One job-coordinator component | ✅ Complete |
 | T12 | One job-route plugin | ✅ Complete |
 | T13 | One Fastify integration boundary | ✅ Complete |
-| T14 | One OpenAPI contract extension | ✅ Granular |
+| T14 | One OpenAPI contract extension | ✅ Complete |
 | T15 | One production composition root | ✅ Cohesive dependency graph |
 | T16 | One Railway IaC resource change | ✅ Granular |
 | T17 | One container entrypoint | ✅ Granular |

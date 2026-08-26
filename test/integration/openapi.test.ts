@@ -14,17 +14,32 @@ const AUTHORIZATION_HEADER = { authorization: `Bearer ${API_ACCESS_KEY}` }
 const VIDEO_URL = 'https://youtu.be/dQw4w9WgXcQ'
 
 interface SchemaNode {
+  anyOf?: SchemaNode[]
   enum?: string[]
+  format?: string
   properties: Record<string, SchemaNode>
   required?: string[]
+  type?: string
 }
 
 interface OpenApiOperation {
-  requestBody: {
+  parameters?: Array<{
+    in: string
+    name: string
+    required: boolean
+    schema: unknown
+  }>
+  requestBody?: {
     required?: boolean
     content: Record<string, { schema: unknown }>
   }
-  responses: Record<string, { content: Record<string, { schema: unknown }> }>
+  responses: Record<
+    string,
+    {
+      content: Record<string, { schema: unknown }>
+      headers?: Record<string, { schema: unknown }>
+    }
+  >
   security?: Array<Record<string, never>>
 }
 
@@ -69,8 +84,18 @@ describe('OpenAPI contract', () => {
   })
 
   function createApp() {
+    const jobCoordinator = {
+      isReady: true,
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockResolvedValue(undefined),
+      prepare: vi.fn(),
+      submit: vi.fn(),
+      get: vi.fn(),
+      getTranscript: vi.fn(),
+      getPdf: vi.fn(),
+    }
     return buildApp(
-      { transcriptService: { getTranscript }, pdfRenderer: { render } },
+      { transcriptService: { getTranscript }, pdfRenderer: { render }, jobCoordinator },
       { apiAccessKey: API_ACCESS_KEY },
     )
   }
@@ -86,7 +111,7 @@ describe('OpenAPI contract', () => {
     const { document } = await readDocument()
 
     expect(document.openapi).toBe('3.1.0')
-    expect(document.info.version).toBe('1.0.0')
+    expect(document.info.version).toBe('1.1.0')
     expect(document.servers).toBeUndefined()
   })
 
@@ -111,6 +136,10 @@ describe('OpenAPI contract', () => {
       'GET /health',
       'GET /metrics',
       'GET /ready',
+      'GET /v1/jobs/{jobId}',
+      'GET /v1/jobs/{jobId}/pdf',
+      'GET /v1/jobs/{jobId}/transcript',
+      'POST /v1/jobs',
       'POST /v1/transcripts',
       'POST /v1/transcripts/pdf',
     ])
@@ -132,6 +161,14 @@ describe('OpenAPI contract', () => {
     expect(mustExist(document.paths['/v1/transcripts/pdf']?.post).security).toEqual([
       { bearerAuth: [] },
     ])
+    for (const operation of [
+      document.paths['/v1/jobs']?.post,
+      document.paths['/v1/jobs/{jobId}']?.get,
+      document.paths['/v1/jobs/{jobId}/transcript']?.get,
+      document.paths['/v1/jobs/{jobId}/pdf']?.get,
+    ]) {
+      expect(mustExist(operation).security).toEqual([{ bearerAuth: [] }])
+    }
 
     const app = createApp()
     const publicDocument = await app.inject({ method: 'GET', url: '/openapi.json' })
@@ -177,8 +214,48 @@ describe('OpenAPI contract', () => {
         'MUSE_TIMEOUT',
         'MUSE_UPSTREAM_UNAVAILABLE',
         'MUSE_INVALID_RESPONSE',
+        'JOB_QUEUE_CAPACITY_EXCEEDED',
+        'JOB_NOT_FOUND',
+        'JOB_NOT_COMPLETED',
+        'JOB_FAILED',
+        'JOB_EXPIRED',
+        'JOB_INTERRUPTED',
+        'JOB_STORAGE_UNAVAILABLE',
       ]),
     )
+
+    const submissionSchema = mustExist(schemas.JobSubmission)
+    const jobSchema = mustExist(schemas.TranscriptJob)
+    const linksSchema = mustExist(schemas.JobLinks)
+    const failureSchema = mustExist(schemas.JobFailure)
+    expect(submissionSchema.required).toEqual([
+      'jobId',
+      'status',
+      'disposition',
+      'createdAt',
+      'updatedAt',
+      'expiresAt',
+      'links',
+    ])
+    expect(jobSchema.required).toEqual([
+      'jobId',
+      'status',
+      'createdAt',
+      'updatedAt',
+      'startedAt',
+      'completedAt',
+      'expiresAt',
+      'failure',
+      'links',
+    ])
+    expect(mustExist(jobSchema.properties.status).enum).toEqual([
+      'queued',
+      'processing',
+      'completed',
+      'failed',
+    ])
+    expect(linksSchema.required).toEqual(['status', 'transcript', 'pdf'])
+    expect(failureSchema.required).toEqual(['code', 'message'])
   })
 
   it('documents actual bodies, media types, success statuses, and error statuses', async () => {
@@ -186,8 +263,9 @@ describe('OpenAPI contract', () => {
     const jsonOperation = mustExist(document.paths['/v1/transcripts']?.post)
     const pdfOperation = mustExist(document.paths['/v1/transcripts/pdf']?.post)
 
-    expect(jsonOperation.requestBody.required).toBe(true)
-    expect(mustExist(jsonOperation.requestBody.content['application/json']).schema).toEqual({
+    const jsonRequestBody = mustExist(jsonOperation.requestBody)
+    expect(jsonRequestBody.required).toBe(true)
+    expect(mustExist(jsonRequestBody.content['application/json']).schema).toEqual({
       $ref: '#/components/schemas/TranscriptRequest',
     })
     expect(
@@ -211,6 +289,63 @@ describe('OpenAPI contract', () => {
     expect(
       mustExist(mustExist(metricsOperation.responses['200']).content['text/plain']).schema,
     ).toEqual({ type: 'string' })
+  })
+
+  it('documents exact job bodies, parameters, headers, statuses, and result media types', async () => {
+    const { document } = await readDocument()
+    const submit = mustExist(document.paths['/v1/jobs']?.post)
+    const status = mustExist(document.paths['/v1/jobs/{jobId}']?.get)
+    const transcriptResult = mustExist(document.paths['/v1/jobs/{jobId}/transcript']?.get)
+    const pdfResult = mustExist(document.paths['/v1/jobs/{jobId}/pdf']?.get)
+
+    expect(mustExist(mustExist(submit.requestBody).content['application/json']).schema).toEqual({
+      $ref: '#/components/schemas/TranscriptRequest',
+    })
+    expect(Object.keys(submit.responses).toSorted()).toEqual(['202', '400', '401', '429', '503'])
+    expect(mustExist(submit.responses['202']).headers).toEqual({
+      Location: { schema: { type: 'string' } },
+      'Retry-After': { schema: { type: 'integer', enum: [2] } },
+    })
+    expect(
+      mustExist(mustExist(submit.responses['202']).content['application/json']).schema,
+    ).toEqual({ $ref: '#/components/schemas/JobSubmission' })
+
+    for (const operation of [status, transcriptResult, pdfResult]) {
+      expect(operation.parameters).toEqual([
+        {
+          in: 'path',
+          name: 'jobId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ])
+    }
+    expect(Object.keys(status.responses).toSorted()).toEqual([
+      '200',
+      '400',
+      '401',
+      '404',
+      '410',
+      '503',
+    ])
+    expect(Object.keys(transcriptResult.responses).toSorted()).toEqual([
+      '200',
+      '400',
+      '401',
+      '404',
+      '409',
+      '410',
+      '503',
+    ])
+    expect(mustExist(transcriptResult.responses['409']).headers).toEqual({
+      'Retry-After': { schema: { type: 'integer', enum: [2] } },
+    })
+    expect(
+      mustExist(mustExist(transcriptResult.responses['200']).content['application/json']).schema,
+    ).toEqual({ $ref: '#/components/schemas/Transcript' })
+    expect(
+      mustExist(mustExist(pdfResult.responses['200']).content['application/pdf']).schema,
+    ).toEqual({ type: 'string', format: 'binary' })
   })
 
   it('keeps a stable snapshot of public component schemas', async () => {

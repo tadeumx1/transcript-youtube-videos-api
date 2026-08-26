@@ -230,7 +230,7 @@ OpenAPI document without credentials.
 | OPS-02 | Durable operations | T16, T17, T18 | Planned |
 | OPS-03 | Durable operations | T13, T15 | Partial (T13 complete) |
 | OPS-04 | Durable operations | T4 | Completed |
-| OPS-05 | Durable operations | T14 | Planned |
+| OPS-05 | Durable operations | T14 | Completed |
 | OPS-06 | Durable operations | T4, T13, T20 | Partial (T4, T13 complete) |
 | OPS-07 | Durable operations | T3, T17, T18, T19 | Partial (T3 complete) |
 | OPS-08 | Durable operations | T20 | Planned |

@@ -1,6 +1,8 @@
 import fastifySwagger from '@fastify/swagger'
 import type { FastifyInstance, FastifySchema } from 'fastify'
 
+import { PUBLIC_JOB_FAILURE_MESSAGES } from '../domain/job.js'
+
 const PUBLIC_ERROR_CODES = [
   'INVALID_YOUTUBE_URL',
   'TRANSCRIPT_CAPACITY_EXCEEDED',
@@ -24,12 +26,23 @@ const PUBLIC_ERROR_CODES = [
   'UNAUTHORIZED',
   'INVALID_REQUEST',
   'INTERNAL_SERVER_ERROR',
+  'JOB_QUEUE_CAPACITY_EXCEEDED',
+  'JOB_NOT_FOUND',
+  'JOB_NOT_COMPLETED',
+  'JOB_FAILED',
+  'JOB_EXPIRED',
+  'JOB_INTERRUPTED',
+  'JOB_STORAGE_UNAVAILABLE',
 ] as const
 
 const inScopePaths = new Set([
   '/health',
   '/ready',
   '/metrics',
+  '/v1/jobs',
+  '/v1/jobs/:jobId',
+  '/v1/jobs/:jobId/transcript',
+  '/v1/jobs/:jobId/pdf',
   '/v1/transcripts',
   '/v1/transcripts/pdf',
 ])
@@ -131,6 +144,73 @@ const errorSchema = {
   },
 } as const
 
+const jobLinksSchema = {
+  $id: 'JobLinks',
+  type: 'object',
+  additionalProperties: false,
+  required: ['status', 'transcript', 'pdf'],
+  properties: {
+    status: { type: 'string' },
+    transcript: { type: 'string' },
+    pdf: { type: 'string' },
+  },
+} as const
+
+const jobFailureSchema = {
+  $id: 'JobFailure',
+  type: 'object',
+  additionalProperties: false,
+  required: ['code', 'message'],
+  properties: {
+    code: { type: 'string', enum: Object.keys(PUBLIC_JOB_FAILURE_MESSAGES) },
+    message: { type: 'string' },
+  },
+} as const
+
+const jobSubmissionSchema = {
+  $id: 'JobSubmission',
+  type: 'object',
+  additionalProperties: false,
+  required: ['jobId', 'status', 'disposition', 'createdAt', 'updatedAt', 'expiresAt', 'links'],
+  properties: {
+    jobId: { type: 'string', format: 'uuid' },
+    status: { type: 'string', enum: ['queued', 'processing', 'completed', 'failed'] },
+    disposition: { type: 'string', enum: ['miss', 'joined', 'hit'] },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+    expiresAt: { anyOf: [{ type: 'string', format: 'date-time' }, { type: 'null' }] },
+    links: { $ref: 'JobLinks#' },
+  },
+} as const
+
+const transcriptJobSchema = {
+  $id: 'TranscriptJob',
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'jobId',
+    'status',
+    'createdAt',
+    'updatedAt',
+    'startedAt',
+    'completedAt',
+    'expiresAt',
+    'failure',
+    'links',
+  ],
+  properties: {
+    jobId: { type: 'string', format: 'uuid' },
+    status: { type: 'string', enum: ['queued', 'processing', 'completed', 'failed'] },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+    startedAt: { anyOf: [{ type: 'string', format: 'date-time' }, { type: 'null' }] },
+    completedAt: { anyOf: [{ type: 'string', format: 'date-time' }, { type: 'null' }] },
+    expiresAt: { anyOf: [{ type: 'string', format: 'date-time' }, { type: 'null' }] },
+    failure: { anyOf: [{ $ref: 'JobFailure#' }, { type: 'null' }] },
+    links: { $ref: 'JobLinks#' },
+  },
+} as const
+
 const errorResponses = {
   400: { $ref: 'Error#', description: 'Invalid request' },
   401: { $ref: 'Error#', description: 'Missing or invalid Bearer credential' },
@@ -141,6 +221,107 @@ const errorResponses = {
   503: { $ref: 'Error#', description: 'Authentication, tool, fallback, or shutdown failure' },
   504: { $ref: 'Error#', description: 'Media or Muse timeout' },
 } as const
+
+const jobErrorResponses = {
+  400: { $ref: 'Error#', description: 'Invalid request or job ID' },
+  401: { $ref: 'Error#', description: 'Missing or invalid Bearer credential' },
+  404: { $ref: 'Error#', description: 'Transcript job was not found' },
+  409: {
+    $ref: 'Error#',
+    description: 'Transcript job is not completed or failed',
+    headers: { 'Retry-After': { type: 'integer', enum: [2] } },
+  },
+  410: { $ref: 'Error#', description: 'Transcript job has expired' },
+  429: {
+    $ref: 'Error#',
+    description: 'Durable transcript queue is full',
+    headers: { 'Retry-After': { type: 'integer', enum: [30] } },
+  },
+  503: { $ref: 'Error#', description: 'Authentication or transcript storage is unavailable' },
+} as const
+
+const jobIdParametersSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['jobId'],
+  properties: { jobId: { type: 'string', format: 'uuid' } },
+} as const
+
+function transformJobRouteSchema(url: string): FastifySchema | undefined {
+  if (url === '/v1/jobs') {
+    return {
+      operationId: 'createTranscriptJob',
+      security: protectedSecurity,
+      consumes: ['application/json'],
+      body: { $ref: 'TranscriptRequest#' },
+      response: {
+        202: {
+          $ref: 'JobSubmission#',
+          description: 'Durable transcript job accepted',
+          headers: {
+            Location: { type: 'string' },
+            'Retry-After': { type: 'integer', enum: [2] },
+          },
+        },
+        400: jobErrorResponses[400],
+        401: jobErrorResponses[401],
+        429: jobErrorResponses[429],
+        503: jobErrorResponses[503],
+      },
+    }
+  }
+
+  const base = {
+    security: protectedSecurity,
+    params: jobIdParametersSchema,
+  } as const
+  if (url === '/v1/jobs/:jobId') {
+    return {
+      ...base,
+      operationId: 'getTranscriptJob',
+      response: {
+        200: { $ref: 'TranscriptJob#', description: 'Retained transcript job status' },
+        400: jobErrorResponses[400],
+        401: jobErrorResponses[401],
+        404: jobErrorResponses[404],
+        410: jobErrorResponses[410],
+        503: jobErrorResponses[503],
+      },
+    }
+  }
+  if (url === '/v1/jobs/:jobId/transcript') {
+    return {
+      ...base,
+      operationId: 'getTranscriptJobTranscript',
+      response: {
+        200: { $ref: 'Transcript#', description: 'Completed transcript job JSON' },
+        400: jobErrorResponses[400],
+        401: jobErrorResponses[401],
+        404: jobErrorResponses[404],
+        409: jobErrorResponses[409],
+        410: jobErrorResponses[410],
+        503: jobErrorResponses[503],
+      },
+    }
+  }
+  if (url === '/v1/jobs/:jobId/pdf') {
+    return {
+      ...base,
+      operationId: 'getTranscriptJobPdf',
+      produces: ['application/pdf'],
+      response: {
+        200: { type: 'string', format: 'binary' },
+        400: jobErrorResponses[400],
+        401: jobErrorResponses[401],
+        404: jobErrorResponses[404],
+        409: jobErrorResponses[409],
+        410: jobErrorResponses[410],
+        503: jobErrorResponses[503],
+      },
+    }
+  }
+  return undefined
+}
 
 const protectedSecurity = [{ bearerAuth: [] }]
 
@@ -211,7 +392,7 @@ export function registerOpenApi(app: FastifyInstance): void {
       openapi: '3.1.0',
       info: {
         title: 'YouTube Transcript API',
-        version: '1.0.0',
+        version: '1.1.0',
       },
       components: {
         securitySchemes: {
@@ -222,6 +403,10 @@ export function registerOpenApi(app: FastifyInstance): void {
         },
       },
     },
+    transform: ({ schema, url }) => ({
+      schema: transformJobRouteSchema(url) ?? schema,
+      url,
+    }),
     refResolver: {
       buildLocalReference: (schema, _baseUri, _fragment, index) =>
         typeof schema.$id === 'string' ? schema.$id : `schema-${index}`,
@@ -235,6 +420,10 @@ export function registerOpenApi(app: FastifyInstance): void {
     healthSchema,
     readinessSchema,
     errorSchema,
+    jobLinksSchema,
+    jobFailureSchema,
+    jobSubmissionSchema,
+    transcriptJobSchema,
   ]) {
     app.addSchema(schema)
   }
@@ -245,5 +434,7 @@ export function registerOpenApi(app: FastifyInstance): void {
 }
 
 export function getRegisteredOpenApiOperations(app: FastifyInstance): string[] {
-  return [...(registeredOperations.get(app) ?? [])].toSorted()
+  return [...(registeredOperations.get(app) ?? [])]
+    .map((operation) => operation.replaceAll(/:([A-Za-z0-9_]+)/g, '{$1}'))
+    .toSorted()
 }
