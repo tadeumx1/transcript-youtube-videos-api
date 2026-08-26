@@ -197,16 +197,16 @@ OpenAPI document without credentials.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | JOB-01 | Submit/retrieve durable jobs | T11, T12 | Planned |
-| JOB-02 | Submit/retrieve durable jobs | T2, T11, T12 | Planned |
+| JOB-02 | Submit/retrieve durable jobs | T2, T11, T12 | Partial (T2 complete) |
 | JOB-03 | Submit/retrieve durable jobs | T11, T12 | Planned |
 | JOB-04 | Submit/retrieve durable jobs | T11, T12 | Planned |
 | JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Planned |
 | JOB-06 | Submit/retrieve durable jobs | T12, T13 | Planned |
-| JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Planned |
+| JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Partial (T2 complete) |
 | WORK-01 | Durable worker lifecycle | T10, T15 | Planned |
 | WORK-02 | Durable worker lifecycle | T5, T10 | Planned |
 | WORK-03 | Durable worker lifecycle | T5, T10 | Planned |
-| WORK-04 | Durable worker lifecycle | T2, T10 | Planned |
+| WORK-04 | Durable worker lifecycle | T2, T10 | Partial (T2 complete) |
 | WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Planned |
 | WORK-06 | Durable worker lifecycle | T10 | Planned |
 | WORK-07 | Durable worker lifecycle | T5, T10 | Planned |
@@ -241,7 +241,7 @@ OpenAPI document without credentials.
 | EDGE-05 | Language identity edge case | T1 | Completed |
 | EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Planned |
 | EDGE-07 | Duplicate recovery edge case | T8, T11 | Planned |
-| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Planned |
+| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2 complete) |
 
 **Coverage:** 46 total requirements, 46 listed, 0 unmapped after Tasks assigns implementation phases.
 

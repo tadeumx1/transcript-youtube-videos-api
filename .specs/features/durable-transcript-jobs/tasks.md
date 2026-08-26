@@ -126,7 +126,7 @@ Approved phase-aligned batching proposal:
 **Gate**: quick
 **Commit**: `feat(domain): canonicalize transcript requests`
 
-### T2: Define durable job state and transitions
+### T2: Define durable job state and transitions ✅
 
 **What**: Add strict persisted/public job models, sanitized failure mapping, UUID validation, legal
 revision-guarded transitions, links, and tombstones.
@@ -142,12 +142,12 @@ revision-guarded transitions, links, and tombstones.
 
 **Done when**:
 
-- [ ] Models represent only queued, processing, completed, failed, and expired-tombstone contracts from the design.
-- [ ] Legal transitions and expected revision increments are exact; terminal/stale transitions reject without mutation.
-- [ ] Public resources omit persisted request, cache/artifact identity, and every prohibited content/diagnostic field.
-- [ ] Failure mapping accepts only allowlisted codes and fixed messages, including `JOB_INTERRUPTED`.
-- [ ] Unit tests cover every legal/illegal transition, exact resource shape, UUID rejection, links, timestamps, and redaction.
-- [ ] `npm run test:unit` passes with at least 168 tests and no silent deletions.
+- [x] Models represent only queued, processing, completed, failed, and expired-tombstone contracts from the design.
+- [x] Legal transitions and expected revision increments are exact; terminal/stale transitions reject without mutation.
+- [x] Public resources omit persisted request, cache/artifact identity, and every prohibited content/diagnostic field.
+- [x] Failure mapping accepts only allowlisted codes and fixed messages, including `JOB_INTERRUPTED`.
+- [x] Unit tests cover every legal/illegal transition, exact resource shape, UUID rejection, links, timestamps, and redaction.
+- [x] `npm run test:unit` passes with at least 168 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -671,7 +671,7 @@ boundaries are the only batch boundaries.
 | Task | Scope | Status |
 | ---- | ----- | ------ |
 | T1 | One request-identity component | ✅ Complete |
-| T2 | One durable-job domain component | ✅ Granular |
+| T2 | One durable-job domain component | ✅ Complete |
 | T3 | One runtime-config extension | ✅ Granular |
 | T4 | One metrics-registry extension | ✅ Granular |
 | T5 | One execution-controller extension | ✅ Granular |
