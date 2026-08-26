@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { AppError } from '../../domain/errors.js'
 import type { ProcessRunner } from './process-runner.js'
 
-const MAX_CHUNK_BYTES = 24 * 1024 * 1024
+const MAX_CHUNK_BYTES = 8 * 1024 * 1024
 
 export interface MediaFileSystem {
   mkdtemp(prefix: string): Promise<string>
@@ -98,7 +98,7 @@ export class AudioMediaPipeline implements AudioChunkSource {
         '-f',
         'segment',
         '-segment_time',
-        '1200',
+        '600',
         '-reset_timestamps',
         '1',
         join(directory, 'chunk-%03d.mp3'),
@@ -118,7 +118,7 @@ export class AudioMediaPipeline implements AudioChunkSource {
           throw new AppError(
             'AUDIO_CHUNK_TOO_LARGE',
             502,
-            'An audio chunk exceeds the 24 MB upload safety limit',
+            'An audio chunk exceeds the 8 MiB upload safety limit',
           )
         }
       }

@@ -26,7 +26,7 @@ const captionTranscript: Transcript = {
 
 const fallbackTranscript: Transcript = {
   ...captionTranscript,
-  source: 'openai_transcription',
+  source: 'muse_transcription',
   language: 'pt',
   isGenerated: true,
   timestampPrecision: 'chunk',
@@ -67,7 +67,7 @@ describe('HybridTranscriptService', () => {
     const result = await service.getTranscript(parsedUrl, ['pt'])
 
     expect(result).toMatchObject({
-      source: 'openai_transcription',
+      source: 'muse_transcription',
       text: 'Transcrição pelo áudio.',
       timestampPrecision: 'chunk',
     })
@@ -83,7 +83,7 @@ describe('HybridTranscriptService', () => {
     transcribe.mockResolvedValue(fallbackTranscript)
 
     await expect(service.getTranscript(parsedUrl)).resolves.toMatchObject({
-      source: 'openai_transcription',
+      source: 'muse_transcription',
       text: 'Transcrição pelo áudio.',
     })
   })
@@ -101,7 +101,7 @@ describe('HybridTranscriptService', () => {
     transcribe.mockResolvedValue({ ...fallbackTranscript, segments: [], text: '' })
 
     await expect(service.getTranscript(parsedUrl)).rejects.toMatchObject({
-      code: 'OPENAI_TRANSCRIPTION_FAILED',
+      code: 'MUSE_TRANSCRIPTION_FAILED',
       statusCode: 502,
     })
   })

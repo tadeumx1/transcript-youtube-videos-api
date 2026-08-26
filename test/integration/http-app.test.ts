@@ -37,7 +37,7 @@ const applicationErrors: Array<[AppErrorCode, number]> = [
   ['AUDIO_TOOL_UNAVAILABLE', 503],
   ['AUDIO_EXTRACTION_FAILED', 502],
   ['AUDIO_CHUNK_TOO_LARGE', 502],
-  ['OPENAI_TRANSCRIPTION_FAILED', 502],
+  ['MUSE_TRANSCRIPTION_FAILED', 502],
 ]
 
 describe('Fastify application', () => {
@@ -86,11 +86,11 @@ describe('Fastify application', () => {
     )
   })
 
-  it('returns the same contract for an OpenAI fallback transcript', async () => {
+  it('returns the same contract for a Muse fallback transcript', async () => {
     const app = createTestApp()
     const fallbackTranscript: Transcript = {
       ...captionTranscript,
-      source: 'openai_transcription',
+      source: 'muse_transcription',
       language: 'pt',
       isGenerated: true,
       timestampPrecision: 'chunk',

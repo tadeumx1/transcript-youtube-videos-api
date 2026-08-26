@@ -60,9 +60,9 @@ export class HybridTranscriptService {
     const transcript = await this.#audio.transcribe(input)
     if (!hasUsableSegments(transcript)) {
       throw new AppError(
-        'OPENAI_TRANSCRIPTION_FAILED',
+        'MUSE_TRANSCRIPTION_FAILED',
         502,
-        'OpenAI returned no usable transcript segments',
+        'Muse returned no usable transcript segments',
       )
     }
 

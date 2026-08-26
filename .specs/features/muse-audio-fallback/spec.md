@@ -80,15 +80,15 @@ without network or media tool access.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| MUSE-01 | P1: Transcribe captionless videos with Muse | Execute 1 | Implementing |
+| MUSE-01 | P1: Transcribe captionless videos with Muse | Execute 1 | Verified |
 | MUSE-02 | P1: Transcribe captionless videos with Muse | Execute 1 | Verified |
-| MUSE-03 | P1: Transcribe captionless videos with Muse | Execute 1 | Implementing |
-| MUSE-04 | P1: Transcribe captionless videos with Muse | Execute 1 | Pending |
+| MUSE-03 | P1: Transcribe captionless videos with Muse | Execute 1 | Verified |
+| MUSE-04 | P1: Transcribe captionless videos with Muse | Execute 1 | Verified |
 | MUSE-05 | P1: Transcribe captionless videos with Muse | Execute 1 | Verified |
-| MUSE-06 | P1: Transcribe captionless videos with Muse | Execute 2 | Pending |
-| MUSE-07 | P1: Transcribe captionless videos with Muse | Execute 2 | Pending |
-| MUSE-08 | P1: Transcribe captionless videos with Muse | Execute 2 | Pending |
-| MUSE-09 | P1: Transcribe captionless videos with Muse | Execute 2 | Pending |
+| MUSE-06 | P1: Transcribe captionless videos with Muse | Execute 2 | Verified |
+| MUSE-07 | P1: Transcribe captionless videos with Muse | Execute 2 | Verified |
+| MUSE-08 | P1: Transcribe captionless videos with Muse | Execute 2 | Verified |
+| MUSE-09 | P1: Transcribe captionless videos with Muse | Execute 2 | Verified |
 | MUSE-10 | P1: Transcribe captionless videos with Muse | Execute 1 | Verified |
 
 **Coverage:** 10 total, 10 mapped to execution steps, 0 unmapped.

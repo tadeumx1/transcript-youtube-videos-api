@@ -12,7 +12,7 @@ import {
 const transcript: Transcript = {
   videoId: 'dQw4w9WgXcQ',
   sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-  source: 'openai_transcription',
+  source: 'muse_transcription',
   language: 'pt',
   isGenerated: true,
   timestampPrecision: 'chunk',
@@ -81,7 +81,7 @@ describe('buildTranscriptPdfModel', () => {
     expect(buildTranscriptPdfModel(transcript).metadata).toEqual([
       { label: 'URL de origem', value: transcript.sourceUrl },
       { label: 'ID do vídeo', value: transcript.videoId },
-      { label: 'Origem da transcrição', value: 'openai_transcription' },
+      { label: 'Origem da transcrição', value: 'muse_transcription' },
       { label: 'Idioma', value: 'pt' },
       { label: 'Conteúdo gerado automaticamente', value: 'sim' },
       { label: 'Precisão dos timestamps', value: 'chunk' },

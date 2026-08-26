@@ -1,6 +1,6 @@
 export const DEFAULT_CAPTION_LANGUAGES = ['pt-BR', 'pt', 'en'] as const
 
-export type TranscriptSource = 'youtube_captions' | 'openai_transcription'
+export type TranscriptSource = 'youtube_captions' | 'openai_transcription' | 'muse_transcription'
 
 export type TimestampPrecision = 'caption' | 'chunk'
 

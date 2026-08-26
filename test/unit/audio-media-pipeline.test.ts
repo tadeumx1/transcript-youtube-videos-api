@@ -18,7 +18,7 @@ function createFileSystem(requestDirectories = ['/tmp/youtube-transcript-a']): M
       return readCount === 1 ? ['source.m4a'] : ['source.m4a', 'chunk-001.mp3', 'chunk-000.mp3']
     }),
     rm: vi.fn(async () => undefined),
-    stat: vi.fn(async () => ({ size: 7_200_000 })),
+    stat: vi.fn(async () => ({ size: 3_600_000 })),
   }
 }
 
@@ -59,7 +59,7 @@ describe('AudioMediaPipeline', () => {
       '-f',
       'segment',
       '-segment_time',
-      '1200',
+      '600',
       '-reset_timestamps',
       '1',
       '/tmp/youtube-transcript-a/chunk-%03d.mp3',
@@ -70,9 +70,9 @@ describe('AudioMediaPipeline', () => {
     ])
   })
 
-  it('stops before its callback when a chunk exceeds 24 MB', async () => {
+  it('stops before its callback when a chunk exceeds 8 MiB', async () => {
     const fileSystem = createFileSystem()
-    fileSystem.stat = vi.fn(async () => ({ size: 24 * 1024 * 1024 + 1 }))
+    fileSystem.stat = vi.fn(async () => ({ size: 8 * 1024 * 1024 + 1 }))
     const consume = vi.fn(async () => 'unused')
     const pipeline = new AudioMediaPipeline(
       { run: vi.fn(async () => undefined) },
@@ -113,9 +113,9 @@ describe('AudioMediaPipeline', () => {
 
     await expect(
       pipeline.withChunks(sourceUrl, async () => {
-        throw new Error('OpenAI failed')
+        throw new Error('Muse failed')
       }),
-    ).rejects.toThrow('OpenAI failed')
+    ).rejects.toThrow('Muse failed')
     expect(fileSystem.rm).toHaveBeenCalledWith('/tmp/youtube-transcript-a', {
       force: true,
       recursive: true,
