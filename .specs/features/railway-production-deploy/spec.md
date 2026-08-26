@@ -104,23 +104,23 @@ transcript content.
 
 | Requirement ID | Story | Planned task | Status |
 | -------------- | ----- | ------------ | ------ |
-| RYSEC-01 | Protected production API | T2 | Implemented |
-| RYSEC-02 | Protected production API | T2 | Implemented |
-| RYSEC-03 | Protected production API | T2 | Implemented |
-| RYSEC-04 | Protected production API | T2 | Implemented |
-| RYSEC-05 | Protected production API | T2 | Implemented |
-| RYSEC-06 | Protected production API | T1 | Implemented |
-| RYSEC-07 | Edge case | T2 | Implemented |
-| RYSEC-08 | Edge case | T2 | Implemented |
-| RYDEP-01 | Railway service | T3, T4, T6 | Implemented |
-| RYDEP-02 | Railway service | T3 | Implemented |
-| RYDEP-03 | Railway service | T4, T6 | Implemented |
-| RYDEP-04 | Railway service | T7 | Implemented |
-| RYDEP-05 | Railway service | T7 | Implemented |
-| RYDEP-06 | Railway service | T7 | Implemented |
-| RYDEP-07 | Railway service | T7 | Implemented |
-| RYDEP-08 | Edge case | T7 | Implemented |
-| RYDEP-09 | Edge case | T7 | Implemented |
+| RYSEC-01 | Protected production API | T2 | Verified |
+| RYSEC-02 | Protected production API | T2 | Verified |
+| RYSEC-03 | Protected production API | T2 | Verified |
+| RYSEC-04 | Protected production API | T2 | Verified |
+| RYSEC-05 | Protected production API | T2 | Verified |
+| RYSEC-06 | Protected production API | T1 | Verified |
+| RYSEC-07 | Edge case | T2 | Verified |
+| RYSEC-08 | Edge case | T2 | Verified |
+| RYDEP-01 | Railway service | T3, T4, T6 | Verified |
+| RYDEP-02 | Railway service | T3 | Verified |
+| RYDEP-03 | Railway service | T4, T6 | Verified |
+| RYDEP-04 | Railway service | T7 | Verified |
+| RYDEP-05 | Railway service | T7 | Verified |
+| RYDEP-06 | Railway service | T7 | Verified |
+| RYDEP-07 | Railway service | T7 | Verified |
+| RYDEP-08 | Edge case | T7 | Verified |
+| RYDEP-09 | Edge case | T7 | Verified |
 
 **Coverage:** 17 total, 17 mapped to planned tasks, 0 unmapped.
 
