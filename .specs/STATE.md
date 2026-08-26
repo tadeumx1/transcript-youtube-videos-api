@@ -76,11 +76,11 @@
 
 ## Handoff
 
-- **Feature**: railway-production-deploy
-- **Phase / Task**: Validate complete
-- **Completed**: T1-T7, public Bearer auth, current Railway IaC, production deployment, JSON/PDF smoke tests, 83-test gate, 17/17 AC PASS, and 5/5 killed auth mutations
+- **Feature**: production-runtime-hardening
+- **Phase / Task**: Tasks ready for approval; Execute not started
+- **Completed**: validated 46-requirement spec, approved context/design, AD-008/AD-009, and validated 11-task/two-batch execution plan
 - **In-progress** (file:line): none
-- **Next step**: Choose the first production-hardening task from `improvements.md`; `IMP-01` concurrency limiting and `IMP-02` subprocess timeouts are the recommended P1 order
-- **Blockers**: none; service is live on its Railway-provided domain
-- **Uncommitted files**: none after the feature-close commit
+- **Next step**: receive explicit tasks approval, read Execute references, dispatch approved batch 1 for T1-T7, then batch 2 for T8-T11
+- **Blockers**: detailed tasks approval required by TLC before Execute; architecture and subagent use are already approved
+- **Uncommitted files**: `.specs/STATE.md`, feature `spec.md`, and new `tasks.md` pending the planning commit
 - **Branch**: `main`

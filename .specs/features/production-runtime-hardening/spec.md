@@ -216,54 +216,54 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HARD-01 | Bounded transcript work | Design | Pending |
-| HARD-02 | Bounded transcript work | Design | Pending |
-| HARD-03 | Bounded transcript work | Design | Pending |
-| HARD-04 | Bounded transcript work | Design | Pending |
-| HARD-05 | Bounded transcript work | Design | Pending |
-| HARD-06 | Bounded transcript work edge case | Design | Pending |
-| PROC-01 | Media timeout and cancellation | Design | Pending |
-| PROC-02 | Media timeout and cancellation | Design | Pending |
-| PROC-03 | Media timeout and cancellation | Design | Pending |
-| PROC-04 | Media timeout and cancellation | Design | Pending |
-| PROC-05 | Media timeout and cancellation | Design | Pending |
-| PROC-06 | Media timeout and cancellation | Design | Pending |
-| PROC-07 | Media timeout and cancellation edge case | Design | Pending |
-| PROV-01 | Muse failure classification | Design | Pending |
-| PROV-02 | Muse failure classification | Design | Pending |
-| PROV-03 | Muse failure classification | Design | Pending |
-| PROV-04 | Muse failure classification | Design | Pending |
-| PROV-05 | Muse failure classification | Design | Pending |
-| PROV-06 | Muse failure classification | Design | Pending |
-| PROV-07 | Muse failure classification edge case | Design | Pending |
-| OBS-01 | Observability and readiness | Design | Pending |
-| OBS-02 | Observability and readiness | Design | Pending |
-| OBS-03 | Observability and readiness | Design | Pending |
-| OBS-04 | Observability and readiness | Design | Pending |
-| OBS-05 | Observability and readiness | Design | Pending |
-| OBS-06 | Observability and readiness | Design | Pending |
-| OBS-07 | Observability and readiness edge case | Design | Pending |
-| API-01 | OpenAPI contract | Design | Pending |
-| API-02 | OpenAPI contract | Design | Pending |
-| API-03 | OpenAPI contract | Design | Pending |
-| API-04 | OpenAPI contract | Design | Pending |
-| API-05 | OpenAPI contract | Design | Pending |
-| API-06 | OpenAPI contract | Design | Pending |
-| API-07 | OpenAPI contract edge case | Design | Pending |
-| CI-01 | Continuous integration | Design | Pending |
-| CI-02 | Continuous integration | Design | Pending |
-| CI-03 | Continuous integration | Design | Pending |
-| CI-04 | Continuous integration | Design | Pending |
-| CI-05 | Continuous integration | Design | Pending |
-| CI-06 | Continuous integration | Design | Pending |
-| CI-07 | Continuous integration edge case | Design | Pending |
-| OPS-01 | YouTube operations runbook | Design | Pending |
-| OPS-02 | YouTube operations runbook | Design | Pending |
-| OPS-03 | YouTube operations runbook | Design | Pending |
-| OPS-04 | YouTube operations runbook | Design | Pending |
-| OPS-05 | YouTube operations runbook | Design | Pending |
+| HARD-01 | Bounded transcript work | T3, T8 | In Tasks |
+| HARD-02 | Bounded transcript work | T3, T8 | In Tasks |
+| HARD-03 | Bounded transcript work | T3, T8 | In Tasks |
+| HARD-04 | Bounded transcript work | T3, T8 | In Tasks |
+| HARD-05 | Bounded transcript work | T1 | In Tasks |
+| HARD-06 | Bounded transcript work edge case | T8 | In Tasks |
+| PROC-01 | Media timeout and cancellation | T1, T4, T5 | In Tasks |
+| PROC-02 | Media timeout and cancellation | T4, T5, T7 | In Tasks |
+| PROC-03 | Media timeout and cancellation | T1, T4 | In Tasks |
+| PROC-04 | Media timeout and cancellation | T4 | In Tasks |
+| PROC-05 | Media timeout and cancellation | T4 | In Tasks |
+| PROC-06 | Media timeout and cancellation | T5, T7 | In Tasks |
+| PROC-07 | Media timeout and cancellation edge case | T4 | In Tasks |
+| PROV-01 | Muse failure classification | T6 | In Tasks |
+| PROV-02 | Muse failure classification | T6, T8 | In Tasks |
+| PROV-03 | Muse failure classification | T1, T6 | In Tasks |
+| PROV-04 | Muse failure classification | T6 | In Tasks |
+| PROV-05 | Muse failure classification | T6 | In Tasks |
+| PROV-06 | Muse failure classification | T6 | In Tasks |
+| PROV-07 | Muse failure classification edge case | T7 | In Tasks |
+| OBS-01 | Observability and readiness | T3, T8 | In Tasks |
+| OBS-02 | Observability and readiness | T3, T8 | In Tasks |
+| OBS-03 | Observability and readiness | T2, T7, T8 | In Tasks |
+| OBS-04 | Observability and readiness | T8 | In Tasks |
+| OBS-05 | Observability and readiness | T2, T7, T8 | In Tasks |
+| OBS-06 | Observability and readiness | T7, T8 | In Tasks |
+| OBS-07 | Observability and readiness edge case | T2 | In Tasks |
+| API-01 | OpenAPI contract | T9 | In Tasks |
+| API-02 | OpenAPI contract | T9 | In Tasks |
+| API-03 | OpenAPI contract | T9 | In Tasks |
+| API-04 | OpenAPI contract | T9 | In Tasks |
+| API-05 | OpenAPI contract | T9 | In Tasks |
+| API-06 | OpenAPI contract | T9 | In Tasks |
+| API-07 | OpenAPI contract edge case | T9 | In Tasks |
+| CI-01 | Continuous integration | T10 | In Tasks |
+| CI-02 | Continuous integration | T10 | In Tasks |
+| CI-03 | Continuous integration | T10 | In Tasks |
+| CI-04 | Continuous integration | T10 | In Tasks |
+| CI-05 | Continuous integration | T10 | In Tasks |
+| CI-06 | Continuous integration | T10 | In Tasks |
+| CI-07 | Continuous integration edge case | T10 | In Tasks |
+| OPS-01 | YouTube operations runbook | T11 | In Tasks |
+| OPS-02 | YouTube operations runbook | T11 | In Tasks |
+| OPS-03 | YouTube operations runbook | T11 | In Tasks |
+| OPS-04 | YouTube operations runbook | T11 | In Tasks |
+| OPS-05 | YouTube operations runbook | T11 | In Tasks |
 
-**Coverage:** 46 total requirements, 0 mapped to tasks, 46 pending design and task mapping.
+**Coverage:** 46 total requirements, 46 mapped to tasks, 0 unmapped.
 
 ---
 
