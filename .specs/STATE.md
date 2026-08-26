@@ -86,10 +86,10 @@
 ## Handoff
 
 - **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
-- **Phase / Task**: Execute / Verification Fix Round 1, T21 next
-- **Completed**: T1-T20; independent FAIL report at `f8e92a8`; 36/46 requirements matched; 15/18 mutants killed; grounded lessons L-007 through L-010 recorded
-- **In-progress** (file:line): `.specs/features/durable-transcript-jobs/tasks.md:1` fix plan pending commit
-- **Next step**: execute T21-T28 sequentially, then dispatch a fresh independent re-verifier
-- **Blockers**: none; local Docker unavailable, and Railway apply/deploy remain explicitly pending
-- **Uncommitted files**: fix task plan, traceability statuses, and Handoff pending planning commit
+- **Phase / Task**: Execute / Verification Fix Round 1 complete through T28
+- **Completed**: T1-T28; fixes close WORK-06/07, STORE-03/06, CACHE-04/05/07, OPS-04, EDGE-01/02; read-only Railway plan evidence recorded
+- **In-progress** (file:line): none
+- **Next step**: dispatch a fresh independent re-verifier against the completed fix round
+- **Blockers**: none; Railway apply/deploy remain explicitly pending separate approval
+- **Uncommitted files**: none after the T28 commit
 - **Branch**: `main`

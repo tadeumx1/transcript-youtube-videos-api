@@ -787,7 +787,7 @@ equivalent submission.
 **Gate**: full
 **Commit**: `test(cache): verify resubmission after expiry`
 
-### T28: Persist the Railway Volume plan evidence
+### T28: Persist the Railway Volume plan evidence ✅
 
 **What**: Re-run the read-only Railway config plan and persist its exact non-secret summary for the
 later apply approval without mutating remote state.
@@ -797,9 +797,9 @@ later apply approval without mutating remote state.
 
 **Done when**:
 
-- [ ] Evidence records date/session, `1 to add, 2 to change, 0 to destroy`, Volume name/mount and hidden `DATA_ROOT` change without IDs/secrets.
-- [ ] Evidence explicitly states no apply/deploy/domain/remote mutation ran and that exact apply approval remains pending.
-- [ ] `railway config plan` is read-only and `npm run check` passes with no silent deletions.
+- [x] Evidence records date/session, `1 to add, 2 to change, 0 to destroy`, Volume name/mount and hidden `DATA_ROOT` change without IDs/secrets.
+- [x] Evidence explicitly states no apply/deploy/domain/remote mutation ran and that exact apply approval remains pending.
+- [x] `railway config plan` is read-only and `npm run check` passes with no silent deletions.
 
 **Tests**: existing Railway static contract
 **Gate**: build
@@ -857,7 +857,7 @@ boundaries are the only batch boundaries.
 | T25 | One recovery non-call discrimination test | ✅ Complete |
 | T26 | One full-capacity hit discrimination test | ✅ Complete |
 | T27 | One expiry/resubmission integration scenario | ✅ Complete |
-| T28 | One Railway plan evidence artifact | Verification fix |
+| T28 | One Railway plan evidence artifact | ✅ Complete |
 
 ## Diagram-Definition Cross-Check
 
