@@ -216,10 +216,10 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| HARD-01 | Bounded transcript work | T3, T8 | In Tasks |
-| HARD-02 | Bounded transcript work | T3, T8 | In Tasks |
-| HARD-03 | Bounded transcript work | T3, T8 | In Tasks |
-| HARD-04 | Bounded transcript work | T3, T8 | In Tasks |
+| HARD-01 | Bounded transcript work | T3, T8 | Partial: T3 complete |
+| HARD-02 | Bounded transcript work | T3, T8 | Partial: T3 complete |
+| HARD-03 | Bounded transcript work | T3, T8 | Partial: T3 complete |
+| HARD-04 | Bounded transcript work | T3, T8 | Partial: T3 complete |
 | HARD-05 | Bounded transcript work | T1 | Implemented |
 | HARD-06 | Bounded transcript work edge case | T8 | In Tasks |
 | PROC-01 | Media timeout and cancellation | T1, T4, T5 | Partial: T1 complete |
@@ -236,8 +236,8 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | PROV-05 | Muse failure classification | T6 | In Tasks |
 | PROV-06 | Muse failure classification | T6 | In Tasks |
 | PROV-07 | Muse failure classification edge case | T7 | In Tasks |
-| OBS-01 | Observability and readiness | T3, T8 | In Tasks |
-| OBS-02 | Observability and readiness | T3, T8 | In Tasks |
+| OBS-01 | Observability and readiness | T3, T8 | Partial: T3 complete |
+| OBS-02 | Observability and readiness | T3, T8 | Partial: T3 complete |
 | OBS-03 | Observability and readiness | T2, T7, T8 | Partial: T2 complete |
 | OBS-04 | Observability and readiness | T8 | In Tasks |
 | OBS-05 | Observability and readiness | T2, T7, T8 | Partial: T2 complete |

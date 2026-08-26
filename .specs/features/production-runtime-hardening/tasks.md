@@ -136,7 +136,7 @@ sources, stage duration, and stage failures with closed label mappers.
 **Gate:** quick
 **Commit:** `feat(observability): add bounded runtime metrics`
 
-### T3: Create the transcript execution controller
+### T3: Create the transcript execution controller ✅
 
 **What:** Implement synchronous bounded admission, idempotent permits, readiness state, and abort-all
 shutdown using application-owned `AbortController` instances.
@@ -152,12 +152,12 @@ shutdown using application-owned `AbortController` instances.
 
 **Done when:**
 
-- [ ] `tryAcquire` reserves atomically up to the configured maximum and returns no permit after saturation or shutdown.
-- [ ] A permit owns one signal and an idempotent release that decrements the active gauge exactly once.
-- [ ] `beginShutdown` flips readiness before aborting all active permits and remains idempotent.
-- [ ] Operational callers can inspect exact active count and readiness without acquiring a slot.
-- [ ] Unit tests cover cap boundaries, cross-route-neutral permits, success/error-style release, double release, shutdown abort, acquisition after shutdown, and metrics updates.
-- [ ] `npm run test:unit` passes with at least 107 tests and no silent deletions.
+- [x] `tryAcquire` reserves atomically up to the configured maximum and returns no permit after saturation or shutdown.
+- [x] A permit owns one signal and an idempotent release that decrements the active gauge exactly once.
+- [x] `beginShutdown` flips readiness before aborting all active permits and remains idempotent.
+- [x] Operational callers can inspect exact active count and readiness without acquiring a slot.
+- [x] Unit tests cover cap boundaries, cross-route-neutral permits, success/error-style release, double release, shutdown abort, acquisition after shutdown, and metrics updates.
+- [x] `npm run test:unit` passes with at least 107 tests and no silent deletions.
 
 **Tests:** unit
 **Gate:** quick
