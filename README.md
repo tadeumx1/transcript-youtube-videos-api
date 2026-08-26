@@ -1,46 +1,42 @@
 # API híbrida de transcrição do YouTube
 
 API em Node.js, Fastify e TypeScript que recebe a URL de um vídeo público do YouTube,
-prioriza suas legendas e, quando elas não estão disponíveis, extrai o áudio e usa o modelo
-`gpt-transcribe` da OpenAI. As duas origens produzem o mesmo JSON e o mesmo PDF pesquisável,
-prontos para serem usados como fonte de um fluxo RAG.
+prioriza suas legendas e, quando elas não estão disponíveis, transcreve o áudio com
+`muse-spark-1.2-contributor` pelo OpenCode Go. As duas origens produzem o mesmo JSON e um PDF
+pesquisável gerado localmente, prontos para alimentar um fluxo RAG.
 
 ## Como funciona
 
 1. Valida a URL e a transforma no formato canônico do YouTube.
 2. Procura legendas na ordem solicitada, usando por padrão `pt-BR`, `pt` e `en`.
 3. Somente quando não há legenda utilizável, baixa o áudio com `yt-dlp`.
-4. O FFmpeg converte o áudio em MP3 mono, 16 kHz e 48 kbps, dividido em blocos de 20 minutos.
-5. Envia cada bloco sequencialmente ao `gpt-transcribe` e remove os arquivos temporários.
-6. Retorna o contrato unificado como JSON ou gera um PDF pesquisável com metadados de origem.
+4. O FFmpeg converte o áudio em MP3 mono, 16 kHz e 48 kbps, dividido em blocos de 10 minutos.
+5. Envia cada bloco sequencialmente ao Muse com `reasoning.effort: "minimal"`.
+6. Remove os arquivos temporários mesmo quando download, conversão ou transcrição falham.
+7. Retorna o contrato unificado como JSON ou gera um PDF pesquisável sem outra chamada de IA.
 
-O fallback pago não é usado quando as legendas funcionam e não é acionado para erros inesperados
-do YouTube.
+O Muse não é acionado quando as legendas funcionam nem quando o provedor de legendas falha de
+forma inesperada.
 
-## ChatGPT e faturamento da API
+## OpenCode Go e política de dados
 
-O plano ChatGPT Free, Go, Plus, Pro, Business ou Enterprise **não fornece saldo para esta API**.
-ChatGPT e API Platform têm faturamentos separados, conforme a
-[documentação oficial de cobrança](https://help.openai.com/en/articles/9039756-managing-billing-settings-on-chatgpt-web-and-platform).
+O fallback usa a assinatura OpenCode Go e a chave do workspace em `OPENCODE_API_KEY`. O modelo
+Contributor exige que a opção **“Permitir modelos que usam dados de solicitações para
+treinamento”** esteja habilitada no workspace.
 
-Para usar o fallback de áudio:
+Esse consentimento permite que solicitações, inclusive o áudio enviado, sejam usadas para melhorar
+o modelo. Use apenas vídeos públicos que você tem autorização para processar. Não envie gravações
+privadas, credenciais, dados pessoais sensíveis ou conteúdo confidencial.
 
-1. Crie ou acesse um projeto em [platform.openai.com](https://platform.openai.com/).
-2. Configure o faturamento desse projeto na API Platform.
-3. Crie uma API key do projeto.
-4. Defina a chave apenas no servidor como `OPENAI_API_KEY`.
-
-Sem essa chave, vídeos com legenda continuam funcionando. Um vídeo sem legenda recebe HTTP 503
-com `AUDIO_FALLBACK_NOT_CONFIGURED`. Consulte também o
-[guia oficial de speech-to-text](https://developers.openai.com/api/docs/guides/speech-to-text)
-e os [preços atuais da API](https://developers.openai.com/api/docs/pricing).
+Consulte a [documentação oficial do OpenCode Go](https://dev.opencode.ai/docs/go/) para modelos,
+limites e endpoints atuais.
 
 ## Requisitos locais
 
 - Node.js 22 ou superior
 - `yt-dlp`
 - FFmpeg
-- Uma API key da OpenAI Platform somente para vídeos sem legenda
+- Assinatura OpenCode Go e `OPENCODE_API_KEY` para vídeos sem legenda
 
 O Dockerfile já instala os dois executáveis de mídia. Para desenvolvimento sem Docker, confirme:
 
@@ -57,25 +53,30 @@ npm ci
 cp .env.example .env
 ```
 
-O projeto não carrega `.env` automaticamente. Exporte as variáveis no shell, use seu gerenciador de
-segredos ou execute com Docker usando `--env-file`.
+Preencha somente o arquivo `.env`, que já está ignorado pelo Git:
+
+```dotenv
+OPENCODE_API_KEY=sua-chave-do-opencode-go
+```
+
+Os scripts `dev` e `start` carregam o `.env` da raiz quando ele existe. Variáveis fornecidas pelo
+ambiente da hospedagem também são aceitas.
 
 | Variável | Obrigatória | Padrão | Uso |
 | --- | --- | --- | --- |
 | `HOST` | não | `0.0.0.0` | Endereço em que o Fastify escuta. |
 | `PORT` | não | `3000` | Porta TCP, de 1 a 65535. |
-| `OPENAI_API_KEY` | apenas no fallback | vazia | Chave de projeto da API Platform. |
+| `OPENCODE_API_KEY` | apenas no fallback | vazia | Chave do workspace OpenCode Go. |
 | `YT_DLP_PATH` | não | `yt-dlp` | Caminho do executável `yt-dlp`. |
 | `FFMPEG_PATH` | não | `ffmpeg` | Caminho do executável FFmpeg. |
 
-Nunca envie `OPENAI_API_KEY` no body, em commits ou para o cliente da API.
+Nunca envie `OPENCODE_API_KEY` no body, em commits ou ao cliente da API.
 
 ## Executar
 
 Em desenvolvimento:
 
 ```bash
-export OPENAI_API_KEY="sua-chave-da-api-platform"
 npm run dev
 ```
 
@@ -92,14 +93,13 @@ npm start
 docker build -t youtube-transcript-api .
 docker run --rm \
   -p 3000:3000 \
-  -e OPENAI_API_KEY="sua-chave-da-api-platform" \
+  --env-file .env \
   youtube-transcript-api
 ```
 
 A imagem executa a aplicação compilada como usuário sem privilégios, inclui FFmpeg e fixa o
-`yt-dlp` na versão `2026.8.19` publicada no
-[PyPI oficial](https://pypi.org/project/yt-dlp/). Como o YouTube muda com frequência, atualize a
-versão fixada no Dockerfile quando necessário.
+`yt-dlp` na versão `2026.8.19`. Como o YouTube muda com frequência, atualize essa versão quando
+necessário.
 
 ## Rotas
 
@@ -126,7 +126,7 @@ curl -X POST http://localhost:3000/v1/transcripts \
   }'
 ```
 
-`languages` é opcional, ordenado e aceita de um a cinco códigos. Exemplo de resposta:
+`languages` é opcional, ordenado e aceita de um a cinco códigos. Exemplo de resposta por legenda:
 
 ```json
 {
@@ -148,9 +148,9 @@ curl -X POST http://localhost:3000/v1/transcripts \
 }
 ```
 
-Quando o áudio é transcrito, `source` vale `openai_transcription`, `isGenerated` vale `true` e
-`timestampPrecision` vale `chunk`. Nesse caminho, cada timestamp representa o início aproximado de
-um bloco de até 20 minutos, não o tempo exato de cada palavra.
+Quando o áudio é transcrito, `source` vale `muse_transcription`, `isGenerated` vale `true` e
+`timestampPrecision` vale `chunk`. Cada timestamp representa o início aproximado de um bloco de
+até 10 minutos, não o tempo exato de cada palavra.
 
 ### PDF
 
@@ -162,7 +162,8 @@ curl -X POST http://localhost:3000/v1/transcripts/pdf \
 ```
 
 O PDF contém URL canônica, ID do vídeo, origem da transcrição, idioma, indicador de conteúdo
-gerado, precisão dos timestamps, data de extração e todo o texto em ordem cronológica.
+gerado, precisão dos timestamps, data de extração e todo o texto em ordem cronológica. A renderização
+usa PDFKit localmente e não consome tokens do Muse.
 
 ## Erros
 
@@ -183,33 +184,31 @@ Erros têm o formato:
 | 400 | `INVALID_YOUTUBE_URL` | URL não suportada ou ID inválido. |
 | 404 | `VIDEO_NOT_AVAILABLE` | Vídeo privado, restrito ou indisponível. |
 | 502 | `YOUTUBE_UPSTREAM_ERROR` | Falha inesperada ao consultar legendas. |
-| 503 | `AUDIO_FALLBACK_NOT_CONFIGURED` | O fallback precisa de `OPENAI_API_KEY`. |
+| 503 | `AUDIO_FALLBACK_NOT_CONFIGURED` | O fallback precisa de `OPENCODE_API_KEY`. |
 | 503 | `AUDIO_TOOL_UNAVAILABLE` | `yt-dlp` ou FFmpeg não pôde iniciar. |
 | 502 | `AUDIO_EXTRACTION_FAILED` | Falha no download ou processamento do áudio. |
-| 502 | `AUDIO_CHUNK_TOO_LARGE` | Um bloco ultrapassou o limite interno de 24 MB. |
-| 502 | `OPENAI_TRANSCRIPTION_FAILED` | A API de transcrição falhou. |
+| 502 | `AUDIO_CHUNK_TOO_LARGE` | Um bloco ultrapassou o limite interno de 8 MiB. |
+| 502 | `MUSE_TRANSCRIPTION_FAILED` | O OpenCode Go ou o Muse não concluiu a transcrição. |
 | 500 | `PDF_GENERATION_FAILED` | Não foi possível renderizar o PDF. |
 
-Não há retry automático: isso evita cobranças duplicadas e amplificação de bloqueios do YouTube.
+Não há retry automático. Uma falha interrompe a requisição para evitar consumo duplicado da
+franquia e amplificação de bloqueios do YouTube.
 
 ## Privacidade e limitações
 
-- Áudio e blocos são criados em um diretório temporário exclusivo da requisição e removidos em um
-  bloco `finally`, tanto no sucesso quanto no erro. JSONs e PDFs não são persistidos pela API.
-- O limite interno por bloco é 24 MB, abaixo do limite documentado de upload de 25 MB da OpenAI.
-- A transcrição é síncrona. Vídeos longos podem exceder o timeout de um proxy ou plataforma; para
-  produção em grande escala, considere uma fila assíncrona.
+- Áudio e blocos ficam em um diretório temporário exclusivo da requisição e são removidos em um
+  bloco `finally`. JSONs e PDFs não são persistidos pela API.
+- Os chunks usam MP3 a 48 kbps, duram até 10 minutos e são enviados ao OpenCode Go como Base64.
+- A transcrição é síncrona. Vídeos longos podem exceder o timeout do proxy ou da hospedagem; uma
+  fila assíncrona é recomendada para produção em escala.
 - O YouTube pode bloquear IPs de datacenter, exigir login, aplicar rate limit ou alterar endpoints.
-  A primeira versão aceita somente vídeos públicos acessíveis sem cookies e não tenta contornar
-  restrições.
-- Use somente conteúdo que você tem autorização para processar e respeite direitos autorais e os
-  termos das plataformas envolvidas.
-- Autenticação, quotas, rate limiting e ingestão no banco vetorial/RAG ficam fora deste MVP e devem
-  ser adicionados antes de expor a API publicamente.
+  Esta versão aceita somente vídeos públicos acessíveis sem cookies e não contorna restrições.
+- Autenticação da API, quotas próprias, rate limiting e ingestão no banco vetorial/RAG estão fora
+  deste MVP e devem ser adicionados antes de exposição pública.
 
 ## Qualidade
 
-Todos os testes usam adapters falsos: não acessam YouTube/OpenAI e não executam `yt-dlp` ou FFmpeg.
+Os testes usam adapters falsos: não acessam YouTube/OpenCode Go e não executam `yt-dlp` ou FFmpeg.
 
 ```bash
 npm run check

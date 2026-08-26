@@ -8,9 +8,9 @@ the user's OpenCode Go subscription while preserving the captions-first flow and
 
 ## Goals
 
-- [ ] Transcribe captionless public YouTube videos with Muse Spark 1.2 Contributor.
-- [ ] Preserve the unified JSON and searchable PDF behavior.
-- [ ] Remove the OpenAI SDK and `OPENAI_API_KEY` runtime dependency.
+- [x] Transcribe captionless public YouTube videos with Muse Spark 1.2 Contributor.
+- [x] Preserve the unified JSON and searchable PDF behavior.
+- [x] Remove the OpenAI SDK and `OPENAI_API_KEY` runtime dependency.
 
 ## Out of Scope
 
@@ -97,6 +97,6 @@ without network or media tool access.
 
 ## Success Criteria
 
-- [ ] All Muse request, failure, orchestration, HTTP, media, and PDF tests pass without network.
-- [ ] `npm run check` passes with no OpenAI dependency or `OPENAI_API_KEY` reference in runtime code.
-- [ ] A live smoke test with the configured OpenCode Go key transcribes a public Portuguese sample.
+- [x] All Muse request, failure, orchestration, HTTP, media, and PDF tests pass without network.
+- [x] `npm run check` passes with no OpenAI dependency or `OPENAI_API_KEY` reference in runtime code.
+- [x] A live smoke test with the configured OpenCode Go key transcribes a public Portuguese sample.
