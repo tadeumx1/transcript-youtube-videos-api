@@ -215,7 +215,7 @@ OpenAPI document without credentials.
 | STORE-03 | Atomic persistent store | T7, T23 | Needs Fix |
 | STORE-04 | Atomic persistent store | T7 | Completed |
 | STORE-05 | Atomic persistent store | T8 | Completed |
-| STORE-06 | Atomic persistent store | T7, T15, T22 | Needs Fix |
+| STORE-06 | Atomic persistent store | T7, T15, T22 | Completed |
 | STORE-07 | Atomic persistent store | T7, T8 | Completed |
 | STORE-08 | Atomic persistent store | T6, T7, T8 | Completed |
 | CACHE-01 | Deduplication/cache | T1 | Completed |

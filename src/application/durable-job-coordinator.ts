@@ -244,7 +244,13 @@ export class DurableJobCoordinator {
         return submission(active, 'joined')
       }
 
-      const bundle = await this.#artifactCoordinator.find(prepared)
+      let bundle: ArtifactBundle | undefined
+      try {
+        bundle = await this.#artifactCoordinator.find(prepared)
+      } catch {
+        this.#ready = false
+        throw new DurableJobError('JOB_STORAGE_UNAVAILABLE', 503)
+      }
       if (bundle) {
         const retained = bundle.reference.producerJobId
           ? await this.#repository.get(bundle.reference.producerJobId)

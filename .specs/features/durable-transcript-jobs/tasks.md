@@ -673,7 +673,7 @@ from surviving when the producer cannot persist `completed`.
 **Gate**: quick
 **Commit**: `fix(storage): clean failed durable publications`
 
-### T22: Sanitize durable submission storage failures
+### T22: Sanitize durable submission storage failures ✅
 
 **What**: Convert cache lookup/storage failures during durable submit to the exact public 503,
 degrade storage readiness, and perform no record/provider work.
@@ -683,10 +683,10 @@ degrade storage readiness, and perform no record/provider work.
 
 **Done when**:
 
-- [ ] Cache lookup I/O failure becomes `JOB_STORAGE_UNAVAILABLE`/503 with no path, cause, or provider text.
-- [ ] Storage readiness becomes unhealthy while liveness remains callable, and no job/provider work starts.
-- [ ] Route and application tests assert exact body/status/redaction and recovery after a healthy probe.
-- [ ] `npm test` passes with at least 414 total tests and no silent deletions.
+- [x] Cache lookup I/O failure becomes `JOB_STORAGE_UNAVAILABLE`/503 with no path, cause, or provider text.
+- [x] Storage readiness becomes unhealthy while liveness remains callable, and no job/provider work starts.
+- [x] Route and application tests assert exact body/status/redaction and recovery after a healthy probe.
+- [x] `npm test` passes with at least 414 total tests and no silent deletions.
 
 **Tests**: unit/integration
 **Gate**: full
@@ -851,7 +851,7 @@ boundaries are the only batch boundaries.
 | T19 | One ignore-policy change | ✅ Complete |
 | T20 | One operator/developer documentation contract | ✅ Complete |
 | T21 | One durable-publication cleanup boundary | ✅ Complete |
-| T22 | One durable-submit storage error boundary | Verification fix |
+| T22 | One durable-submit storage error boundary | ✅ Complete |
 | T23 | One completed-artifact quarantine path | Verification fix |
 | T24 | One lifecycle-gauge synchronization path | Verification fix |
 | T25 | One recovery non-call discrimination test | Verification fix |

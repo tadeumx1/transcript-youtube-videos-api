@@ -325,6 +325,29 @@ describe('DurableJobCoordinator', () => {
     expect(fixture.worker.notify).toHaveBeenCalledOnce()
   })
 
+  it('sanitizes cache lookup failures, degrades readiness, and starts no durable work', async () => {
+    const fixture = createFixture()
+    await fixture.coordinator.start()
+    fixture.find.mockRejectedValue(new Error('/data/private/cache provider-secret'))
+
+    const failure = await fixture.coordinator.submit(request).catch((error: unknown) => error)
+
+    expect(failure).toEqual(
+      expect.objectContaining({
+        name: 'DurableJobError',
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+    expect(JSON.stringify(failure)).not.toMatch(/\/data|private|provider|secret|cause/)
+    expect(fixture.coordinator.isReady).toBe(false)
+    expect(fixture.repository.create).not.toHaveBeenCalled()
+    expect(fixture.worker.notify).not.toHaveBeenCalled()
+    expect(fixture.metrics.recordJobSubmission).not.toHaveBeenCalled()
+    await fixture.coordinator.stop()
+  })
+
   it('returns exact status, transcript, and PDF resources for a completed job', async () => {
     const fixture = createFixture([completed()])
 

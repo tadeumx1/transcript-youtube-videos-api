@@ -240,4 +240,46 @@ describe('production durable application composition', () => {
     expect(health.json()).toEqual({ status: 'ok' })
     await app.close()
   })
+
+  it('returns sanitized 503 for a durable lookup failure and recovers after a healthy probe', async () => {
+    const dataRoot = await temporaryRoot()
+    const { getTranscript, overrides, render } = createOverrides()
+    const app = createApplication(config(dataRoot), {}, overrides)
+    await app.ready()
+    const cacheRoot = join(dataRoot, 'v1/cache')
+    await writeFile(cacheRoot, '/data/private/cache provider-secret')
+
+    const submission = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs',
+      headers: authorization,
+      payload: { url: firstUrl },
+    })
+
+    expect(submission.statusCode).toBe(503)
+    expect(submission.json()).toEqual({
+      error: {
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        message: 'Transcript job storage is unavailable',
+      },
+    })
+    expect(submission.body).not.toMatch(/\/data|private|provider|secret|cause/)
+    expect(getTranscript).not.toHaveBeenCalled()
+    expect(render).not.toHaveBeenCalled()
+    expect((await app.inject({ method: 'GET', url: '/health' })).json()).toEqual({ status: 'ok' })
+    const unavailable = await app.inject({ method: 'GET', url: '/ready' })
+    expect(unavailable.statusCode).toBe(503)
+    expect(unavailable.json()).toEqual({ status: 'not_ready' })
+
+    await rm(cacheRoot)
+    await vi.waitFor(
+      async () => {
+        const readiness = await app.inject({ method: 'GET', url: '/ready' })
+        expect(readiness.statusCode).toBe(200)
+        expect(readiness.json()).toEqual({ status: 'ready' })
+      },
+      { timeout: 3_000, interval: 100 },
+    )
+    await app.close()
+  })
 })
