@@ -8,6 +8,7 @@ export type AppErrorCode =
   | 'AUDIO_EXTRACTION_FAILED'
   | 'AUDIO_CHUNK_TOO_LARGE'
   | 'OPENAI_TRANSCRIPTION_FAILED'
+  | 'MUSE_TRANSCRIPTION_FAILED'
   | 'PDF_GENERATION_FAILED'
 
 export class AppError extends Error {
