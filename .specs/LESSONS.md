@@ -50,6 +50,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M9 (runbook)
 - last seen: 2026-08-26T20:38:33Z
 
+### L-007 - Assert prohibited external calls in every recovery branch, not only complete and missing branches
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `jobs` · harmful: 0
+- features: durable-transcript-jobs
+- evidence: M09 (jobs)
+- last seen: 2026-08-26T23:27:05Z
+
+### L-008 - Assert lifecycle metrics through real state transitions, not only metric wrapper methods
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `observability` · harmful: 0
+- features: durable-transcript-jobs
+- evidence: M17 (observability)
+- last seen: 2026-08-26T23:27:05Z
+
+### L-009 - Test cache-hit decision ordering at full capacity, not only join and miss ordering
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `cache` · harmful: 0
+- features: durable-transcript-jobs
+- evidence: M18 (cache)
+- last seen: 2026-08-26T23:27:05Z
+
+### L-010 - Treat cleanup, quarantine, and rollback as observable persistence outcomes with real-filesystem assertions
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `storage` · harmful: 0
+- features: durable-transcript-jobs
+- evidence: WORK-07/STORE-03/CACHE-04 (storage)
+- last seen: 2026-08-26T23:27:05Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 7,
+  "next_id": 11,
   "lessons": [
     {
       "id": "L-001",
@@ -112,6 +112,78 @@
       ],
       "created": "2026-08-26T20:38:33Z",
       "last_seen": "2026-08-26T20:38:33Z"
+    },
+    {
+      "id": "L-007",
+      "key": "surviving_mutant::assert prohibited external calls in every recovery branch not only complete and missing branches",
+      "text": "Assert prohibited external calls in every recovery branch, not only complete and missing branches",
+      "signal": "surviving_mutant",
+      "scope": "jobs",
+      "status": "candidate",
+      "features": [
+        "durable-transcript-jobs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M09 (jobs)"
+      ],
+      "created": "2026-08-26T23:27:05Z",
+      "last_seen": "2026-08-26T23:27:05Z"
+    },
+    {
+      "id": "L-008",
+      "key": "surviving_mutant::assert lifecycle metrics through real state transitions not only metric wrapper methods",
+      "text": "Assert lifecycle metrics through real state transitions, not only metric wrapper methods",
+      "signal": "surviving_mutant",
+      "scope": "observability",
+      "status": "candidate",
+      "features": [
+        "durable-transcript-jobs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M17 (observability)"
+      ],
+      "created": "2026-08-26T23:27:05Z",
+      "last_seen": "2026-08-26T23:27:05Z"
+    },
+    {
+      "id": "L-009",
+      "key": "surviving_mutant::test cache hit decision ordering at full capacity not only join and miss ordering",
+      "text": "Test cache-hit decision ordering at full capacity, not only join and miss ordering",
+      "signal": "surviving_mutant",
+      "scope": "cache",
+      "status": "candidate",
+      "features": [
+        "durable-transcript-jobs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M18 (cache)"
+      ],
+      "created": "2026-08-26T23:27:05Z",
+      "last_seen": "2026-08-26T23:27:05Z"
+    },
+    {
+      "id": "L-010",
+      "key": "ac_gap::treat cleanup quarantine and rollback as observable persistence outcomes with real filesystem assertions",
+      "text": "Treat cleanup, quarantine, and rollback as observable persistence outcomes with real-filesystem assertions",
+      "signal": "ac_gap",
+      "scope": "storage",
+      "status": "candidate",
+      "features": [
+        "durable-transcript-jobs"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "WORK-07/STORE-03/CACHE-04 (storage)"
+      ],
+      "created": "2026-08-26T23:27:05Z",
+      "last_seen": "2026-08-26T23:27:05Z"
     }
   ]
 }
