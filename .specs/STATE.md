@@ -86,10 +86,10 @@
 ## Handoff
 
 - **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
-- **Phase / Task**: Execute / Batch 1, T1 next
-- **Completed**: approved 46-requirement spec/context/design; AD-010; approved 20-task six-phase plan, tools, and three sequential sub-agent batches
-- **In-progress** (file:line): none; planning freeze pending commit
-- **Next step**: commit approved planning artifacts, then dispatch sequential Batch 1 (T1-T8)
+- **Phase / Task**: Execute / Batch 1 complete, Batch 2 T9 next
+- **Completed**: approved planning and Batch 1 Phases 1-2, T1-T8, with domain/runtime foundations and atomic file-backed artifact/job storage
+- **In-progress** (file:line): none
+- **Next step**: dispatch sequential Batch 2 for Phases 3-5, T9-T15
 - **Blockers**: none
-- **Uncommitted files**: approved spec, context, design, tasks, and STATE pending planning commit
+- **Uncommitted files**: none after the T8 atomic commit
 - **Branch**: `main`

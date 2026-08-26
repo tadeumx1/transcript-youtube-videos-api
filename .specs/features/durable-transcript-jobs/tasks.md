@@ -289,7 +289,7 @@ transcripts, checksums, quarantine, per-key locks, health probes, and expiry.
 **Gate**: quick
 **Commit**: `feat(storage): persist transcript artifacts`
 
-### T8: Persist revision-guarded durable jobs
+### T8: Persist revision-guarded durable jobs ✅
 
 **What**: Implement the file job repository, in-memory post-commit index, FIFO lookup, recovery scan,
 active-key ownership, bounded tombstones, corruption quarantine, and deterministic duplicate repair.
@@ -305,14 +305,14 @@ active-key ownership, bounded tombstones, corruption quarantine, and determinist
 
 **Done when**:
 
-- [ ] Create/transition updates the in-memory index only after atomic disk publication and rejects stale revision/state without overwriting.
-- [ ] `oldestQueued` orders by creation timestamp then UUID; non-terminal counts and active owners are exact.
-- [ ] Startup validates every record/tombstone, quarantines corrupt content without identifiers/content logs, and rebuilds the index.
-- [ ] Duplicate active keys retain the oldest owner; later records become fixed failed `JOB_INTERRUPTED` without external work.
-- [ ] Completed expiry deletes cache/artifacts through the shared lock then writes a 24-hour tombstone; failed jobs and tombstones obey exact fixed TTLs without sliding reads.
-- [ ] Unknown/expired/invalid identifiers remain distinguishable and invalid formats touch no path.
-- [ ] Real-filesystem tests cover restart persistence, stale transitions, FIFO, corruption, duplicate recovery, TTL boundaries, tombstone deletion, and read/expiry races.
-- [ ] `npm run test:unit` passes with at least 174 tests and no silent deletions.
+- [x] Create/transition updates the in-memory index only after atomic disk publication and rejects stale revision/state without overwriting.
+- [x] `oldestQueued` orders by creation timestamp then UUID; non-terminal counts and active owners are exact.
+- [x] Startup validates every record/tombstone, quarantines corrupt content without identifiers/content logs, and rebuilds the index.
+- [x] Duplicate active keys retain the oldest owner; later records become fixed failed `JOB_INTERRUPTED` without external work.
+- [x] Completed expiry deletes cache/artifacts through the shared lock then writes a 24-hour tombstone; failed jobs and tombstones obey exact fixed TTLs without sliding reads.
+- [x] Unknown/expired/invalid identifiers remain distinguishable and invalid formats touch no path.
+- [x] Real-filesystem tests cover restart persistence, stale transitions, FIFO, corruption, duplicate recovery, TTL boundaries, tombstone deletion, and read/expiry races.
+- [x] `npm run test:unit` passes with at least 174 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -677,7 +677,7 @@ boundaries are the only batch boundaries.
 | T5 | One execution-controller extension | ✅ Complete |
 | T6 | One atomic-writer component | ✅ Complete |
 | T7 | One artifact-store component | ✅ Complete |
-| T8 | One job-repository component | ✅ Cohesive repository boundary |
+| T8 | One job-repository component | ✅ Complete |
 | T9 | One artifact-coordinator component | ✅ Granular |
 | T10 | One durable-worker component | ✅ Cohesive lifecycle boundary |
 | T11 | One job-coordinator component | ✅ Cohesive API/application boundary |

@@ -200,7 +200,7 @@ OpenAPI document without credentials.
 | JOB-02 | Submit/retrieve durable jobs | T2, T11, T12 | Partial (T2 complete) |
 | JOB-03 | Submit/retrieve durable jobs | T11, T12 | Planned |
 | JOB-04 | Submit/retrieve durable jobs | T11, T12 | Planned |
-| JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Planned |
+| JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Partial (T8 complete) |
 | JOB-06 | Submit/retrieve durable jobs | T12, T13 | Planned |
 | JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Partial (T2 complete) |
 | WORK-01 | Durable worker lifecycle | T10, T15 | Planned |
@@ -214,17 +214,17 @@ OpenAPI document without credentials.
 | STORE-02 | Atomic persistent store | T7 | Completed |
 | STORE-03 | Atomic persistent store | T7 | Completed |
 | STORE-04 | Atomic persistent store | T7 | Completed |
-| STORE-05 | Atomic persistent store | T8 | Planned |
+| STORE-05 | Atomic persistent store | T8 | Completed |
 | STORE-06 | Atomic persistent store | T7, T15 | Partial (T7 complete) |
-| STORE-07 | Atomic persistent store | T7, T8 | Partial (T7 complete) |
-| STORE-08 | Atomic persistent store | T6, T7, T8 | Partial (T6, T7 complete) |
+| STORE-07 | Atomic persistent store | T7, T8 | Completed |
+| STORE-08 | Atomic persistent store | T6, T7, T8 | Completed |
 | CACHE-01 | Deduplication/cache | T1 | Completed |
 | CACHE-02 | Deduplication/cache | T1 | Completed |
 | CACHE-03 | Deduplication/cache | T11 | Planned |
 | CACHE-04 | Deduplication/cache | T11 | Planned |
 | CACHE-05 | Deduplication/cache | T11 | Planned |
 | CACHE-06 | Deduplication/cache | T7, T9 | Partial (T7 complete) |
-| CACHE-07 | Deduplication/cache | T8, T11 | Planned |
+| CACHE-07 | Deduplication/cache | T8, T11 | Partial (T8 complete) |
 | CACHE-08 | Deduplication/cache | T9, T13 | Planned |
 | OPS-01 | Durable operations | T3 | Completed |
 | OPS-02 | Durable operations | T16, T17, T18 | Planned |
@@ -240,8 +240,8 @@ OpenAPI document without credentials.
 | EDGE-04 | Read/expiry race edge case | T7 | Completed |
 | EDGE-05 | Language identity edge case | T1 | Completed |
 | EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Partial (T7 complete) |
-| EDGE-07 | Duplicate recovery edge case | T8, T11 | Planned |
-| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2, T6, T7 complete) |
+| EDGE-07 | Duplicate recovery edge case | T8, T11 | Partial (T8 complete) |
+| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2, T6, T7, T8 complete) |
 
 **Coverage:** 46 total requirements, 46 listed, 0 unmapped after Tasks assigns implementation phases.
 
