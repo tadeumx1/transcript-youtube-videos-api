@@ -43,6 +43,31 @@ describe('loadConfig', () => {
     })
   })
 
+  it('uses every durable storage default when variables are missing', () => {
+    expect(loadConfig({})).toMatchObject({
+      dataRoot: '.data/transcripts',
+      maxQueuedJobs: 100,
+      artifactTtlSeconds: 604_800,
+      failedJobTtlSeconds: 86_400,
+      jobTombstoneTtlSeconds: 86_400,
+      storageSweepIntervalMs: 60_000,
+    })
+  })
+
+  it.each([
+    ['data/transcripts', 'data/transcripts'],
+    ['/data/transcripts', '/data/transcripts'],
+    ['  .data/custom  ', '.data/custom'],
+  ])('accepts and trims the non-empty DATA_ROOT path %s', (rawValue, expected) => {
+    expect(loadConfig({ DATA_ROOT: rawValue }).dataRoot).toBe(expected)
+  })
+
+  it.each(['', '   '])('rejects an empty DATA_ROOT without echoing its value', (rawValue) => {
+    expect(() => loadConfig({ DATA_ROOT: rawValue })).toThrowError(
+      /^DATA_ROOT must be a non-empty path$/,
+    )
+  })
+
   it.each([
     ['MAX_CONCURRENT_TRANSCRIPTS', '1', 'maxConcurrentTranscripts', 1],
     ['MAX_CONCURRENT_TRANSCRIPTS', '32', 'maxConcurrentTranscripts', 32],
@@ -56,6 +81,16 @@ describe('loadConfig', () => {
     ['PROCESS_TERMINATION_GRACE_MS', '60000', 'processTerminationGraceMs', 60_000],
     ['MUSE_TIMEOUT_MS', '1', 'museTimeoutMs', 1],
     ['MUSE_TIMEOUT_MS', '3600000', 'museTimeoutMs', 3_600_000],
+    ['MAX_QUEUED_JOBS', '1', 'maxQueuedJobs', 1],
+    ['MAX_QUEUED_JOBS', '10000', 'maxQueuedJobs', 10_000],
+    ['ARTIFACT_TTL_SECONDS', '60', 'artifactTtlSeconds', 60],
+    ['ARTIFACT_TTL_SECONDS', '2678400', 'artifactTtlSeconds', 2_678_400],
+    ['FAILED_JOB_TTL_SECONDS', '60', 'failedJobTtlSeconds', 60],
+    ['FAILED_JOB_TTL_SECONDS', '604800', 'failedJobTtlSeconds', 604_800],
+    ['JOB_TOMBSTONE_TTL_SECONDS', '60', 'jobTombstoneTtlSeconds', 60],
+    ['JOB_TOMBSTONE_TTL_SECONDS', '604800', 'jobTombstoneTtlSeconds', 604_800],
+    ['STORAGE_SWEEP_INTERVAL_MS', '1000', 'storageSweepIntervalMs', 1_000],
+    ['STORAGE_SWEEP_INTERVAL_MS', '3600000', 'storageSweepIntervalMs', 3_600_000],
   ] as const)(
     'accepts the documented boundary %s=%s',
     (environmentName, rawValue, configName, expected) => {
@@ -96,6 +131,26 @@ describe('loadConfig', () => {
     ['MUSE_TIMEOUT_MS', '0'],
     ['MUSE_TIMEOUT_MS', '-1'],
     ['MUSE_TIMEOUT_MS', '3600001'],
+    ['MAX_QUEUED_JOBS', 'invalid'],
+    ['MAX_QUEUED_JOBS', '1.5'],
+    ['MAX_QUEUED_JOBS', '0'],
+    ['MAX_QUEUED_JOBS', '10001'],
+    ['ARTIFACT_TTL_SECONDS', 'invalid'],
+    ['ARTIFACT_TTL_SECONDS', '1.5'],
+    ['ARTIFACT_TTL_SECONDS', '59'],
+    ['ARTIFACT_TTL_SECONDS', '2678401'],
+    ['FAILED_JOB_TTL_SECONDS', 'invalid'],
+    ['FAILED_JOB_TTL_SECONDS', '1.5'],
+    ['FAILED_JOB_TTL_SECONDS', '59'],
+    ['FAILED_JOB_TTL_SECONDS', '604801'],
+    ['JOB_TOMBSTONE_TTL_SECONDS', 'invalid'],
+    ['JOB_TOMBSTONE_TTL_SECONDS', '1.5'],
+    ['JOB_TOMBSTONE_TTL_SECONDS', '59'],
+    ['JOB_TOMBSTONE_TTL_SECONDS', '604801'],
+    ['STORAGE_SWEEP_INTERVAL_MS', 'invalid'],
+    ['STORAGE_SWEEP_INTERVAL_MS', '1.5'],
+    ['STORAGE_SWEEP_INTERVAL_MS', '999'],
+    ['STORAGE_SWEEP_INTERVAL_MS', '3600001'],
   ])('rejects %s without echoing the raw value', (environmentName, rawValue) => {
     expect(() => loadConfig({ [environmentName]: rawValue })).toThrowError(
       new RegExp(`^${environmentName} must be an integer between \\d+ and \\d+$`),

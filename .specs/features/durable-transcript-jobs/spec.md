@@ -226,13 +226,13 @@ OpenAPI document without credentials.
 | CACHE-06 | Deduplication/cache | T7, T9 | Planned |
 | CACHE-07 | Deduplication/cache | T8, T11 | Planned |
 | CACHE-08 | Deduplication/cache | T9, T13 | Planned |
-| OPS-01 | Durable operations | T3 | Planned |
+| OPS-01 | Durable operations | T3 | Completed |
 | OPS-02 | Durable operations | T16, T17, T18 | Planned |
 | OPS-03 | Durable operations | T13, T15 | Planned |
 | OPS-04 | Durable operations | T4 | Planned |
 | OPS-05 | Durable operations | T14 | Planned |
 | OPS-06 | Durable operations | T4, T13, T20 | Planned |
-| OPS-07 | Durable operations | T3, T17, T18, T19 | Planned |
+| OPS-07 | Durable operations | T3, T17, T18, T19 | Partial (T3 complete) |
 | OPS-08 | Durable operations | T20 | Planned |
 | EDGE-01 | Queue capacity edge case | T11 | Planned |
 | EDGE-02 | Partial publication edge case | T7, T10 | Planned |

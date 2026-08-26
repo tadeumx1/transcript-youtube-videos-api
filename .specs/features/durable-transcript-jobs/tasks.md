@@ -153,7 +153,7 @@ revision-guarded transitions, links, and tombstones.
 **Gate**: quick
 **Commit**: `feat(jobs): define durable job state`
 
-### T3: Parse bounded durable storage configuration
+### T3: Parse bounded durable storage configuration ✅
 
 **What**: Add `DATA_ROOT`, queue capacity, completed/failed/tombstone TTL, and sweep-interval runtime
 configuration with the approved defaults and bounds.
@@ -169,11 +169,11 @@ configuration with the approved defaults and bounds.
 
 **Done when**:
 
-- [ ] Defaults exactly match `.data/transcripts`, 100, 604800, 86400, 86400, and 60000.
-- [ ] Every lower/upper boundary succeeds and every non-integer/out-of-range value fails with only the variable name and allowed range.
-- [ ] `DATA_ROOT` accepts a non-empty relative/absolute path without logging or embedding it in an error.
-- [ ] Existing runtime defaults/bounds remain unchanged and config tests cover every new variable.
-- [ ] `npm run test:unit` passes with at least 169 tests and no silent deletions.
+- [x] Defaults exactly match `.data/transcripts`, 100, 604800, 86400, 86400, and 60000.
+- [x] Every lower/upper boundary succeeds and every non-integer/out-of-range value fails with only the variable name and allowed range.
+- [x] `DATA_ROOT` accepts a non-empty relative/absolute path without logging or embedding it in an error.
+- [x] Existing runtime defaults/bounds remain unchanged and config tests cover every new variable.
+- [x] `npm run test:unit` passes with at least 169 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -672,7 +672,7 @@ boundaries are the only batch boundaries.
 | ---- | ----- | ------ |
 | T1 | One request-identity component | ✅ Complete |
 | T2 | One durable-job domain component | ✅ Complete |
-| T3 | One runtime-config extension | ✅ Granular |
+| T3 | One runtime-config extension | ✅ Complete |
 | T4 | One metrics-registry extension | ✅ Granular |
 | T5 | One execution-controller extension | ✅ Granular |
 | T6 | One atomic-writer component | ✅ Granular |

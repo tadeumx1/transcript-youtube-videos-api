@@ -11,6 +11,12 @@ export interface RuntimeConfig extends ApplicationConfig {
   ffmpegTimeoutMs: number
   processTerminationGraceMs: number
   museTimeoutMs: number
+  dataRoot: string
+  maxQueuedJobs: number
+  artifactTtlSeconds: number
+  failedJobTtlSeconds: number
+  jobTombstoneTtlSeconds: number
+  storageSweepIntervalMs: number
 }
 
 function optionalValue(value: string | undefined): string | undefined {
@@ -38,6 +44,15 @@ function parseBoundedInteger(
     throw new Error(`${environmentName} must be an integer between ${minimum} and ${maximum}`)
   }
   return parsed
+}
+
+function parseDataRoot(value: string | undefined): string {
+  if (value === undefined) return '.data/transcripts'
+  const normalized = value.trim()
+  if (!normalized) {
+    throw new Error('DATA_ROOT must be a non-empty path')
+  }
+  return normalized
 }
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): RuntimeConfig {
@@ -89,6 +104,42 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Runtim
       environment.MUSE_TIMEOUT_MS,
       300_000,
       1,
+      3_600_000,
+    ),
+    dataRoot: parseDataRoot(environment.DATA_ROOT),
+    maxQueuedJobs: parseBoundedInteger(
+      'MAX_QUEUED_JOBS',
+      environment.MAX_QUEUED_JOBS,
+      100,
+      1,
+      10_000,
+    ),
+    artifactTtlSeconds: parseBoundedInteger(
+      'ARTIFACT_TTL_SECONDS',
+      environment.ARTIFACT_TTL_SECONDS,
+      604_800,
+      60,
+      2_678_400,
+    ),
+    failedJobTtlSeconds: parseBoundedInteger(
+      'FAILED_JOB_TTL_SECONDS',
+      environment.FAILED_JOB_TTL_SECONDS,
+      86_400,
+      60,
+      604_800,
+    ),
+    jobTombstoneTtlSeconds: parseBoundedInteger(
+      'JOB_TOMBSTONE_TTL_SECONDS',
+      environment.JOB_TOMBSTONE_TTL_SECONDS,
+      86_400,
+      60,
+      604_800,
+    ),
+    storageSweepIntervalMs: parseBoundedInteger(
+      'STORAGE_SWEEP_INTERVAL_MS',
+      environment.STORAGE_SWEEP_INTERVAL_MS,
+      60_000,
+      1_000,
       3_600_000,
     ),
     ...(openCodeApiKey ? { openCodeApiKey } : {}),
