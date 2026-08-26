@@ -28,8 +28,8 @@ change the transcript, Muse, or local PDF algorithms.
 - Continue using the checked-in multi-stage Dockerfile because it already installs FFmpeg and a
   pinned `yt-dlp` as a non-root runtime.
 - Resolve health checks using Railway's runtime `PORT`.
-- Check in `railway.json` with Dockerfile builder, `/health`, a 300-second health timeout, and
-  bounded `ON_FAILURE` restarts.
+- Manage the project with `.railway/railway.ts`, explicit `/health`, a 300-second health timeout,
+  and Railway's bounded `ON_FAILURE`/10-retry defaults.
 - Use one Railway-provided public domain and platform service variables.
 
 ### Verification
@@ -59,7 +59,8 @@ change the transcript, Muse, or local PDF algorithms.
 - Existing HTTP boundary: `src/http/app.ts`.
 - Existing runtime configuration: `src/config.ts` and `src/app.ts`.
 - Existing container contract: `Dockerfile`.
-- Railway configuration fields verified through `use-railway` reference `configure.md`.
+- Railway configuration fields verified through `use-railway` and the current official IaC
+  documentation exposed by `railway docs`.
 
 ---
 

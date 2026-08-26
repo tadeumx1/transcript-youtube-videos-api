@@ -25,7 +25,7 @@ commits, independent Verifier, and requirement traceability.
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
 | Runtime configuration | unit | Every new normalization branch and missing-value behavior | `test/unit/**/*.test.ts` | `npm run test:unit` |
 | Fastify authentication and routes | integration | Both protected routes: configured/unconfigured, valid, missing, malformed, wrong, scheme-casing, dependency short-circuit, and log secrecy | `test/integration/**/*.test.ts` | `npm run test:integration` |
-| Container and Railway configuration | none | Static contract inspection plus full build gate | `Dockerfile`, `railway.json` | `npm run check` |
+| Container and Railway configuration | none | Static contract inspection plus full build gate | `Dockerfile`, `.railway/railway.ts` | `npm run check` |
 | Documentation and external Railway state | none | Build gate plus scoped CLI/HTTP deployment evidence | `README.md`, Railway service | `npm run check` |
 
 ## Gate Check Commands
@@ -42,7 +42,7 @@ commits, independent Verifier, and requirement traceability.
 
 ## Execution Plan
 
-Phases are ordered and run sequentially; the six tasks fit one inline execution batch.
+Phases are ordered and run sequentially; the seven tasks fit one inline execution batch.
 
 ### Phase 1: Fail-closed API access
 
@@ -53,13 +53,13 @@ T1 → T2
 ### Phase 2: Reproducible Railway runtime
 
 ```text
-T2 → T3 → T4 → T5
+T2 → T3 → T4 → T5 → T6
 ```
 
 ### Phase 3: Production publication
 
 ```text
-T5 → T6
+T6 → T7
 ```
 
 ---
@@ -141,7 +141,7 @@ T5 → T6
 **Gate:** build
 **Commit:** `fix(container): probe the runtime port`
 
-### T4: Define the Railway service deployment contract ✅
+### T4: Define the legacy Railway service deployment contract ✅ (superseded by T6)
 
 **What:** Add checked-in Railway build, health, timeout, and restart configuration.
 **Where:** `railway.json`
@@ -190,12 +190,37 @@ T5 → T6
 **Gate:** build
 **Commit:** `docs(api): document authenticated railway use`
 
-### T6: Deploy and verify the public Railway service
+### T6: Migrate Railway configuration to current Infrastructure as Code
+
+**What:** Replace deprecated Config as Code with the current TypeScript Railway IaC project definition.
+**Where:** `.railway/railway.ts`
+**Depends on:** T5
+**Reuses:** The deployed service, root Dockerfile, `/health`, and `railway config migrate`
+**Requirement:** RYDEP-01, RYDEP-03
+
+**Tools**:
+
+- MCP: Railway CLI
+- Skill: `tlc-spec-driven`, `use-railway`
+
+**Done when**:
+
+- [ ] The official pinned `railway` TypeScript SDK is a development dependency.
+- [ ] `.railway/railway.ts` owns the existing project/service and configures `/health` with a 300-second timeout.
+- [ ] Deprecated `railway.json` is removed and the remote legacy config-file setting is cleared by the migration command.
+- [ ] `railway config plan` reports no destructive changes before apply and no remaining drift afterward.
+- [ ] `npm run check` passes.
+
+**Tests:** none - Railway IaC uses plan/apply evidence and the build gate per matrix
+**Gate:** build
+**Commit:** `chore(railway): migrate service configuration to iac`
+
+### T7: Deploy and verify the public Railway service
 
 **What:** Provision/link the Railway service, set sealed credentials, deploy, generate a domain, and verify its public contract.
 **Where:** `.specs/features/railway-production-deploy/validation.md`
-**Depends on:** T5
-**Reuses:** Root `.env` OpenCode credential, `railway.json`, Dockerfile, and authenticated route contract
+**Depends on:** T6
+**Reuses:** Root `.env` OpenCode credential, Railway IaC, Dockerfile, and authenticated route contract
 **Requirement:** RYDEP-04, RYDEP-05, RYDEP-06, RYDEP-07, RYDEP-08, RYDEP-09
 
 **Tools**:
@@ -225,8 +250,8 @@ T5 → T6
 Phase 1 → Phase 2 → Phase 3
 
 Phase 1: T1 → T2
-Phase 2: T3 → T4 → T5
-Phase 3: T6
+Phase 2: T3 → T4 → T5 → T6
+Phase 3: T7
 ```
 
 Execution is strictly sequential. Cross-phase dependencies are carried by the last task of the
@@ -241,9 +266,10 @@ previous phase and the first task of the next phase.
 | T1 | One runtime configuration concept | ✅ Granular |
 | T2 | One HTTP authentication boundary | ✅ Granular |
 | T3 | One container health correction | ✅ Granular |
-| T4 | One Railway service configuration | ✅ Granular |
+| T4 | One legacy Railway service configuration | ✅ Granular; superseded after platform warning |
 | T5 | One operator-documentation update | ✅ Granular |
-| T6 | One production deployment operation | ✅ Granular |
+| T6 | One Railway IaC migration | ✅ Granular |
+| T7 | One production deployment operation | ✅ Granular |
 
 ---
 
@@ -256,7 +282,8 @@ previous phase and the first task of the next phase.
 | T3 | T2 | Phase 1 → Phase 2, T2 → T3 | ✅ Match |
 | T4 | T3 | T3 → T4 | ✅ Match |
 | T5 | T4 | T4 → T5 | ✅ Match |
-| T6 | T5 | Phase 2 → Phase 3, T5 → T6 | ✅ Match |
+| T6 | T5 | T5 → T6 | ✅ Match |
+| T7 | T6 | Phase 2 → Phase 3, T6 → T7 | ✅ Match |
 
 ---
 
@@ -269,4 +296,5 @@ previous phase and the first task of the next phase.
 | T3 | Container configuration | none | none | ✅ OK |
 | T4 | Railway configuration | none | none | ✅ OK |
 | T5 | Documentation | none | none | ✅ OK |
-| T6 | External Railway state/evidence | none | none | ✅ OK |
+| T6 | Railway IaC and dependency metadata | none | none | ✅ OK |
+| T7 | External Railway state/evidence | none | none | ✅ OK |

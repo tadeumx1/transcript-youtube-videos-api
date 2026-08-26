@@ -59,7 +59,7 @@ or any transcript dependency, so unauthorized requests cannot create work.
 
 | System | Integration method |
 | ------ | ------------------ |
-| Railway build | `railway.json` selects the checked-in Dockerfile. |
+| Railway build | `.railway/railway.ts` manages the service; Railway detects the root Dockerfile. |
 | Railway health | `deploy.healthcheckPath: /health`; container health reads runtime `PORT`. |
 | Railway secrets | CLI `variable set --stdin` for `OPENCODE_API_KEY` and generated `API_ACCESS_KEY`. |
 | Railway networking | One Railway-provided public domain scoped to the deployed service. |
@@ -93,9 +93,9 @@ or any transcript dependency, so unauthorized requests cannot create work.
 ### Railway service config
 
 - **Purpose:** Make build/deploy behavior reviewable and repeatable.
-- **Location:** `railway.json`.
-- **Behavior:** Dockerfile builder, `/health`, 300-second health timeout, and bounded on-failure
-  restart policy.
+- **Location:** `.railway/railway.ts`.
+- **Behavior:** Project/service ownership, `/health`, 300-second health timeout, and platform-default
+  bounded on-failure restart policy. The deprecated `railway.json` is removed after migration.
 
 ### Deployment operation
 
@@ -141,5 +141,5 @@ or any transcript dependency, so unauthorized requests cannot create work.
 | Auth storage | Railway service variable | Avoids Git and image-layer secrets. |
 | Health route | Public liveness-only endpoint | Compatible with Railway probes and does not call dependencies. |
 | Builder | Dockerfile | Required media executables are already packaged and pinned. |
-| Deployment config | Checked-in `railway.json` | Reviewable source of truth for health and restart behavior. |
+| Deployment config | Checked-in `.railway/railway.ts` | Current project-level IaC; avoids the `railway.json` cutoff on 2026-12-01. |
 | Tests | Existing Vitest unit + Fastify integration suites | Maintains network-isolated deterministic coverage. |
