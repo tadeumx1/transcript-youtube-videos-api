@@ -118,7 +118,7 @@ T5 → T6
 **Gate:** full
 **Commit:** `feat(api): protect transcript routes`
 
-### T3: Make the container health check use Railway's runtime port
+### T3: Make the container health check use Railway's runtime port ✅
 
 **What:** Change the Docker health probe to read `PORT` at runtime with the existing local fallback.
 **Where:** `Dockerfile`
@@ -133,9 +133,9 @@ T5 → T6
 
 **Done when**:
 
-- [ ] The health command targets `process.env.PORT` and falls back to 3000 only when absent.
-- [ ] Node.js 22, FFmpeg, pinned `yt-dlp`, non-root execution, and compiled entrypoint remain unchanged.
-- [ ] `npm run check` passes.
+- [x] The health command targets `process.env.PORT` and falls back to 3000 only when absent.
+- [x] Node.js 22, FFmpeg, pinned `yt-dlp`, non-root execution, and compiled entrypoint remain unchanged.
+- [x] `npm run check` passes with 83 tests; local Docker is unavailable, so Railway will validate the image build in T6.
 
 **Tests:** none - container files use the build gate per matrix
 **Gate:** build
