@@ -193,7 +193,7 @@ bounded internal stderr, and a single cleanup/settlement path.
 **Gate:** quick
 **Commit:** `feat(media): bound subprocess lifecycle`
 
-### T5: Apply process policies and cleanup in the media pipeline
+### T5: Apply process policies and cleanup in the media pipeline ✅
 
 **What:** Pass distinct yt-dlp/FFmpeg timeouts and the operation signal into the process runner while
 preserving request-directory cleanup for every terminal path.
@@ -209,12 +209,12 @@ preserving request-directory cleanup for every terminal path.
 
 **Done when:**
 
-- [ ] yt-dlp receives the configured 300000 ms default and FFmpeg receives the configured 900000 ms default.
-- [ ] The same caller signal reaches both subprocess stages and chunk consumption.
-- [ ] Timeout/abort errors retain their typed codes instead of collapsing into extraction failure.
-- [ ] The request-specific directory is removed after download timeout, conversion timeout, abort, consumer failure, and success.
-- [ ] Unit tests assert exact runner options, stage ordering, typed propagation, no later-stage calls after failure, and cleanup.
-- [ ] `npm run test:unit` passes with at least 121 tests and no silent deletions.
+- [x] yt-dlp receives the configured 300000 ms default and FFmpeg receives the configured 900000 ms default.
+- [x] The same caller signal reaches both subprocess stages and chunk consumption.
+- [x] Timeout/abort errors retain their typed codes instead of collapsing into extraction failure.
+- [x] The request-specific directory is removed after download timeout, conversion timeout, abort, consumer failure, and success.
+- [x] Unit tests assert exact runner options, stage ordering, typed propagation, no later-stage calls after failure, and cleanup.
+- [x] `npm run test:unit` passes with at least 121 tests and no silent deletions.
 
 **Tests:** unit
 **Gate:** quick

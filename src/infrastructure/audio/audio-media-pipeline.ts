@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { AppError } from '../../domain/errors.js'
-import type { ProcessRunner } from './process-runner.js'
+import type { ProcessRunner, ProcessRunOptions } from './process-runner.js'
 
 const MAX_CHUNK_BYTES = 8 * 1024 * 1024
 
@@ -19,8 +19,31 @@ const nodeFileSystem: MediaFileSystem = { mkdtemp, readdir, rm, stat }
 export interface AudioChunkSource {
   withChunks<T>(
     sourceUrl: string,
-    consume: (chunkPaths: readonly string[]) => Promise<T>,
+    consume: (chunkPaths: readonly string[], options?: AudioChunkOperationOptions) => Promise<T>,
+    options?: AudioChunkOperationOptions,
   ): Promise<T>
+}
+
+export interface AudioChunkOperationOptions {
+  signal?: AbortSignal
+}
+
+interface ProcessPolicies {
+  ytDlpTimeoutMs: number
+  ffmpegTimeoutMs: number
+}
+
+function processOptions(
+  timeoutMs: number,
+  options: AudioChunkOperationOptions | undefined,
+): ProcessRunOptions {
+  return options?.signal ? { timeoutMs, signal: options.signal } : { timeoutMs }
+}
+
+function assertNotAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new AppError('AUDIO_PROCESS_ABORTED', 503, 'Audio processing was aborted')
+  }
 }
 
 export class AudioMediaPipeline implements AudioChunkSource {
@@ -29,6 +52,7 @@ export class AudioMediaPipeline implements AudioChunkSource {
   readonly #temporaryRoot: () => string
   readonly #ytDlpPath: string
   readonly #ffmpegPath: string
+  readonly #policies: ProcessPolicies
 
   constructor(
     runner: ProcessRunner,
@@ -38,42 +62,59 @@ export class AudioMediaPipeline implements AudioChunkSource {
       ytDlpPath: 'yt-dlp',
       ffmpegPath: 'ffmpeg',
     },
+    policies: ProcessPolicies = {
+      ytDlpTimeoutMs: 300_000,
+      ffmpegTimeoutMs: 900_000,
+    },
   ) {
     this.#runner = runner
     this.#fileSystem = fileSystem
     this.#temporaryRoot = temporaryRoot
     this.#ytDlpPath = tools.ytDlpPath
     this.#ffmpegPath = tools.ffmpegPath
+    this.#policies = policies
   }
 
   async withChunks<T>(
     sourceUrl: string,
-    consume: (chunkPaths: readonly string[]) => Promise<T>,
+    consume: (chunkPaths: readonly string[], options?: AudioChunkOperationOptions) => Promise<T>,
+    options?: AudioChunkOperationOptions,
   ): Promise<T> {
     const directory = await this.#fileSystem.mkdtemp(
       join(this.#temporaryRoot(), 'youtube-transcript-'),
     )
 
     try {
-      const chunks = await this.#extractChunks(directory, sourceUrl)
-      return await consume(chunks)
+      assertNotAborted(options?.signal)
+      const chunks = await this.#extractChunks(directory, sourceUrl, options)
+      assertNotAborted(options?.signal)
+      return options ? await consume(chunks, options) : await consume(chunks)
     } finally {
       await this.#fileSystem.rm(directory, { force: true, recursive: true })
     }
   }
 
-  async #extractChunks(directory: string, sourceUrl: string): Promise<string[]> {
+  async #extractChunks(
+    directory: string,
+    sourceUrl: string,
+    options: AudioChunkOperationOptions | undefined,
+  ): Promise<string[]> {
     try {
-      await this.#runner.run(this.#ytDlpPath, [
-        '--no-playlist',
-        '--no-warnings',
-        '--no-progress',
-        '--format',
-        'bestaudio[ext=m4a]/bestaudio',
-        '--output',
-        join(directory, 'source.%(ext)s'),
-        sourceUrl,
-      ])
+      await this.#runner.run(
+        this.#ytDlpPath,
+        [
+          '--no-playlist',
+          '--no-warnings',
+          '--no-progress',
+          '--format',
+          'bestaudio[ext=m4a]/bestaudio',
+          '--output',
+          join(directory, 'source.%(ext)s'),
+          sourceUrl,
+        ],
+        processOptions(this.#policies.ytDlpTimeoutMs, options),
+      )
+      assertNotAborted(options?.signal)
 
       const downloadedFiles = await this.#fileSystem.readdir(directory)
       const sourceName = downloadedFiles.find((name) => name.startsWith('source.'))
@@ -81,28 +122,33 @@ export class AudioMediaPipeline implements AudioChunkSource {
         throw new AppError('AUDIO_EXTRACTION_FAILED', 502, 'yt-dlp produced no audio file')
       }
 
-      await this.#runner.run(this.#ffmpegPath, [
-        '-hide_banner',
-        '-loglevel',
-        'error',
-        '-y',
-        '-i',
-        join(directory, sourceName),
-        '-vn',
-        '-ac',
-        '1',
-        '-ar',
-        '16000',
-        '-b:a',
-        '48k',
-        '-f',
-        'segment',
-        '-segment_time',
-        '600',
-        '-reset_timestamps',
-        '1',
-        join(directory, 'chunk-%03d.mp3'),
-      ])
+      await this.#runner.run(
+        this.#ffmpegPath,
+        [
+          '-hide_banner',
+          '-loglevel',
+          'error',
+          '-y',
+          '-i',
+          join(directory, sourceName),
+          '-vn',
+          '-ac',
+          '1',
+          '-ar',
+          '16000',
+          '-b:a',
+          '48k',
+          '-f',
+          'segment',
+          '-segment_time',
+          '600',
+          '-reset_timestamps',
+          '1',
+          join(directory, 'chunk-%03d.mp3'),
+        ],
+        processOptions(this.#policies.ffmpegTimeoutMs, options),
+      )
+      assertNotAborted(options?.signal)
 
       const chunkNames = (await this.#fileSystem.readdir(directory))
         .filter((name) => /^chunk-\d{3}\.mp3$/.test(name))
