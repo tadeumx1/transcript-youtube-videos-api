@@ -9,11 +9,11 @@ routes, Railway health checks, Railway-managed provider credentials, and reprodu
 
 ## Goals
 
-- [ ] Protect every transcript-producing endpoint with one server-managed Bearer token.
-- [ ] Package the container and service configuration for Railway's dynamic runtime port.
-- [ ] Deploy the service with OpenCode and API access credentials stored as Railway variables.
-- [ ] Verify health, authentication, JSON, and PDF behavior through the public Railway domain.
-- [ ] Record separately prioritized production-hardening tasks discovered during the audit.
+- [x] Protect every transcript-producing endpoint with one server-managed Bearer token.
+- [x] Package the container and service configuration for Railway's dynamic runtime port.
+- [x] Deploy the service with OpenCode and API access credentials stored as Railway variables.
+- [x] Verify health, authentication, JSON, and PDF behavior through the public Railway domain.
+- [x] Record separately prioritized production-hardening tasks discovered during the audit.
 
 ## Out of Scope
 
@@ -128,8 +128,8 @@ transcript content.
 
 ## Success Criteria
 
-- [ ] `npm run check` passes with unit and integration coverage for authentication.
-- [ ] No production secret is added to Git or emitted in command output.
-- [ ] Railway reports a terminal successful deployment and healthy service.
-- [ ] The public domain passes health, unauthorized, authenticated JSON, and authenticated PDF smoke tests.
-- [ ] Production hardening findings exist as prioritized, acceptance-testable backlog tasks.
+- [x] `npm run check` passes with unit and integration coverage for authentication.
+- [x] No production secret is added to Git or emitted in command output.
+- [x] Railway reports a terminal successful deployment and healthy service.
+- [x] The public domain passes health, unauthorized, authenticated JSON, and authenticated PDF smoke tests.
+- [x] Production hardening findings exist as prioritized, acceptance-testable backlog tasks.

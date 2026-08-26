@@ -11,7 +11,7 @@ commits, independent Verifier, and requirement traceability.
 ---
 
 **Design:** `.specs/features/railway-production-deploy/design.md`
-**Status:** Approved and ready for execution
+**Status:** Done
 
 ---
 

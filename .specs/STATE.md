@@ -38,13 +38,31 @@
 - **Date**: 2026-08-25
 - **Status**: active
 
+### AD-006
+
+- **Decision**: Every transcript-producing HTTP route requires a server-managed Bearer token, while `/health` remains public and missing auth configuration fails closed.
+- **Reason**: Public media processing can exhaust CPU, bandwidth, and the owner's OpenCode Go quota.
+- **Trade-off**: Every RAG client must securely store and send one additional credential.
+- **Scope**: Fastify transcript and PDF routes in all hosted environments.
+- **Date**: 2026-08-25
+- **Status**: active
+
+### AD-007
+
+- **Decision**: Railway production infrastructure is managed through `.railway/railway.ts` and builds the checked-in Dockerfile.
+- **Reason**: The container owns FFmpeg and pinned `yt-dlp`; current Railway IaC replaces Config as Code before its 2026-12-01 cutoff.
+- **Trade-off**: The repository carries the Railway TypeScript SDK as a development dependency and deploy configuration is Railway-specific.
+- **Scope**: Production hosting, health checks, service variables, and future Railway configuration changes.
+- **Date**: 2026-08-25
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: muse-audio-fallback
+- **Feature**: railway-production-deploy
 - **Phase / Task**: Validate complete
-- **Completed**: Captions-first Muse fallback, OpenCode Go configuration, local PDF flow, 74-test gate, 10/10 AC PASS, and 3/3 killed mutations
+- **Completed**: T1-T7, public Bearer auth, current Railway IaC, production deployment, JSON/PDF smoke tests, 83-test gate, 17/17 AC PASS, and 5/5 killed auth mutations
 - **In-progress** (file:line): none
-- **Next step**: Run a real captionless YouTube request in Docker or a host with `yt-dlp` and FFmpeg; then choose the RAG storage layer
-- **Blockers**: none for source delivery; the current host lacks `yt-dlp` and FFmpeg for a full video smoke test
-- **Uncommitted files**: none after the validation bookkeeping commit
+- **Next step**: Choose the first production-hardening task from `improvements.md`; `IMP-01` concurrency limiting and `IMP-02` subprocess timeouts are the recommended P1 order
+- **Blockers**: none; service is live on its Railway-provided domain
+- **Uncommitted files**: none after the feature-close commit
 - **Branch**: `main`
