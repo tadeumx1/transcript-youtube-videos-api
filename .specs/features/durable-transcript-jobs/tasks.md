@@ -376,7 +376,7 @@ conservative restart reconciliation, shutdown, cleanup, and exact metrics.
 **Gate**: quick
 **Commit**: `feat(jobs): execute durable transcript work`
 
-### T11: Coordinate durable submissions and results
+### T11: Coordinate durable submissions and results ✅
 
 **What**: Implement lifecycle readiness, serialized submit/dedup/capacity decisions, API resource
 reads, result state mapping, worker notification, sweeper, and active ownership cleanup.
@@ -392,13 +392,13 @@ reads, result state mapping, worker notification, sweeper, and active ownership 
 
 **Done when**:
 
-- [ ] Concurrent same-key misses create one queued record: creator gets `miss`, followers get the same ID with `joined`, and one worker notification occurs.
-- [ ] Active owners join; verified completed owners hit; a verified sync bundle creates one immediate completed hit without queue capacity; failed/corrupt/expired state allows a new miss.
-- [ ] Queue cap rejects only a new miss with exact 429 metadata; joined/hit still return during saturation without record/provider work.
-- [ ] Status/result methods return exact resources/bytes and map queued/processing/failed/unknown/expired/corrupt states to the specified errors/Retry-After.
-- [ ] `start` initializes/reconciles before ready; `stop` flips readiness, stops worker/sweeper, and is idempotent.
-- [ ] Unit tests cover concurrent promise races, every disposition/state/TTL boundary, exact IDs/links/headers metadata, notifications, metrics, and zero prohibited fields.
-- [ ] `npm run test:unit` passes with at least 177 tests and no silent deletions.
+- [x] Concurrent same-key misses create one queued record: creator gets `miss`, followers get the same ID with `joined`, and one worker notification occurs.
+- [x] Active owners join; verified completed owners hit; a verified sync bundle creates one immediate completed hit without queue capacity; failed/corrupt/expired state allows a new miss.
+- [x] Queue cap rejects only a new miss with exact 429 metadata; joined/hit still return during saturation without record/provider work.
+- [x] Status/result methods return exact resources/bytes and map queued/processing/failed/unknown/expired/corrupt states to the specified errors/Retry-After.
+- [x] `start` initializes/reconciles before ready; `stop` flips readiness, stops worker/sweeper, and is idempotent.
+- [x] Unit tests cover concurrent promise races, every disposition/state/TTL boundary, exact IDs/links/headers metadata, notifications, metrics, and zero prohibited fields.
+- [x] `npm run test:unit` passes with at least 177 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -680,7 +680,7 @@ boundaries are the only batch boundaries.
 | T8 | One job-repository component | ✅ Complete |
 | T9 | One artifact-coordinator component | ✅ Complete |
 | T10 | One durable-worker component | ✅ Complete |
-| T11 | One job-coordinator component | ✅ Cohesive API/application boundary |
+| T11 | One job-coordinator component | ✅ Complete |
 | T12 | One job-route plugin | ✅ Cohesive four-operation resource |
 | T13 | One Fastify integration boundary | ✅ Cohesive lifecycle/cache wiring |
 | T14 | One OpenAPI contract extension | ✅ Granular |
