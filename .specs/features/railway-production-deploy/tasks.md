@@ -141,7 +141,7 @@ T5 → T6
 **Gate:** build
 **Commit:** `fix(container): probe the runtime port`
 
-### T4: Define the Railway service deployment contract
+### T4: Define the Railway service deployment contract ✅
 
 **What:** Add checked-in Railway build, health, timeout, and restart configuration.
 **Where:** `railway.json`
@@ -156,10 +156,10 @@ T5 → T6
 
 **Done when**:
 
-- [ ] Railway selects the Dockerfile builder and repository Dockerfile.
-- [ ] Railway probes `/health` with a 300-second deployment timeout.
-- [ ] Failed processes use a bounded `ON_FAILURE` restart policy.
-- [ ] `npm run check` passes.
+- [x] Railway selects the Dockerfile builder and repository Dockerfile.
+- [x] Railway probes `/health` with a 300-second deployment timeout.
+- [x] Failed processes use a bounded `ON_FAILURE` restart policy with 10 retries.
+- [x] JSON contract inspection and `npm run check` pass with 83 tests.
 
 **Tests:** none - Railway configuration uses the build gate per matrix
 **Gate:** build
