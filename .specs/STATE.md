@@ -77,10 +77,10 @@
 ## Handoff
 
 - **Feature**: production-runtime-hardening
-- **Phase / Task**: Tasks ready for approval; Execute not started
+- **Phase / Task**: Execute approved; batch 1 (T1-T7) ready to dispatch
 - **Completed**: validated 46-requirement spec, approved context/design, AD-008/AD-009, and validated 11-task/two-batch execution plan
 - **In-progress** (file:line): none
-- **Next step**: receive explicit tasks approval, read Execute references, dispatch approved batch 1 for T1-T7, then batch 2 for T8-T11
-- **Blockers**: detailed tasks approval required by TLC before Execute; architecture and subagent use are already approved
-- **Uncommitted files**: `.specs/STATE.md`, feature `spec.md`, and new `tasks.md` pending the planning commit
+- **Next step**: dispatch approved batch 1 for T1-T7, verify its commits/gates, then dispatch batch 2 for T8-T11
+- **Blockers**: none
+- **Uncommitted files**: `.specs/STATE.md` and `tasks.md` approval status pending execution-start commit
 - **Branch**: `main`
