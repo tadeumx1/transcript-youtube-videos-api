@@ -10,7 +10,7 @@
 
 ### AD-002: Keep request processing stateless
 
-- **Status:** active
+- **Status:** superseded by AD-010
 - **Decision:** Transcript results and PDFs are returned synchronously; temporary audio exists only in request-specific directories and is always removed.
 - **Reason:** The MVP needs no database and must not retain downloaded media.
 
@@ -74,13 +74,22 @@
 - **Date**: 2026-08-26
 - **Status**: active
 
+### AD-010
+
+- **Decision**: Successful transcript JSON/PDF artifacts and durable job metadata are retained for bounded TTLs in an application-owned atomic file store on one Railway Volume; temporary audio remains request-scoped and is always removed.
+- **Reason**: Durable jobs, restart recovery, deduplication, and local LanceDB ingestion require persistent source artifacts without a new paid database or storage provider.
+- **Trade-off**: The service is constrained to one Volume-backed replica, incurs brief redeploy downtime, and needs explicit retention, corruption handling, and backup operations.
+- **Scope**: Durable transcript jobs, synchronous artifact cache, Railway deployment topology, and future local RAG ingestion.
+- **Date**: 2026-08-26
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: production-runtime-hardening
-- **Phase / Task**: Complete after independent validation iteration 2
-- **Completed**: T1-T14; 46/46 requirements verified; 215 tests and all local source gates pass; discrimination sensor killed 6/6 mutants
-- **In-progress** (file:line): none
-- **Next step**: specify durable jobs and artifact deduplication/cache for IMP-03/IMP-04 on the approved Railway Volume
+- **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
+- **Phase / Task**: Execute / Batch 1, T1 next
+- **Completed**: approved 46-requirement spec/context/design; AD-010; approved 20-task six-phase plan, tools, and three sequential sub-agent batches
+- **In-progress** (file:line): none; planning freeze pending commit
+- **Next step**: commit approved planning artifacts, then dispatch sequential Batch 1 (T1-T8)
 - **Blockers**: none
-- **Uncommitted files**: none after this validation commit
+- **Uncommitted files**: approved spec, context, design, tasks, and STATE pending planning commit
 - **Branch**: `main`
