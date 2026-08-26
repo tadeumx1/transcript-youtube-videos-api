@@ -56,6 +56,24 @@
 - **Date**: 2026-08-25
 - **Status**: active
 
+### AD-008
+
+- **Decision**: Expensive transcript work is admitted and cancelled by an application-owned execution controller using idempotent permits and standard `AbortSignal` propagation.
+- **Reason**: The same bounded lifecycle must protect synchronous HTTP routes and future durable workers without depending on Fastify internals.
+- **Trade-off**: Every external adapter and application boundary must accept and correctly clean up an optional cancellation signal.
+- **Scope**: Transcript HTTP routes, media subprocesses, provider calls, shutdown, and durable job workers.
+- **Date**: 2026-08-26
+- **Status**: active
+
+### AD-009
+
+- **Decision**: Operational metrics and logs use fixed low-cardinality labels and never include video identifiers, URLs, transcript/audio/PDF content, credentials, provider bodies, or nested cause messages.
+- **Reason**: Production diagnosis must not create a second store of source content or secrets and must remain safe for metrics aggregation.
+- **Trade-off**: Per-video debugging requires correlation outside application telemetry and bounded operator probes.
+- **Scope**: HTTP logging, provider/media diagnostics, Prometheus metrics, readiness, and future worker instrumentation.
+- **Date**: 2026-08-26
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: railway-production-deploy
