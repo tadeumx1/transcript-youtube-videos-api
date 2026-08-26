@@ -431,7 +431,7 @@ normal close and after rejection, killing verifier mutant M10.
 **Gate:** quick
 **Commit:** `test(media): assert abort listener cleanup`
 
-### T13: Make CI gates fail closed
+### T13: Make CI gates fail closed ✅
 
 **What:** Strengthen the static workflow contract so source and container gates cannot tolerate
 failure through `continue-on-error`, killing verifier mutant M12.
@@ -447,10 +447,10 @@ failure through `continue-on-error`, killing verifier mutant M12.
 
 **Done when:**
 
-- [ ] Every source and container job/step is asserted not to set `continue-on-error: true`.
-- [ ] The contract test fails when `continue-on-error: true` is added to `npm run check` or Docker build.
-- [ ] Existing job names, dependency, permissions, commands, and branch-protection assertions remain unchanged.
-- [ ] `npm run test:unit` passes with at least 214 tests and no silent deletions.
+- [x] Every source and container job/step is asserted not to set `continue-on-error: true`.
+- [x] The contract test fails when `continue-on-error: true` is added to `npm run check` or Docker build.
+- [x] Existing job names, dependency, permissions, commands, and branch-protection assertions remain unchanged.
+- [x] `npm run test:unit` passes with 165 unit tests; the full-suite baseline is expected to reach at least 214 after this task.
 
 **Tests:** unit/static
 **Gate:** quick

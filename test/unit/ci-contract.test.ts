@@ -8,12 +8,14 @@ interface WorkflowStep {
   run?: string
   uses?: string
   with?: Record<string, string | boolean>
+  'continue-on-error'?: boolean
 }
 
 interface WorkflowJob {
   name: string
   needs?: string
   steps: WorkflowStep[]
+  'continue-on-error'?: boolean
 }
 
 interface WorkflowContract {
@@ -73,6 +75,17 @@ describe('CI workflow contract', () => {
       file: 'Dockerfile',
       push: false,
     })
+  })
+
+  it('keeps every source and container gate fail closed', async () => {
+    const { workflow } = await readWorkflow()
+
+    for (const job of Object.values(workflow.jobs)) {
+      expect(job['continue-on-error']).not.toBe(true)
+      for (const step of job.steps) {
+        expect(step['continue-on-error']).not.toBe(true)
+      }
+    }
   })
 
   it('does not couple deterministic CI gates to provider or API secrets', async () => {
