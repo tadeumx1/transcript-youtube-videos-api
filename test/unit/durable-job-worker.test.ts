@@ -19,6 +19,7 @@ import {
 } from '../../src/domain/job.js'
 import type { Transcript, TranscriptOperationOptions } from '../../src/domain/transcript.js'
 import { normalizeTranscriptRequest } from '../../src/domain/transcript-request.js'
+import { buildTranscriptPdfModel } from '../../src/infrastructure/pdf/transcript-pdf.js'
 import { createStoragePaths } from '../../src/infrastructure/storage/atomic-file-writer.js'
 import {
   FileArtifactStore,
@@ -482,13 +483,15 @@ describe('DurableJobWorker', () => {
     const ids = [artifactId, temporaryId]
     const store = new FileArtifactStore({ root, createId: () => ids.shift() ?? artifactId })
     await store.saveWorkTranscript(jobId, transcript)
+    const publishBundle = vi.spyOn(store, 'publishBundle')
     const repository = new MemoryRepository([record])
     const render = vi.fn().mockResolvedValue(pdf)
+    const produceRequired = vi.fn()
     const metrics = createMetrics()
     const worker = new DurableJobWorker({
       repository,
       executionController: { waitForPermit: vi.fn() },
-      artifactCoordinator: { produceRequired: vi.fn() },
+      artifactCoordinator: { produceRequired },
       artifactStore: store,
       pdfRenderer: { render },
       metrics,
@@ -506,7 +509,16 @@ describe('DurableJobWorker', () => {
       artifactId,
       expiresAt: artifactExpiresAt,
     })
-    expect(render).toHaveBeenCalledOnce()
+    expect(produceRequired).not.toHaveBeenCalled()
+    expect(render).toHaveBeenCalledExactlyOnceWith(buildTranscriptPdfModel(transcript))
+    expect(publishBundle).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        cacheKey: request.cacheKey,
+        producerJobId: jobId,
+        transcript,
+        pdf,
+      }),
+    )
     expect(await store.find(request.cacheKey, now)).toMatchObject({ transcript, pdf })
     expect(metrics.recordJobRecovery).toHaveBeenCalledExactlyOnceWith('pdf_resumed')
     expect(metrics.setDurableJobs.mock.calls).toEqual([

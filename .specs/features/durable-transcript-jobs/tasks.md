@@ -731,7 +731,7 @@ required, and unit/integration metrics tests
 **Gate**: full
 **Commit**: `fix(metrics): track durable job states`
 
-### T25: Prove transcript-only recovery never calls the provider
+### T25: Prove transcript-only recovery never calls the provider ✅
 
 **What**: Strengthen the transcript-only restart test with an explicit prohibited provider call and
 exact local rendering/publication assertions.
@@ -741,10 +741,10 @@ exact local rendering/publication assertions.
 
 **Done when**:
 
-- [ ] The retained provider/`produceRequired` mock is asserted at zero calls.
-- [ ] Exactly one local PDF render/publication occurs with the unchanged verified transcript.
-- [ ] The M09 mutation fails the test.
-- [ ] `npm run test:unit` passes with at least 416 total tests and no silent deletions.
+- [x] The retained provider/`produceRequired` mock is asserted at zero calls.
+- [x] Exactly one local PDF render/publication occurs with the unchanged verified transcript.
+- [x] The M09 mutation fails the test.
+- [x] `npm run test:unit` passes with at least 416 total tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -854,7 +854,7 @@ boundaries are the only batch boundaries.
 | T22 | One durable-submit storage error boundary | ✅ Complete |
 | T23 | One completed-artifact quarantine path | ✅ Complete |
 | T24 | One lifecycle-gauge synchronization path | ✅ Complete |
-| T25 | One recovery non-call discrimination test | Verification fix |
+| T25 | One recovery non-call discrimination test | ✅ Complete |
 | T26 | One full-capacity hit discrimination test | Verification fix |
 | T27 | One expiry/resubmission integration scenario | Verification fix |
 | T28 | One Railway plan evidence artifact | Verification fix |

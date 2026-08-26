@@ -208,7 +208,7 @@ OpenAPI document without credentials.
 | WORK-03 | Durable worker lifecycle | T5, T10 | Completed |
 | WORK-04 | Durable worker lifecycle | T2, T10 | Completed |
 | WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Completed |
-| WORK-06 | Durable worker lifecycle | T10, T25 | Needs Fix |
+| WORK-06 | Durable worker lifecycle | T10, T25 | Completed |
 | WORK-07 | Durable worker lifecycle | T5, T10, T21 | Completed |
 | STORE-01 | Atomic persistent store | T6 | Completed |
 | STORE-02 | Atomic persistent store | T7 | Completed |
@@ -235,7 +235,7 @@ OpenAPI document without credentials.
 | OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Completed |
 | OPS-08 | Durable operations | T20 | Completed |
 | EDGE-01 | Queue capacity edge case | T11, T26 | Needs Fix |
-| EDGE-02 | Partial publication edge case | T7, T10, T25 | Needs Fix |
+| EDGE-02 | Partial publication edge case | T7, T10, T25 | Completed |
 | EDGE-03 | Uncertain external side effect edge case | T10 | Completed |
 | EDGE-04 | Read/expiry race edge case | T7 | Completed |
 | EDGE-05 | Language identity edge case | T1 | Completed |
