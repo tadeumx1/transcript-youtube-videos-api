@@ -165,7 +165,7 @@ shutdown using application-owned `AbortController` instances.
 
 ## Phase 2 Tasks
 
-### T4: Add deterministic timeout and abort to subprocess execution
+### T4: Add deterministic timeout and abort to subprocess execution ✅
 
 **What:** Extend `NodeProcessRunner` with timeout, `AbortSignal`, `SIGTERM`/`SIGKILL` escalation,
 bounded internal stderr, and a single cleanup/settlement path.
@@ -181,13 +181,13 @@ bounded internal stderr, and a single cleanup/settlement path.
 
 **Done when:**
 
-- [ ] An already-aborted signal rejects with `AUDIO_PROCESS_ABORTED` before spawn.
-- [ ] Timeout and live abort send `SIGTERM`; only a still-open process receives one `SIGKILL` after grace.
-- [ ] Timeout maps to 504 `AUDIO_PROCESS_TIMEOUT`; cancellation maps to 503 `AUDIO_PROCESS_ABORTED`.
-- [ ] Error/close/timeout/abort/kill races settle once and remove both timers, abort listeners, and stderr listeners.
-- [ ] At most 16384 stderr characters are retained internally and never appear in the public error message.
-- [ ] Fake-child/fake-timer unit tests cover success, spawn error, non-zero close, timeout graceful close, forced kill, abort, pre-abort, raced events, bounded stderr, and cleanup.
-- [ ] `npm run test:unit` passes with at least 116 tests and no silent deletions.
+- [x] An already-aborted signal rejects with `AUDIO_PROCESS_ABORTED` before spawn.
+- [x] Timeout and live abort send `SIGTERM`; only a still-open process receives one `SIGKILL` after grace.
+- [x] Timeout maps to 504 `AUDIO_PROCESS_TIMEOUT`; cancellation maps to 503 `AUDIO_PROCESS_ABORTED`.
+- [x] Error/close/timeout/abort/kill races settle once and remove both timers, abort listeners, and stderr listeners.
+- [x] At most 16384 stderr characters are retained internally and never appear in the public error message.
+- [x] Fake-child/fake-timer unit tests cover success, spawn error, non-zero close, timeout graceful close, forced kill, abort, pre-abort, raced events, bounded stderr, and cleanup.
+- [x] `npm run test:unit` passes with at least 116 tests and no silent deletions.
 
 **Tests:** unit
 **Gate:** quick

@@ -65,6 +65,8 @@ const publicErrorMessages: Record<AppErrorCode, string> = {
   AUDIO_FALLBACK_NOT_CONFIGURED: 'Audio transcription fallback is not configured',
   AUDIO_TOOL_UNAVAILABLE: 'A required audio processing tool is unavailable',
   AUDIO_EXTRACTION_FAILED: 'The video audio could not be processed',
+  AUDIO_PROCESS_TIMEOUT: 'Audio processing timed out',
+  AUDIO_PROCESS_ABORTED: 'Audio processing was aborted',
   AUDIO_CHUNK_TOO_LARGE: 'An audio chunk exceeds the upload safety limit',
   MUSE_TRANSCRIPTION_FAILED: 'The video audio could not be transcribed',
   PDF_GENERATION_FAILED: 'The transcript PDF could not be generated',
