@@ -109,7 +109,7 @@ termination grace, and Muse timeout with the approved defaults and bounds.
 **Gate:** quick
 **Commit:** `feat(config): parse runtime hardening limits`
 
-### T2: Create a fixed-label runtime metrics registry
+### T2: Create a fixed-label runtime metrics registry ✅
 
 **What:** Implement an owned Prometheus registry for active jobs, capacity rejections, transcript
 sources, stage duration, and stage failures with closed label mappers.
@@ -125,12 +125,12 @@ sources, stage duration, and stage failures with closed label mappers.
 
 **Done when:**
 
-- [ ] `prom-client` 15.1.3 is pinned and each application receives a non-global registry.
-- [ ] The registry exposes exactly the five designed custom metric families and Prometheus content type.
-- [ ] Route, stage, source, outcome, and reason values pass through fixed allowlists; unknown values map to `unknown`.
-- [ ] Metric output contains no video IDs, URLs, languages, exception text, transcripts, audio/PDF content, or credentials.
-- [ ] Unit tests cover each metric family, allowlist, unknown mapping, registry isolation, and render output.
-- [ ] `npm run test:unit` passes with at least 100 tests and no silent deletions.
+- [x] `prom-client` 15.1.3 is pinned and each application receives a non-global registry.
+- [x] The registry exposes exactly the five designed custom metric families and Prometheus content type.
+- [x] Route, stage, source, outcome, and reason values pass through fixed allowlists; unknown values map to `unknown`.
+- [x] Metric output contains no video IDs, URLs, languages, exception text, transcripts, audio/PDF content, or credentials.
+- [x] Unit tests cover each metric family, allowlist, unknown mapping, registry isolation, and render output.
+- [x] `npm run test:unit` passes with at least 100 tests and no silent deletions.
 
 **Tests:** unit
 **Gate:** quick

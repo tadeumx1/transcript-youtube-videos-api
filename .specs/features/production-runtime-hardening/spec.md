@@ -238,11 +238,11 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | PROV-07 | Muse failure classification edge case | T7 | In Tasks |
 | OBS-01 | Observability and readiness | T3, T8 | In Tasks |
 | OBS-02 | Observability and readiness | T3, T8 | In Tasks |
-| OBS-03 | Observability and readiness | T2, T7, T8 | In Tasks |
+| OBS-03 | Observability and readiness | T2, T7, T8 | Partial: T2 complete |
 | OBS-04 | Observability and readiness | T8 | In Tasks |
-| OBS-05 | Observability and readiness | T2, T7, T8 | In Tasks |
+| OBS-05 | Observability and readiness | T2, T7, T8 | Partial: T2 complete |
 | OBS-06 | Observability and readiness | T7, T8 | In Tasks |
-| OBS-07 | Observability and readiness edge case | T2 | In Tasks |
+| OBS-07 | Observability and readiness edge case | T2 | Implemented |
 | API-01 | OpenAPI contract | T9 | In Tasks |
 | API-02 | OpenAPI contract | T9 | In Tasks |
 | API-03 | OpenAPI contract | T9 | In Tasks |
