@@ -277,3 +277,18 @@ npm run check
 ```
 
 O comando executa lint, verificação estrita de tipos, testes unitários e de integração e o build.
+
+### Integração contínua
+
+O GitHub Actions executa os mesmos gates em pushes para `main` e em pull requests. O workflow não
+recebe `OPENCODE_API_KEY` nem `API_ACCESS_KEY`: os testes usam adapters locais e o build do
+Dockerfile não acessa provedores.
+
+Se branch protection estiver habilitado em `main`, configure exatamente estes checks como
+obrigatórios:
+
+- `Source checks`
+- `Container build`
+
+O primeiro executa `npm ci` e `npm run check` no Node.js 22. O segundo só começa após o primeiro e
+constrói a imagem Docker sem publicá-la.

@@ -338,7 +338,7 @@ whose operations match every in-scope Fastify route.
 
 ## Phase 4 Tasks
 
-### T10: Add CI source and container gates
+### T10: Add CI source and container gates ✅
 
 **What:** Add a least-privilege GitHub Actions workflow for Node.js 22 source checks and a
 non-publishing Docker build, plus a static workflow contract test and branch-protection guidance.
@@ -354,13 +354,16 @@ non-publishing Docker build, plus a static workflow contract test and branch-pro
 
 **Done when:**
 
-- [ ] Pushes to `main` and pull requests run Node.js 22 `npm ci` and `npm run check` with setup-node npm cache.
-- [ ] A dependent container job performs Buildx `build` with `push: false` and no provider/API secrets.
-- [ ] Workflow permissions are `contents: read`; action versions are pinned to stable major tags.
-- [ ] Static tests parse YAML and assert triggers, job dependency, permissions, commands, cache, Dockerfile, and no secret references.
-- [ ] README documents exact required check names for optional `main` branch protection.
-- [ ] `npm run check` passes with at least 166 tests and no silent deletions.
-- [ ] `docker build -t transcript-youtube-videos-api:verify .` succeeds when Docker is available; otherwise the CI container gate remains authoritative and the absence is recorded.
+- [x] Pushes to `main` and pull requests run Node.js 22 `npm ci` and `npm run check` with setup-node npm cache.
+- [x] A dependent container job performs Buildx `build` with `push: false` and no provider/API secrets.
+- [x] Workflow permissions are `contents: read`; action versions are pinned to stable major tags.
+- [x] Static tests parse YAML and assert triggers, job dependency, permissions, commands, cache, Dockerfile, and no secret references.
+- [x] README documents exact required check names for optional `main` branch protection.
+- [x] `npm run check` passes with at least 166 tests and no silent deletions.
+- [x] `docker build -t transcript-youtube-videos-api:verify .` succeeds when Docker is available; otherwise the CI container gate remains authoritative and the absence is recorded.
+
+Local container evidence: Docker is unavailable in this execution environment (`docker: command not
+found`); the checked-in `Container build` job is the authoritative image-build gate per CI-07.
 
 **Tests:** unit/static
 **Gate:** build and container

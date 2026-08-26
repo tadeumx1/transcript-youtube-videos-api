@@ -250,13 +250,13 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | API-05 | OpenAPI contract | T9 | Implemented |
 | API-06 | OpenAPI contract | T9 | Implemented |
 | API-07 | OpenAPI contract edge case | T9 | Implemented |
-| CI-01 | Continuous integration | T10 | In Tasks |
-| CI-02 | Continuous integration | T10 | In Tasks |
-| CI-03 | Continuous integration | T10 | In Tasks |
-| CI-04 | Continuous integration | T10 | In Tasks |
-| CI-05 | Continuous integration | T10 | In Tasks |
-| CI-06 | Continuous integration | T10 | In Tasks |
-| CI-07 | Continuous integration edge case | T10 | In Tasks |
+| CI-01 | Continuous integration | T10 | Implemented |
+| CI-02 | Continuous integration | T10 | Implemented |
+| CI-03 | Continuous integration | T10 | Implemented |
+| CI-04 | Continuous integration | T10 | Implemented |
+| CI-05 | Continuous integration | T10 | Implemented |
+| CI-06 | Continuous integration | T10 | Implemented |
+| CI-07 | Continuous integration edge case | T10 | Implemented |
 | OPS-01 | YouTube operations runbook | T11 | In Tasks |
 | OPS-02 | YouTube operations runbook | T11 | In Tasks |
 | OPS-03 | YouTube operations runbook | T11 | In Tasks |
