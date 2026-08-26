@@ -227,7 +227,7 @@ OpenAPI document without credentials.
 | CACHE-07 | Deduplication/cache | T8, T11 | Completed |
 | CACHE-08 | Deduplication/cache | T9, T13 | Completed |
 | OPS-01 | Durable operations | T3 | Completed |
-| OPS-02 | Durable operations | T16, T17, T18 | Planned |
+| OPS-02 | Durable operations | T16, T17, T18 | Partial (T16 complete) |
 | OPS-03 | Durable operations | T13, T15 | Completed |
 | OPS-04 | Durable operations | T4 | Completed |
 | OPS-05 | Durable operations | T14 | Completed |

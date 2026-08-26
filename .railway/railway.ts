@@ -1,4 +1,4 @@
-import { defineRailway, preserve, project, service } from 'railway/iac'
+import { defineRailway, preserve, project, service, volume } from 'railway/iac'
 
 export const partial = 'transcript-youtube-videos-api'
 
@@ -12,9 +12,14 @@ export default defineRailway(() => {
       healthcheckPath: '/health',
       healthcheckTimeout: 300,
     },
+    replicas: 1,
     env: {
       API_ACCESS_KEY: preserve(),
+      DATA_ROOT: '/data/transcripts',
       OPENCODE_API_KEY: preserve(),
+    },
+    volumeMounts: {
+      '/data': volume('transcript-data', { sizeMB: 1024 }),
     },
   })
 

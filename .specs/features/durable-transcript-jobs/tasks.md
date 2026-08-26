@@ -520,7 +520,7 @@ coordinator graph from runtime config and inject it into Fastify.
 
 ## Phase 6 Tasks
 
-### T16: Declare the Railway transcript Volume
+### T16: Declare the Railway transcript Volume ✅
 
 **What**: Add one 1024 MB Volume, `/data` mount, `DATA_ROOT=/data/transcripts`, explicit one-instance
 topology, and preserved secrets to TypeScript IaC without applying it.
@@ -536,10 +536,10 @@ topology, and preserved secrets to TypeScript IaC without applying it.
 
 **Done when**:
 
-- [ ] Static contract proves exactly one 1024 MB Volume at `/data`, one service instance, correct data root, and existing preserved secrets/build/healthcheck.
-- [ ] No Postgres, Redis, bucket, public storage, literal secret, Railway UUID, or generated domain is introduced.
-- [ ] `railway config plan` is run read-only and its add/change/destroy summary is recorded for later explicit apply approval; no apply runs in this task.
-- [ ] `npm run check` passes with at least 231 total tests and no silent deletions.
+- [x] Static contract proves exactly one 1024 MB Volume at `/data`, one service instance, correct data root, and existing preserved secrets/build/healthcheck.
+- [x] No Postgres, Redis, bucket, public storage, literal secret, Railway UUID, or generated domain is introduced.
+- [x] `railway config plan` is run read-only and its add/change/destroy summary is recorded for later explicit apply approval; no apply runs in this task.
+- [x] `npm run check` passes with at least 231 total tests and no silent deletions.
 
 **Tests**: unit/static
 **Gate**: build
@@ -685,7 +685,7 @@ boundaries are the only batch boundaries.
 | T13 | One Fastify integration boundary | ✅ Complete |
 | T14 | One OpenAPI contract extension | ✅ Complete |
 | T15 | One production composition root | ✅ Complete |
-| T16 | One Railway IaC resource change | ✅ Granular |
+| T16 | One Railway IaC resource change | ✅ Complete |
 | T17 | One container entrypoint | ✅ Granular |
 | T18 | One Docker runtime integration | ✅ Granular |
 | T19 | One ignore-policy change | ✅ Granular |
