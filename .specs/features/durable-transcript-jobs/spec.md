@@ -223,9 +223,9 @@ OpenAPI document without credentials.
 | CACHE-03 | Deduplication/cache | T11 | Planned |
 | CACHE-04 | Deduplication/cache | T11 | Planned |
 | CACHE-05 | Deduplication/cache | T11 | Planned |
-| CACHE-06 | Deduplication/cache | T7, T9 | Partial (T7 complete) |
+| CACHE-06 | Deduplication/cache | T7, T9 | Completed |
 | CACHE-07 | Deduplication/cache | T8, T11 | Partial (T8 complete) |
-| CACHE-08 | Deduplication/cache | T9, T13 | Planned |
+| CACHE-08 | Deduplication/cache | T9, T13 | Partial (T9 complete) |
 | OPS-01 | Durable operations | T3 | Completed |
 | OPS-02 | Durable operations | T16, T17, T18 | Planned |
 | OPS-03 | Durable operations | T13, T15 | Planned |
@@ -239,7 +239,7 @@ OpenAPI document without credentials.
 | EDGE-03 | Uncertain external side effect edge case | T10 | Planned |
 | EDGE-04 | Read/expiry race edge case | T7 | Completed |
 | EDGE-05 | Language identity edge case | T1 | Completed |
-| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Partial (T7 complete) |
+| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Partial (T7, T9 complete) |
 | EDGE-07 | Duplicate recovery edge case | T8, T11 | Partial (T8 complete) |
 | EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Partial (T2, T6, T7, T8 complete) |
 

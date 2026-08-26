@@ -320,7 +320,7 @@ active-key ownership, bounded tombstones, corruption quarantine, and determinist
 
 ## Phase 3 Tasks
 
-### T9: Coordinate complete transcript artifacts
+### T9: Coordinate complete transcript artifacts ✅
 
 **What**: Implement canonical cache lookup and complete JSON/PDF production for best-effort
 synchronous and strict durable modes.
@@ -336,13 +336,13 @@ synchronous and strict durable modes.
 
 **Done when**:
 
-- [ ] Verified hit returns exact transcript/PDF without provider or renderer calls and records one hit.
-- [ ] Synchronous miss uses the caller signal/metrics, renders one PDF, and publishes only a complete bundle.
-- [ ] JSON mode returns a valid produced transcript when cache-PDF rendering or storage publication fails, records fixed failure metrics, and exposes no storage detail.
-- [ ] PDF mode preserves existing `PDF_GENERATION_FAILED`; durable mode persists a verified work transcript before PDF and fails closed on any required storage step.
-- [ ] Failures never create a bundle/pointer and a later request remains a miss.
-- [ ] Unit tests cover hit/miss, exact metadata/bytes, provider/render/store failures, abort propagation, no partial cache, and call counts.
-- [ ] `npm run test:unit` passes with at least 175 tests and no silent deletions.
+- [x] Verified hit returns exact transcript/PDF without provider or renderer calls and records one hit.
+- [x] Synchronous miss uses the caller signal/metrics, renders one PDF, and publishes only a complete bundle.
+- [x] JSON mode returns a valid produced transcript when cache-PDF rendering or storage publication fails, records fixed failure metrics, and exposes no storage detail.
+- [x] PDF mode preserves existing `PDF_GENERATION_FAILED`; durable mode persists a verified work transcript before PDF and fails closed on any required storage step.
+- [x] Failures never create a bundle/pointer and a later request remains a miss.
+- [x] Unit tests cover hit/miss, exact metadata/bytes, provider/render/store failures, abort propagation, no partial cache, and call counts.
+- [x] `npm run test:unit` passes with at least 175 tests and no silent deletions.
 
 **Tests**: unit
 **Gate**: quick
@@ -678,7 +678,7 @@ boundaries are the only batch boundaries.
 | T6 | One atomic-writer component | ✅ Complete |
 | T7 | One artifact-store component | ✅ Complete |
 | T8 | One job-repository component | ✅ Complete |
-| T9 | One artifact-coordinator component | ✅ Granular |
+| T9 | One artifact-coordinator component | ✅ Complete |
 | T10 | One durable-worker component | ✅ Cohesive lifecycle boundary |
 | T11 | One job-coordinator component | ✅ Cohesive API/application boundary |
 | T12 | One job-route plugin | ✅ Cohesive four-operation resource |
