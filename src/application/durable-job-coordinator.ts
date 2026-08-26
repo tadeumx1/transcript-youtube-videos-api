@@ -33,6 +33,7 @@ export interface JobSubmission {
 
 export interface DurableCoordinatorRepository {
   readonly activeCount: number
+  count(status: 'queued' | 'processing'): number
   initialize(): Promise<JobRecoverySnapshot>
   create(record: TranscriptJobRecord): Promise<void>
   get(jobId: string): Promise<TranscriptJobRecord | JobTombstone | undefined>
@@ -212,8 +213,7 @@ export class DurableJobCoordinator {
       this.#metrics.recordJobRecovery('duplicate')
     }
     await this.#worker.recover(snapshot.processing)
-    this.#metrics.setDurableJobs('queued', snapshot.queued.length)
-    this.#metrics.setDurableJobs('processing', 0)
+    this.#refreshMetrics()
     this.#worker.start()
     this.#sweepTimer = setInterval(() => void this.#sweep(), this.#sweepIntervalMs)
     this.#sweepTimer.unref()
@@ -279,7 +279,6 @@ export class DurableJobCoordinator {
 
       const record = queuedRecord(this.#createId(), prepared, this.#now().toISOString())
       await this.#create(record)
-      this.#metrics.setDurableJobs('queued', this.#repository.activeCount)
       this.#metrics.recordJobSubmission('miss')
       this.#worker.notify()
       return submission(record, 'miss')
@@ -333,6 +332,7 @@ export class DurableJobCoordinator {
   async #create(record: TranscriptJobRecord): Promise<void> {
     try {
       await this.#repository.create(record)
+      this.#refreshMetrics()
     } catch {
       throw new DurableJobError('JOB_STORAGE_UNAVAILABLE', 503)
     }
@@ -341,10 +341,16 @@ export class DurableJobCoordinator {
   async #sweep(): Promise<void> {
     try {
       await this.#repository.sweep(this.#now())
+      this.#refreshMetrics()
       this.#ready = await this.#artifactStore.probe()
     } catch {
       this.#ready = false
     }
+  }
+
+  #refreshMetrics(): void {
+    this.#metrics.setDurableJobs('queued', this.#repository.count('queued'))
+    this.#metrics.setDurableJobs('processing', this.#repository.count('processing'))
   }
 
   async #withSubmissionLock<T>(operation: () => Promise<T>): Promise<T> {

@@ -122,11 +122,15 @@ describe('FileJobRepository', () => {
     )
     await expect(first.get(jobA)).resolves.toBeUndefined()
     expect(first.activeCount).toBe(0)
+    expect(first.count('queued')).toBe(0)
+    expect(first.count('processing')).toBe(0)
 
     failWrite = false
     await first.create(queued())
     await expect(first.get(jobA)).resolves.toEqual(queued())
     expect(first.activeCount).toBe(1)
+    expect(first.count('queued')).toBe(1)
+    expect(first.count('processing')).toBe(0)
 
     const restarted = repository(root)
     const snapshot = await restarted.initialize()
@@ -156,6 +160,8 @@ describe('FileJobRepository', () => {
       startedAt,
     })
     expect(JSON.parse(await readFile(path, 'utf8'))).toEqual(processing)
+    expect(store.count('queued')).toBe(0)
+    expect(store.count('processing')).toBe(1)
   })
 
   it('keeps disk and index unchanged when atomic transition publication fails', async () => {

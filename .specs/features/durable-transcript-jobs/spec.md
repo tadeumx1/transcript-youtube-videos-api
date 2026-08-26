@@ -229,7 +229,7 @@ OpenAPI document without credentials.
 | OPS-01 | Durable operations | T3 | Completed |
 | OPS-02 | Durable operations | T16, T17, T18 | Completed |
 | OPS-03 | Durable operations | T13, T15 | Completed |
-| OPS-04 | Durable operations | T4, T24 | Needs Fix |
+| OPS-04 | Durable operations | T4, T24 | Completed |
 | OPS-05 | Durable operations | T14 | Completed |
 | OPS-06 | Durable operations | T4, T13, T20 | Completed |
 | OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Completed |

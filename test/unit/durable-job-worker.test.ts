@@ -93,6 +93,12 @@ class MemoryRepository implements DurableWorkerRepository {
     return record ? structuredClone(record) : undefined
   }
 
+  count(status: 'queued' | 'processing'): number {
+    return [...this.records.values()].filter(
+      (record) => 'status' in record && record.status === status,
+    ).length
+  }
+
   async get(id: string): Promise<TranscriptJobRecord | JobTombstone | undefined> {
     const record = this.records.get(id)
     return record ? structuredClone(record) : undefined
@@ -240,6 +246,12 @@ describe('DurableJobWorker', () => {
     expect(options.signal?.aborted).toBe(true)
     expect(fixture.release).toHaveBeenCalledOnce()
     expect(fixture.metrics.observeJobDuration).toHaveBeenCalledExactlyOnceWith('completed', 0)
+    expect(fixture.metrics.setDurableJobs.mock.calls).toEqual([
+      ['queued', 0],
+      ['processing', 1],
+      ['queued', 0],
+      ['processing', 0],
+    ])
   })
 
   it('releases a permit without work when the queued revision lost its claim race', async () => {
@@ -299,6 +311,10 @@ describe('DurableJobWorker', () => {
     )
     expect(fixture.release).toHaveBeenCalledOnce()
     expect(fixture.metrics.observeJobDuration).toHaveBeenCalledExactlyOnceWith('failed', 0)
+    expect(fixture.metrics.setDurableJobs.mock.calls.slice(-2)).toEqual([
+      ['queued', 0],
+      ['processing', 0],
+    ])
   })
 
   it('removes private work after a successful terminal transition on a real filesystem', async () => {
@@ -454,6 +470,10 @@ describe('DurableJobWorker', () => {
     expect(fixture.produceRequired).not.toHaveBeenCalled()
     expect(fixture.render).not.toHaveBeenCalled()
     expect(fixture.metrics.recordJobRecovery).toHaveBeenCalledExactlyOnceWith('completed')
+    expect(fixture.metrics.setDurableJobs.mock.calls).toEqual([
+      ['queued', 0],
+      ['processing', 0],
+    ])
   })
 
   it('resumes a verified real workspace by rendering only PDF and publishing the bundle', async () => {
@@ -489,6 +509,10 @@ describe('DurableJobWorker', () => {
     expect(render).toHaveBeenCalledOnce()
     expect(await store.find(request.cacheKey, now)).toMatchObject({ transcript, pdf })
     expect(metrics.recordJobRecovery).toHaveBeenCalledExactlyOnceWith('pdf_resumed')
+    expect(metrics.setDurableJobs.mock.calls).toEqual([
+      ['queued', 0],
+      ['processing', 0],
+    ])
   })
 
   it('marks processing work without a verified transcript interrupted and never retries', async () => {
@@ -506,6 +530,10 @@ describe('DurableJobWorker', () => {
     expect(fixture.render).not.toHaveBeenCalled()
     expect(fixture.publishBundle).not.toHaveBeenCalled()
     expect(fixture.metrics.recordJobRecovery).toHaveBeenCalledExactlyOnceWith('interrupted')
+    expect(fixture.metrics.setDurableJobs.mock.calls).toEqual([
+      ['queued', 0],
+      ['processing', 0],
+    ])
   })
 
   it('shutdown aborts active work, persists interruption, releases once, and settles idempotently', async () => {

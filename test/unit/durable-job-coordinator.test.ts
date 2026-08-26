@@ -128,6 +128,12 @@ class MemoryRepository implements DurableCoordinatorRepository {
     ).length
   }
 
+  count(status: 'queued' | 'processing'): number {
+    return [...this.records.values()].filter(
+      (record) => 'status' in record && record.status === status,
+    ).length
+  }
+
   activeOwner(cacheKey: string): TranscriptJobRecord | undefined {
     const owner = [...this.records.values()].find(
       (record): record is TranscriptJobRecord =>
@@ -438,6 +444,10 @@ describe('DurableJobCoordinator', () => {
     expect(fixture.worker.recover).toHaveBeenCalledExactlyOnceWith([processingRecord])
     expect(fixture.worker.start).toHaveBeenCalledOnce()
     expect(fixture.coordinator.isReady).toBe(true)
+    expect(fixture.metrics.setDurableJobs.mock.calls).toEqual([
+      ['queued', 1],
+      ['processing', 1],
+    ])
 
     await Promise.all([fixture.coordinator.stop(), fixture.coordinator.stop()])
 
@@ -454,5 +464,26 @@ describe('DurableJobCoordinator', () => {
     expect(fixture.coordinator.isReady).toBe(false)
     expect(fixture.repository.initialize).not.toHaveBeenCalled()
     expect(fixture.worker.start).not.toHaveBeenCalled()
+  })
+
+  it('refreshes both persisted-state gauges after a storage sweep', async () => {
+    vi.useFakeTimers()
+    try {
+      const fixture = createFixture([queued(), processing(secondJobId)])
+      await fixture.coordinator.start()
+      fixture.metrics.setDurableJobs.mockClear()
+      fixture.repository.records.clear()
+
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(fixture.repository.sweep).toHaveBeenCalledOnce()
+      expect(fixture.metrics.setDurableJobs.mock.calls).toEqual([
+        ['queued', 0],
+        ['processing', 0],
+      ])
+      await fixture.coordinator.stop()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

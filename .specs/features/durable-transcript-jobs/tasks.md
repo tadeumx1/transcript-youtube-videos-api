@@ -711,7 +711,7 @@ invalidate its pointer, quarantine content under an opaque name, and still expos
 **Gate**: quick
 **Commit**: `fix(storage): quarantine corrupt job artifacts`
 
-### T24: Keep durable lifecycle gauges accurate
+### T24: Keep durable lifecycle gauges accurate ✅
 
 **What**: Update queued and processing gauges from true repository state after create, claim,
 terminal transition, recovery, and sweep.
@@ -722,10 +722,10 @@ required, and unit/integration metrics tests
 
 **Done when**:
 
-- [ ] Queued and processing gauges match exact persisted state counts through miss, claim, completion, failure, recovery, and expiry.
-- [ ] A single completed job leaves both gauges at zero; no identifier/content labels are introduced.
-- [ ] Composition-level tests inspect rendered Prometheus values after real lifecycle transitions.
-- [ ] `npm test` passes with at least 416 total tests and no silent deletions.
+- [x] Queued and processing gauges match exact persisted state counts through miss, claim, completion, failure, recovery, and expiry.
+- [x] A single completed job leaves both gauges at zero; no identifier/content labels are introduced.
+- [x] Composition-level tests inspect rendered Prometheus values after real lifecycle transitions.
+- [x] `npm test` passes with at least 416 total tests and no silent deletions.
 
 **Tests**: unit/integration
 **Gate**: full
@@ -853,7 +853,7 @@ boundaries are the only batch boundaries.
 | T21 | One durable-publication cleanup boundary | ✅ Complete |
 | T22 | One durable-submit storage error boundary | ✅ Complete |
 | T23 | One completed-artifact quarantine path | ✅ Complete |
-| T24 | One lifecycle-gauge synchronization path | Verification fix |
+| T24 | One lifecycle-gauge synchronization path | ✅ Complete |
 | T25 | One recovery non-call discrimination test | Verification fix |
 | T26 | One full-capacity hit discrimination test | Verification fix |
 | T27 | One expiry/resubmission integration scenario | Verification fix |

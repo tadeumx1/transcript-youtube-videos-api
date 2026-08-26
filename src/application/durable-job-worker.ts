@@ -28,6 +28,7 @@ import type {
 
 export interface DurableWorkerRepository {
   oldestQueued(): TranscriptJobRecord | undefined
+  count(status: 'queued' | 'processing'): number
   get(jobId: string): Promise<TranscriptJobRecord | JobTombstone | undefined>
   transition(
     jobId: string,
@@ -234,6 +235,7 @@ export class DurableJobWorker {
         type: 'start',
         at,
       })
+      this.#refreshMetrics()
       startedAt = this.#monotonicNow()
       const options: TranscriptOperationOptions = {
         signal: AbortSignal.any([permit.signal, stopSignal]),
@@ -260,14 +262,19 @@ export class DurableJobWorker {
     }
   }
 
-  #complete(job: TranscriptJobRecord, reference: ArtifactReference): Promise<TranscriptJobRecord> {
+  async #complete(
+    job: TranscriptJobRecord,
+    reference: ArtifactReference,
+  ): Promise<TranscriptJobRecord> {
     const at = this.#now().toISOString()
-    return this.#repository.transition(job.jobId, job.revision, {
+    const completed = await this.#repository.transition(job.jobId, job.revision, {
       type: 'complete',
       at,
       expiresAt: reference.expiresAt,
       artifactId: reference.artifactId,
     })
+    this.#refreshMetrics()
+    return completed
   }
 
   async #completePublished(
@@ -293,14 +300,21 @@ export class DurableJobWorker {
     return this.#fail(job, failure)
   }
 
-  #fail(job: TranscriptJobRecord, failure: PublicJobFailure): Promise<TranscriptJobRecord> {
+  async #fail(job: TranscriptJobRecord, failure: PublicJobFailure): Promise<TranscriptJobRecord> {
     const at = this.#now()
-    return this.#repository.transition(job.jobId, job.revision, {
+    const failed = await this.#repository.transition(job.jobId, job.revision, {
       type: 'fail',
       at: at.toISOString(),
       expiresAt: addSeconds(at, this.#failedJobTtlSeconds),
       failure,
     })
+    this.#refreshMetrics()
+    return failed
+  }
+
+  #refreshMetrics(): void {
+    this.#metrics.setDurableJobs('queued', this.#repository.count('queued'))
+    this.#metrics.setDurableJobs('processing', this.#repository.count('processing'))
   }
 
   async #renderPdf(transcript: Transcript): Promise<Buffer> {

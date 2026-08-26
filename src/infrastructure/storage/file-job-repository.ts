@@ -293,9 +293,13 @@ export class FileJobRepository {
   }
 
   get activeCount(): number {
+    return this.count('queued') + this.count('processing')
+  }
+
+  count(status: 'queued' | 'processing'): number {
     let count = 0
     for (const job of this.#jobs.values()) {
-      if (job.status === 'queued' || job.status === 'processing') count += 1
+      if (job.status === status) count += 1
     }
     return count
   }

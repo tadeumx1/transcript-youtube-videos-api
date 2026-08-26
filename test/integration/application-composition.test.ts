@@ -5,9 +5,11 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createApplication } from '../../src/app.js'
+import { ExecutionController } from '../../src/application/execution-controller.js'
 import { AppError } from '../../src/domain/errors.js'
 import type { Transcript } from '../../src/domain/transcript.js'
 import type { TranscriptApplicationService } from '../../src/http/app.js'
+import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
 
 const roots: string[] = []
 const apiAccessKey = 'composition-test-key'
@@ -63,6 +65,14 @@ function config(dataRoot: string) {
     jobTombstoneTtlSeconds: 86_400,
     storageSweepIntervalMs: 1_000,
   }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
 }
 
 async function waitForCompleted(app: ReturnType<typeof createApplication>, jobId: string) {
@@ -202,6 +212,52 @@ describe('production durable application composition', () => {
       },
     })
     expect(getTranscript).toHaveBeenCalledOnce()
+    await app.close()
+  })
+
+  it('renders exact queued and processing gauges through a real durable lifecycle', async () => {
+    const dataRoot = await temporaryRoot()
+    const metrics = new RuntimeMetrics()
+    const executionController = new ExecutionController(1, metrics)
+    const heldPermit = executionController.tryAcquire('json')
+    const transcriptResult = deferred<Transcript>()
+    const getTranscript = vi
+      .fn<TranscriptApplicationService['getTranscript']>()
+      .mockReturnValue(transcriptResult.promise)
+    const app = createApplication(
+      config(dataRoot),
+      { runtimeMetrics: metrics, executionController },
+      {
+        transcriptService: { getTranscript },
+        pdfRenderer: { render: vi.fn().mockResolvedValue(pdf) },
+      },
+    )
+    await app.ready()
+
+    const submission = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs',
+      headers: authorization,
+      payload: { url: firstUrl },
+    })
+    expect(submission.statusCode).toBe(202)
+    let rendered = (await app.inject({ method: 'GET', url: '/metrics', headers: authorization }))
+      .body
+    expect(rendered).toContain('youtube_transcript_jobs_current{status="queued"} 1')
+    expect(rendered).toContain('youtube_transcript_jobs_current{status="processing"} 0')
+
+    heldPermit?.release()
+    await vi.waitFor(() => expect(getTranscript).toHaveBeenCalledOnce())
+    rendered = (await app.inject({ method: 'GET', url: '/metrics', headers: authorization })).body
+    expect(rendered).toContain('youtube_transcript_jobs_current{status="queued"} 0')
+    expect(rendered).toContain('youtube_transcript_jobs_current{status="processing"} 1')
+
+    transcriptResult.resolve(transcript())
+    await waitForCompleted(app, submission.json().jobId as string)
+    rendered = (await app.inject({ method: 'GET', url: '/metrics', headers: authorization })).body
+    expect(rendered).toContain('youtube_transcript_jobs_current{status="queued"} 0')
+    expect(rendered).toContain('youtube_transcript_jobs_current{status="processing"} 0')
+    expect(rendered).not.toMatch(/jobId|videoId|cacheKey|dQw4w9WgXcQ/)
     await app.close()
   })
 
