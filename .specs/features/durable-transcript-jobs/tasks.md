@@ -570,7 +570,7 @@ executes the application as `node` through `gosu`.
 **Gate**: build
 **Commit**: `chore(container): add non-root volume entrypoint`
 
-### T18: Enable container Volume permissions safely
+### T18: Enable container Volume permissions safely ✅
 
 **What**: Install pinned-distribution `gosu`, copy/use the entrypoint, retain Node 22/FFmpeg/yt-dlp,
 and remove direct `USER node` startup without running the final Node process as root.
@@ -586,10 +586,10 @@ and remove direct `USER node` startup without running the final Node process as 
 
 **Done when**:
 
-- [ ] Runtime installs `gosu` in the existing apt layer, copies executable entrypoint, and keeps exact CMD/healthcheck/tool versions.
-- [ ] Contract test proves the entrypoint owns privilege drop and Dockerfile does not start Node directly as root or retain an incompatible `USER node` before mount initialization.
-- [ ] Source gate passes; local Docker build and a UID/write probe run when Docker exists, otherwise the unchanged CI container gate remains authoritative.
-- [ ] `npm run check` passes with at least 233 total tests and no silent deletions.
+- [x] Runtime installs `gosu` in the existing apt layer, copies executable entrypoint, and keeps exact CMD/healthcheck/tool versions.
+- [x] Contract test proves the entrypoint owns privilege drop and Dockerfile does not start Node directly as root or retain an incompatible `USER node` before mount initialization.
+- [x] Source gate passes; local Docker build and a UID/write probe run when Docker exists, otherwise the unchanged CI container gate remains authoritative.
+- [x] `npm run check` passes with at least 233 total tests and no silent deletions.
 
 **Tests**: unit/static
 **Gate**: container
@@ -687,7 +687,7 @@ boundaries are the only batch boundaries.
 | T15 | One production composition root | ✅ Complete |
 | T16 | One Railway IaC resource change | ✅ Complete |
 | T17 | One container entrypoint | ✅ Complete |
-| T18 | One Docker runtime integration | ✅ Granular |
+| T18 | One Docker runtime integration | ✅ Complete |
 | T19 | One ignore-policy change | ✅ Granular |
 | T20 | One operator/developer documentation contract | ✅ Granular |
 

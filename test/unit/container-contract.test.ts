@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 const executeFile = promisify(execFile)
 const entrypoint = join(process.cwd(), 'docker-entrypoint.sh')
+const dockerfile = join(process.cwd(), 'Dockerfile')
 
 async function writeExecutable(path: string, source: string): Promise<void> {
   await writeFile(path, source, { mode: 0o755 })
@@ -86,5 +87,37 @@ printf "\\n" >> "$ENTRYPOINT_TEST_LOG"
     } finally {
       await rm(fixtureRoot, { recursive: true, force: true })
     }
+  })
+})
+
+describe('Docker runtime contract', () => {
+  it('retains the pinned runtime, media tools, healthcheck, and application command', async () => {
+    const source = await readFile(dockerfile, 'utf8')
+
+    expect(source).toContain('FROM node:22-bookworm-slim AS runtime')
+    expect(source).toContain('ARG YT_DLP_VERSION=2026.8.19')
+    expect(source).toMatch(
+      /apt-get install --yes --no-install-recommends ca-certificates ffmpeg gosu python3 python3-pip/,
+    )
+    expect(source).toContain(`"yt-dlp[default]==\${YT_DLP_VERSION}"`)
+    expect(source).toContain(
+      'HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3',
+    )
+    expect(source).toContain('CMD ["node", "dist/server.js"]')
+  })
+
+  it('delegates startup and privilege drop to the executable entrypoint', async () => {
+    const source = await readFile(dockerfile, 'utf8')
+    const copyIndex = source.indexOf(
+      'COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh',
+    )
+    const entrypointIndex = source.indexOf('ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]')
+    const commandIndex = source.indexOf('CMD ["node", "dist/server.js"]')
+
+    expect(copyIndex).toBeGreaterThan(-1)
+    expect(entrypointIndex).toBeGreaterThan(copyIndex)
+    expect(commandIndex).toBeGreaterThan(entrypointIndex)
+    expect(source).not.toMatch(/^USER\s+/m)
+    expect(source.match(/\bgosu\b/g)).toHaveLength(1)
   })
 })
