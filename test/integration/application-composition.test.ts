@@ -1,6 +1,6 @@
-import { access, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { access, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -8,8 +8,10 @@ import { createApplication } from '../../src/app.js'
 import { ExecutionController } from '../../src/application/execution-controller.js'
 import { AppError } from '../../src/domain/errors.js'
 import type { Transcript } from '../../src/domain/transcript.js'
+import { normalizeTranscriptRequest } from '../../src/domain/transcript-request.js'
 import type { TranscriptApplicationService } from '../../src/http/app.js'
 import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
+import { createStoragePaths } from '../../src/infrastructure/storage/atomic-file-writer.js'
 
 const roots: string[] = []
 const apiAccessKey = 'composition-test-key'
@@ -337,5 +339,104 @@ describe('production durable application composition', () => {
       { timeout: 3_000, interval: 100 },
     )
     await app.close()
+  })
+
+  it('expires completed content at the fixed TTL and resubmits equivalent work under a new job', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date('2026-08-26T12:00:00.000Z'))
+    const dataRoot = await temporaryRoot()
+    const { getTranscript, overrides } = createOverrides()
+    const app = createApplication(
+      { ...config(dataRoot), artifactTtlSeconds: 60, storageSweepIntervalMs: 60_000 },
+      {},
+      overrides,
+    )
+    const waitWithoutAdvancingClock = async (jobId: string) => {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/v1/jobs/${jobId}`,
+          headers: authorization,
+        })
+        const latest = response.json()
+        if (latest.status === 'completed') return latest
+        await new Promise<void>((resolve) => setTimeout(resolve, 10))
+      }
+      throw new Error('job did not complete')
+    }
+    try {
+      await app.ready()
+      const first = await app.inject({
+        method: 'POST',
+        url: '/v1/jobs',
+        headers: authorization,
+        payload: { url: firstUrl },
+      })
+      const firstJobId = first.json().jobId as string
+      const firstCompleted = await waitWithoutAdvancingClock(firstJobId)
+      expect(getTranscript).toHaveBeenCalledOnce()
+      expect(firstCompleted.expiresAt).toBe('2026-08-26T12:01:00.000Z')
+
+      const normalized = normalizeTranscriptRequest({
+        videoId: 'dQw4w9WgXcQ',
+        canonicalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      })
+      const paths = createStoragePaths(dataRoot)
+      const artifactFiles = await readdir(join(dataRoot, 'v1/artifacts'), { recursive: true })
+      const manifest = artifactFiles.find((path) => path.endsWith('manifest.json'))
+      expect(manifest).toBeDefined()
+      const artifactPath = dirname(join(dataRoot, 'v1/artifacts', manifest as string))
+      await expect(access(paths.cache(normalized.cacheKey))).resolves.toBeUndefined()
+      await expect(access(artifactPath)).resolves.toBeUndefined()
+
+      await vi.advanceTimersByTimeAsync(59_999)
+      const beforeExpiry = await app.inject({
+        method: 'GET',
+        url: `/v1/jobs/${firstJobId}`,
+        headers: authorization,
+      })
+      expect(beforeExpiry.statusCode).toBe(200)
+      expect(beforeExpiry.json().expiresAt).toBe(firstCompleted.expiresAt)
+
+      await vi.advanceTimersByTimeAsync(1)
+      let expired!: Awaited<ReturnType<typeof app.inject>>
+      await vi.waitFor(async () => {
+        expired = await app.inject({
+          method: 'GET',
+          url: `/v1/jobs/${firstJobId}`,
+          headers: authorization,
+        })
+        expect(expired.statusCode).toBe(410)
+      })
+      expect(expired.statusCode).toBe(410)
+      expect(expired.json()).toEqual({
+        error: { code: 'JOB_EXPIRED', message: 'Transcript job has expired' },
+      })
+      await expect(access(paths.cache(normalized.cacheKey))).rejects.toMatchObject({
+        code: 'ENOENT',
+      })
+      await expect(access(artifactPath)).rejects.toMatchObject({ code: 'ENOENT' })
+
+      const second = await app.inject({
+        method: 'POST',
+        url: '/v1/jobs',
+        headers: authorization,
+        payload: { url: firstUrl },
+      })
+      expect(second.statusCode).toBe(202)
+      expect(second.json()).toMatchObject({ status: 'queued', disposition: 'miss' })
+      expect(second.json().jobId).not.toBe(firstJobId)
+      await waitWithoutAdvancingClock(second.json().jobId as string)
+      expect(getTranscript).toHaveBeenCalledTimes(2)
+      const oldAfterResubmit = await app.inject({
+        method: 'GET',
+        url: `/v1/jobs/${firstJobId}`,
+        headers: authorization,
+      })
+      expect(oldAfterResubmit.statusCode).toBe(410)
+    } finally {
+      await app.close()
+      vi.useRealTimers()
+    }
   })
 })

@@ -768,7 +768,7 @@ exact local rendering/publication assertions.
 **Gate**: quick
 **Commit**: `test(cache): verify hits bypass queue capacity`
 
-### T27: Prove resubmission after completed expiry
+### T27: Prove resubmission after completed expiry ✅
 
 **What**: Close the end-to-end expiry loop from completed cache through sweep/tombstone to a new
 equivalent submission.
@@ -778,10 +778,10 @@ equivalent submission.
 
 **Done when**:
 
-- [ ] Sweeping at the exact fixed TTL removes the old pointer/artifact and retains the tombstone.
-- [ ] The equivalent request returns a new `miss`, new UUID, and one new worker notification/provider eligibility.
-- [ ] Reading the old job does not slide expiry and continues to return the retained 410 contract.
-- [ ] `npm test` passes with at least 418 total tests and no silent deletions.
+- [x] Sweeping at the exact fixed TTL removes the old pointer/artifact and retains the tombstone.
+- [x] The equivalent request returns a new `miss`, new UUID, and one new worker notification/provider eligibility.
+- [x] Reading the old job does not slide expiry and continues to return the retained 410 contract.
+- [x] `npm test` passes with at least 418 total tests and no silent deletions.
 
 **Tests**: integration/real filesystem
 **Gate**: full
@@ -856,7 +856,7 @@ boundaries are the only batch boundaries.
 | T24 | One lifecycle-gauge synchronization path | ✅ Complete |
 | T25 | One recovery non-call discrimination test | ✅ Complete |
 | T26 | One full-capacity hit discrimination test | ✅ Complete |
-| T27 | One expiry/resubmission integration scenario | Verification fix |
+| T27 | One expiry/resubmission integration scenario | ✅ Complete |
 | T28 | One Railway plan evidence artifact | Verification fix |
 
 ## Diagram-Definition Cross-Check
