@@ -235,4 +235,44 @@ describe('NodeProcessRunner', () => {
     expect(process.kill).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it('removes the registered abort listener after successful close', async () => {
+    const process = fakeProcess()
+    const controller = new AbortController()
+    const addEventListener = vi.spyOn(controller.signal, 'addEventListener')
+    const removeEventListener = vi.spyOn(controller.signal, 'removeEventListener')
+    const runner = new NodeProcessRunner(() => process)
+    const result = runner.run('ffmpeg', [], {
+      timeoutMs: 900_000,
+      signal: controller.signal,
+    })
+
+    process.emit('close', 0)
+    await result
+
+    expect(addEventListener).toHaveBeenCalledTimes(1)
+    const abortListener = addEventListener.mock.calls[0]?.[1]
+    expect(addEventListener).toHaveBeenCalledWith('abort', abortListener, { once: true })
+    expect(removeEventListener).toHaveBeenCalledExactlyOnceWith('abort', abortListener)
+  })
+
+  it('removes the registered abort listener after a failed process', async () => {
+    const process = fakeProcess()
+    const controller = new AbortController()
+    const addEventListener = vi.spyOn(controller.signal, 'addEventListener')
+    const removeEventListener = vi.spyOn(controller.signal, 'removeEventListener')
+    const runner = new NodeProcessRunner(() => process)
+    const result = runner.run('yt-dlp', [], {
+      timeoutMs: 300_000,
+      signal: controller.signal,
+    })
+
+    process.emit('close', 1)
+    await expect(result).rejects.toMatchObject({ code: 'AUDIO_EXTRACTION_FAILED' })
+
+    expect(addEventListener).toHaveBeenCalledTimes(1)
+    const abortListener = addEventListener.mock.calls[0]?.[1]
+    expect(addEventListener).toHaveBeenCalledWith('abort', abortListener, { once: true })
+    expect(removeEventListener).toHaveBeenCalledExactlyOnceWith('abort', abortListener)
+  })
 })

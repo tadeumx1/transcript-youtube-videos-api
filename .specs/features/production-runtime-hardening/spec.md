@@ -225,7 +225,7 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | PROC-01 | Media timeout and cancellation | T1, T4, T5 | Implemented |
 | PROC-02 | Media timeout and cancellation | T4, T5, T7 | Implemented |
 | PROC-03 | Media timeout and cancellation | T1, T4 | Implemented |
-| PROC-04 | Media timeout and cancellation | T4, T12 | Fix task T12 pending |
+| PROC-04 | Media timeout and cancellation | T4, T12 | Fix implemented; independent revalidation pending |
 | PROC-05 | Media timeout and cancellation | T4 | Implemented |
 | PROC-06 | Media timeout and cancellation | T5, T7 | Implemented |
 | PROC-07 | Media timeout and cancellation edge case | T4 | Implemented |
