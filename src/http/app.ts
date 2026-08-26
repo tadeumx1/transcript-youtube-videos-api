@@ -58,7 +58,6 @@ const publicErrorMessages: Record<AppErrorCode, string> = {
   AUDIO_TOOL_UNAVAILABLE: 'A required audio processing tool is unavailable',
   AUDIO_EXTRACTION_FAILED: 'The video audio could not be processed',
   AUDIO_CHUNK_TOO_LARGE: 'An audio chunk exceeds the upload safety limit',
-  OPENAI_TRANSCRIPTION_FAILED: 'The video audio could not be transcribed',
   MUSE_TRANSCRIPTION_FAILED: 'The video audio could not be transcribed',
   PDF_GENERATION_FAILED: 'The transcript PDF could not be generated',
 }

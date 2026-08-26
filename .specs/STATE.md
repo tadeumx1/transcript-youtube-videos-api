@@ -4,7 +4,7 @@
 
 ### AD-001: Use replaceable external adapters
 
-- **Status:** active
+- **Status:** superseded by AD-004
 - **Decision:** Caption retrieval, media extraction, and OpenAI transcription are accessed through application-owned interfaces.
 - **Reason:** YouTube's unofficial transcript surface and media tools can change independently of the API contract.
 
@@ -16,9 +16,27 @@
 
 ### AD-003: Separate free and billable paths
 
-- **Status:** active
+- **Status:** superseded by AD-005
 - **Decision:** OpenAI is called only after a known captions-unavailable result, never after an unexpected caption-provider failure.
 - **Reason:** This prevents accidental charges and makes failures observable.
+
+### AD-004
+
+- **Decision**: Caption retrieval, media extraction, and Muse transcription use application-owned adapters.
+- **Reason**: YouTube, local media tools, and OpenCode Go can change independently of the HTTP contract.
+- **Trade-off**: The application maintains explicit translation code for each external boundary.
+- **Scope**: Caption and audio transcription infrastructure.
+- **Date**: 2026-08-25
+- **Status**: active
+
+### AD-005
+
+- **Decision**: Muse consumes OpenCode Go quota only after a typed captions-unavailable result.
+- **Reason**: Captions are faster and avoid sending audio to a Contributor model when they are usable.
+- **Trade-off**: Caption provider classification must remain precise so unexpected failures never trigger Muse.
+- **Scope**: Hybrid transcript orchestration.
+- **Date**: 2026-08-25
+- **Status**: active
 
 ## Handoff
 

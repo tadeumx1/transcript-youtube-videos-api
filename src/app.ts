@@ -11,7 +11,6 @@ import { TranscriptPdfRenderer } from './infrastructure/pdf/transcript-pdf.js'
 import { YouTubeCaptionProvider } from './infrastructure/youtube/youtube-caption-provider.js'
 
 export interface ApplicationConfig {
-  openAiApiKey?: string
   openCodeApiKey?: string
   ytDlpPath?: string
   ffmpegPath?: string
