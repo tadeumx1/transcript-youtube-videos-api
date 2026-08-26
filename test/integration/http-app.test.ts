@@ -389,7 +389,7 @@ describe('Fastify application', () => {
     })
     await app.close()
 
-    expect(logs).toContain('dQw4w9WgXcQ')
+    expect(logs).not.toContain('dQw4w9WgXcQ')
     expect(logs).toContain('youtube_captions')
     expect(logs).toContain('YOUTUBE_UPSTREAM_ERROR')
     expect(logs).not.toContain('SECRET_TRANSCRIPT_TEXT')

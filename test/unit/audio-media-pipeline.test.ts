@@ -23,6 +23,14 @@ function createFileSystem(requestDirectories = ['/tmp/youtube-transcript-a']): M
   }
 }
 
+function createMetrics() {
+  return {
+    recordTranscriptSource: vi.fn(),
+    observeStage: vi.fn(),
+    recordStageFailure: vi.fn(),
+  }
+}
+
 describe('AudioMediaPipeline', () => {
   it('downloads audio and creates ordered bounded FFmpeg chunks with safe arguments', async () => {
     const run = vi.fn<ProcessRunner['run']>(async () => undefined)
@@ -84,46 +92,73 @@ describe('AudioMediaPipeline', () => {
   it('passes configured policies and the same signal to both processes and consumption', async () => {
     const run = vi.fn<ProcessRunner['run']>(async () => undefined)
     const fileSystem = createFileSystem()
+    const now = vi
+      .fn<() => number>()
+      .mockReturnValueOnce(1_000)
+      .mockReturnValueOnce(1_250)
+      .mockReturnValueOnce(2_000)
+      .mockReturnValueOnce(2_500)
     const pipeline = new AudioMediaPipeline(
       { run },
       fileSystem,
       () => '/tmp',
       { ytDlpPath: 'custom-yt-dlp', ffmpegPath: 'custom-ffmpeg' },
       { ytDlpTimeoutMs: 123_000, ffmpegTimeoutMs: 456_000 },
+      now,
     )
     const controller = new AbortController()
+    const metrics = createMetrics()
     const consume = vi.fn(async () => 'done')
 
     await expect(
-      pipeline.withChunks(sourceUrl, consume, { signal: controller.signal }),
+      pipeline.withChunks(sourceUrl, consume, { signal: controller.signal, metrics }),
     ).resolves.toBe('done')
 
     expect(run.mock.calls[0]?.[2]).toEqual({ timeoutMs: 123_000, signal: controller.signal })
     expect(run.mock.calls[1]?.[2]).toEqual({ timeoutMs: 456_000, signal: controller.signal })
     expect(consume).toHaveBeenCalledWith(
       ['/tmp/youtube-transcript-a/chunk-000.mp3', '/tmp/youtube-transcript-a/chunk-001.mp3'],
-      { signal: controller.signal },
+      { signal: controller.signal, metrics },
     )
+    expect(metrics.observeStage.mock.calls).toEqual([
+      ['download', 'success', 0.25],
+      ['conversion', 'success', 0.5],
+    ])
+    expect(metrics.recordStageFailure).not.toHaveBeenCalled()
   })
 
   it.each([
-    ['download timeout', 1, 'AUDIO_PROCESS_TIMEOUT', 504],
-    ['conversion timeout', 2, 'AUDIO_PROCESS_TIMEOUT', 504],
-    ['download abort', 1, 'AUDIO_PROCESS_ABORTED', 503],
+    ['download timeout', 1, 'AUDIO_PROCESS_TIMEOUT', 504, 'download', 'timeout'],
+    ['conversion timeout', 2, 'AUDIO_PROCESS_TIMEOUT', 504, 'conversion', 'timeout'],
+    ['download abort', 1, 'AUDIO_PROCESS_ABORTED', 503, 'download', 'aborted'],
   ] as const)(
     'preserves a typed %s and removes the request directory',
-    async (_scenario, failingCall, code, statusCode) => {
+    async (_scenario, failingCall, code, statusCode, stage, outcome) => {
       const typedError = new AppError(code, statusCode, 'typed process failure')
       const run = vi.fn<ProcessRunner['run']>(async () => {
         if (run.mock.calls.length === failingCall) throw typedError
       })
       const fileSystem = createFileSystem()
       const consume = vi.fn(async () => 'unused')
-      const pipeline = new AudioMediaPipeline({ run }, fileSystem, () => '/tmp')
+      const metrics = createMetrics()
+      let currentTime = 0
+      const pipeline = new AudioMediaPipeline(
+        { run },
+        fileSystem,
+        () => '/tmp',
+        undefined,
+        undefined,
+        () => {
+          currentTime += 1_000
+          return currentTime
+        },
+      )
 
-      await expect(pipeline.withChunks(sourceUrl, consume)).rejects.toBe(typedError)
+      await expect(pipeline.withChunks(sourceUrl, consume, { metrics })).rejects.toBe(typedError)
       expect(run).toHaveBeenCalledTimes(failingCall)
       expect(consume).not.toHaveBeenCalled()
+      expect(metrics.observeStage).toHaveBeenCalledWith(stage, outcome, 1)
+      expect(metrics.recordStageFailure).toHaveBeenCalledExactlyOnceWith(stage, outcome)
       expect(fileSystem.rm).toHaveBeenCalledExactlyOnceWith('/tmp/youtube-transcript-a', {
         force: true,
         recursive: true,

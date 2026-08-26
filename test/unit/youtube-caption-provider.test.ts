@@ -113,4 +113,28 @@ describe('YouTubeCaptionProvider', () => {
       statusCode: 502,
     })
   })
+
+  it('stops a pre-aborted operation before calling the caption API', async () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(provider.fetch(input, { signal: controller.signal })).rejects.toMatchObject({
+      code: 'AUDIO_PROCESS_ABORTED',
+      statusCode: 503,
+    })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('stops after caption retrieval when cancellation arrives during the provider call', async () => {
+    const controller = new AbortController()
+    fetch.mockImplementation(async () => {
+      controller.abort()
+      return fetchedTranscript
+    })
+
+    await expect(provider.fetch(input, { signal: controller.signal })).rejects.toMatchObject({
+      code: 'AUDIO_PROCESS_ABORTED',
+      statusCode: 503,
+    })
+  })
 })

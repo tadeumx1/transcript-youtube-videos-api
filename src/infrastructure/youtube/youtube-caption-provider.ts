@@ -9,9 +9,11 @@ import {
 
 import { AppError, CaptionsUnavailableError } from '../../domain/errors.js'
 import {
+  assertTranscriptOperationActive,
   DEFAULT_CAPTION_LANGUAGES,
   type Transcript,
   type TranscriptInput,
+  type TranscriptOperationOptions,
   type TranscriptProvider,
 } from '../../domain/transcript.js'
 
@@ -40,10 +42,12 @@ export class YouTubeCaptionProvider implements TranscriptProvider {
     this.#clock = clock
   }
 
-  async fetch(input: TranscriptInput): Promise<Transcript> {
+  async fetch(input: TranscriptInput, options?: TranscriptOperationOptions): Promise<Transcript> {
     try {
+      assertTranscriptOperationActive(options)
       const languages = input.languages.length > 0 ? input.languages : DEFAULT_CAPTION_LANGUAGES
       const result = await this.#api.fetch(input.videoId, { languages })
+      assertTranscriptOperationActive(options)
       const segments = result.snippets
         .map((snippet) => ({
           text: snippet.text.trim(),

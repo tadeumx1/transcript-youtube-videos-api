@@ -1,5 +1,13 @@
 import { AppError } from '../../domain/errors.js'
-import type { AudioFallback, Transcript, TranscriptInput } from '../../domain/transcript.js'
+import {
+  type AudioFallback,
+  assertTranscriptOperationActive,
+  type Transcript,
+  type TranscriptInput,
+  type TranscriptOperationOptions,
+  transcriptMetricOutcome,
+  transcriptMetricReason,
+} from '../../domain/transcript.js'
 import type { AudioChunkSource } from './audio-media-pipeline.js'
 import { type AudioChunkTranscriber, normalizeLanguageHints } from './muse-audio-transcriber.js'
 
@@ -7,18 +15,25 @@ export class MuseAudioFallback implements AudioFallback {
   readonly #chunks: AudioChunkSource
   readonly #transcriber: AudioChunkTranscriber | undefined
   readonly #clock: () => Date
+  readonly #now: () => number
 
   constructor(
     chunks: AudioChunkSource,
     transcriber?: AudioChunkTranscriber,
     clock: () => Date = () => new Date(),
+    now: () => number = () => performance.now(),
   ) {
     this.#chunks = chunks
     this.#transcriber = transcriber
     this.#clock = clock
+    this.#now = now
   }
 
-  async transcribe(input: TranscriptInput): Promise<Transcript> {
+  async transcribe(
+    input: TranscriptInput,
+    options?: TranscriptOperationOptions,
+  ): Promise<Transcript> {
+    assertTranscriptOperationActive(options)
     const transcriber = this.#transcriber
     if (!transcriber) {
       throw new AppError(
@@ -28,9 +43,34 @@ export class MuseAudioFallback implements AudioFallback {
       )
     }
 
-    const segments = await this.#chunks.withChunks(input.sourceUrl, (paths) =>
-      transcriber.transcribeChunks(paths, input.languages),
-    )
+    const consume = async (paths: readonly string[], chunkOptions?: TranscriptOperationOptions) => {
+      const operationOptions = chunkOptions ?? options
+      const startedAt = this.#now()
+      try {
+        assertTranscriptOperationActive(operationOptions)
+        const segments = operationOptions
+          ? await transcriber.transcribeChunks(paths, input.languages, operationOptions)
+          : await transcriber.transcribeChunks(paths, input.languages)
+        assertTranscriptOperationActive(operationOptions)
+        operationOptions?.metrics?.observeStage(
+          'muse',
+          'success',
+          (this.#now() - startedAt) / 1_000,
+        )
+        return segments
+      } catch (error) {
+        operationOptions?.metrics?.observeStage(
+          'muse',
+          transcriptMetricOutcome(error),
+          (this.#now() - startedAt) / 1_000,
+        )
+        operationOptions?.metrics?.recordStageFailure('muse', transcriptMetricReason(error))
+        throw error
+      }
+    }
+    const segments = options
+      ? await this.#chunks.withChunks(input.sourceUrl, consume, options)
+      : await this.#chunks.withChunks(input.sourceUrl, consume)
     const languages = normalizeLanguageHints(input.languages)
 
     return {

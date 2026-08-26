@@ -183,10 +183,7 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
         parsedUrl,
         getLanguages(request.body),
       )
-      request.log.info(
-        { videoId: transcript.videoId, source: transcript.source },
-        'transcript prepared',
-      )
+      request.log.info({ source: transcript.source }, 'transcript prepared')
       return transcript
     },
   )
@@ -202,10 +199,7 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
       )
       const pdf = await dependencies.pdfRenderer.render(buildTranscriptPdfModel(transcript))
 
-      request.log.info(
-        { videoId: transcript.videoId, source: transcript.source },
-        'transcript PDF prepared',
-      )
+      request.log.info({ source: transcript.source }, 'transcript PDF prepared')
       return reply
         .type('application/pdf')
         .header(

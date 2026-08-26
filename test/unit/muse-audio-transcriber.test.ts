@@ -104,6 +104,22 @@ describe('MuseAudioTranscriber', () => {
     expect(create).toHaveBeenCalledTimes(1)
   })
 
+  it('stops a pre-aborted operation before reading or calling Muse', async () => {
+    const create = vi.fn<MuseResponsesCreate>()
+    const readChunk = vi.fn(async () => Buffer.from('audio'))
+    const transcriber = new MuseAudioTranscriber(create, readChunk)
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(
+      transcriber.transcribeChunks(['/tmp/chunk-000.mp3'], ['pt'], {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ code: 'AUDIO_PROCESS_ABORTED', statusCode: 503 })
+    expect(readChunk).not.toHaveBeenCalled()
+    expect(create).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['whitespace output', successfulResponse('   ')],
     ['reasoning without output text', { output: [{ type: 'reasoning', content: [] }] }],

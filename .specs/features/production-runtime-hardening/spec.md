@@ -223,11 +223,11 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | HARD-05 | Bounded transcript work | T1 | Implemented |
 | HARD-06 | Bounded transcript work edge case | T8 | In Tasks |
 | PROC-01 | Media timeout and cancellation | T1, T4, T5 | Implemented |
-| PROC-02 | Media timeout and cancellation | T4, T5, T7 | Partial: T4, T5 complete |
+| PROC-02 | Media timeout and cancellation | T4, T5, T7 | Implemented |
 | PROC-03 | Media timeout and cancellation | T1, T4 | Implemented |
 | PROC-04 | Media timeout and cancellation | T4 | Implemented |
 | PROC-05 | Media timeout and cancellation | T4 | Implemented |
-| PROC-06 | Media timeout and cancellation | T5, T7 | Partial: T5 complete |
+| PROC-06 | Media timeout and cancellation | T5, T7 | Implemented |
 | PROC-07 | Media timeout and cancellation edge case | T4 | Implemented |
 | PROV-01 | Muse failure classification | T6 | Implemented |
 | PROV-02 | Muse failure classification | T6, T8 | Partial: T6 complete |
@@ -235,13 +235,13 @@ sanitized examples, supported-video policy, and prohibited bypass guidance.
 | PROV-04 | Muse failure classification | T6 | Implemented |
 | PROV-05 | Muse failure classification | T6 | Implemented |
 | PROV-06 | Muse failure classification | T6 | Implemented |
-| PROV-07 | Muse failure classification edge case | T7 | In Tasks |
+| PROV-07 | Muse failure classification edge case | T7 | Implemented |
 | OBS-01 | Observability and readiness | T3, T8 | Partial: T3 complete |
 | OBS-02 | Observability and readiness | T3, T8 | Partial: T3 complete |
-| OBS-03 | Observability and readiness | T2, T7, T8 | Partial: T2 complete |
+| OBS-03 | Observability and readiness | T2, T7, T8 | Partial: T2, T7 complete |
 | OBS-04 | Observability and readiness | T8 | In Tasks |
-| OBS-05 | Observability and readiness | T2, T7, T8 | Partial: T2 complete |
-| OBS-06 | Observability and readiness | T7, T8 | In Tasks |
+| OBS-05 | Observability and readiness | T2, T7, T8 | Partial: T2, T7 complete |
+| OBS-06 | Observability and readiness | T7, T8 | Partial: T7 complete |
 | OBS-07 | Observability and readiness edge case | T2 | Implemented |
 | API-01 | OpenAPI contract | T9 | In Tasks |
 | API-02 | OpenAPI contract | T9 | In Tasks |

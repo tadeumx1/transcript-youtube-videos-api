@@ -248,7 +248,7 @@ codes with optional validated Retry-After metadata and zero retries.
 **Gate:** quick
 **Commit:** `feat(muse): classify provider failures`
 
-### T7: Propagate cancellation and stage telemetry through transcript orchestration
+### T7: Propagate cancellation and stage telemetry through transcript orchestration ✅
 
 **What:** Add the optional transcript operation contract and carry its signal/metrics through
 caption-first orchestration, audio fallback, media, and Muse without changing fallback eligibility.
@@ -264,13 +264,13 @@ caption-first orchestration, audio fallback, media, and Muse without changing fa
 
 **Done when:**
 
-- [ ] `TranscriptOperationOptions` carries an optional signal through service/fallback/chunk interfaces.
-- [ ] Pre-aborted work stops before the next caption, media, chunk, or Muse stage.
-- [ ] Unexpected caption failures still propagate without invoking audio; only typed caption unavailability falls back.
-- [ ] Captions, download, conversion, Muse, and PDF-adjacent orchestration emit only allowlisted stage/source/outcome/reason telemetry.
-- [ ] Logs no longer include video IDs, URLs, languages, transcript text, or nested cause messages.
-- [ ] Unit tests cover signal propagation, pre-stage aborts, caption failure non-fallback, source counters, stage success/failure timings, and redaction.
-- [ ] `npm run test:unit` passes with at least 138 tests and no silent deletions.
+- [x] `TranscriptOperationOptions` carries an optional signal through service/fallback/chunk interfaces.
+- [x] Pre-aborted work stops before the next caption, media, chunk, or Muse stage.
+- [x] Unexpected caption failures still propagate without invoking audio; only typed caption unavailability falls back.
+- [x] Captions, download, conversion, Muse, and PDF-adjacent orchestration emit only allowlisted stage/source/outcome/reason telemetry.
+- [x] Logs no longer include video IDs, URLs, languages, transcript text, or nested cause messages.
+- [x] Unit tests cover signal propagation, pre-stage aborts, caption failure non-fallback, source counters, stage success/failure timings, and redaction.
+- [x] `npm run test:unit` passes with at least 138 tests and no silent deletions.
 
 **Tests:** unit
 **Gate:** quick

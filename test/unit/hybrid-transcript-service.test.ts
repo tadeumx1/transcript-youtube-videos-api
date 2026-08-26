@@ -33,6 +33,14 @@ const fallbackTranscript: Transcript = {
   segments: [{ text: 'Transcrição pelo áudio.', startSeconds: 0, durationSeconds: null }],
 }
 
+function createMetrics() {
+  return {
+    recordTranscriptSource: vi.fn(),
+    observeStage: vi.fn(),
+    recordStageFailure: vi.fn(),
+  }
+}
+
 describe('HybridTranscriptService', () => {
   let fetch: ReturnType<typeof vi.fn<TranscriptProvider['fetch']>>
   let transcribe: ReturnType<typeof vi.fn<AudioFallback['transcribe']>>
@@ -93,6 +101,68 @@ describe('HybridTranscriptService', () => {
     fetch.mockRejectedValue(error)
 
     await expect(service.getTranscript(parsedUrl)).rejects.toBe(error)
+    expect(transcribe).not.toHaveBeenCalled()
+  })
+
+  it('passes the same signal and metrics through caption and typed audio fallback', async () => {
+    fetch.mockRejectedValue(new CaptionsUnavailableError())
+    transcribe.mockResolvedValue(fallbackTranscript)
+    const controller = new AbortController()
+    const metrics = createMetrics()
+    const options = { signal: controller.signal, metrics }
+
+    await service.getTranscript(parsedUrl, ['pt'], options)
+
+    expect(fetch.mock.calls[0]?.[1]).toBe(options)
+    expect(transcribe.mock.calls[0]?.[1]).toBe(options)
+    expect(metrics.recordTranscriptSource).toHaveBeenCalledExactlyOnceWith('muse_transcription')
+  })
+
+  it('stops pre-aborted work before the caption stage', async () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(
+      service.getTranscript(parsedUrl, undefined, { signal: controller.signal }),
+    ).rejects.toMatchObject({ code: 'AUDIO_PROCESS_ABORTED', statusCode: 503 })
+    expect(fetch).not.toHaveBeenCalled()
+    expect(transcribe).not.toHaveBeenCalled()
+  })
+
+  it('records allowlisted caption success duration and source', async () => {
+    fetch.mockResolvedValue(captionTranscript)
+    const metrics = createMetrics()
+    const now = vi.fn<() => number>().mockReturnValueOnce(1_000).mockReturnValueOnce(2_250)
+    service = new HybridTranscriptService({ fetch }, { transcribe }, now)
+
+    await service.getTranscript(parsedUrl, undefined, { metrics })
+
+    expect(metrics.observeStage).toHaveBeenCalledExactlyOnceWith('captions', 'success', 1.25)
+    expect(metrics.recordTranscriptSource).toHaveBeenCalledExactlyOnceWith('youtube_captions')
+    expect(metrics.recordStageFailure).not.toHaveBeenCalled()
+  })
+
+  it('records only fixed caption failure labels without sensitive error content', async () => {
+    fetch.mockRejectedValue(
+      new AppError(
+        'YOUTUBE_UPSTREAM_ERROR',
+        502,
+        'https://youtube.example/private-video?authorization=secret',
+      ),
+    )
+    const metrics = createMetrics()
+    const now = vi.fn<() => number>().mockReturnValueOnce(10).mockReturnValueOnce(510)
+    service = new HybridTranscriptService({ fetch }, { transcribe }, now)
+
+    await expect(service.getTranscript(parsedUrl, undefined, { metrics })).rejects.toMatchObject({
+      code: 'YOUTUBE_UPSTREAM_ERROR',
+    })
+
+    expect(metrics.observeStage).toHaveBeenCalledExactlyOnceWith('captions', 'failure', 0.5)
+    expect(metrics.recordStageFailure).toHaveBeenCalledExactlyOnceWith('captions', 'upstream')
+    expect(JSON.stringify(vi.mocked(metrics).recordStageFailure.mock.calls)).not.toMatch(
+      /private-video|authorization|secret/,
+    )
     expect(transcribe).not.toHaveBeenCalled()
   })
 

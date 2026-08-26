@@ -1,7 +1,11 @@
 import { readFile } from 'node:fs/promises'
 
 import { AppError } from '../../domain/errors.js'
-import type { TranscriptSegment } from '../../domain/transcript.js'
+import {
+  assertTranscriptOperationActive,
+  type TranscriptOperationOptions,
+  type TranscriptSegment,
+} from '../../domain/transcript.js'
 
 const CHUNK_DURATION_SECONDS = 600
 const MUSE_ENDPOINT = 'https://opencode.ai/zen/go/v1/responses'
@@ -38,13 +42,9 @@ export interface MuseResponsesRequest {
   ]
 }
 
-export interface MuseOperationOptions {
-  signal?: AbortSignal
-}
-
 export type MuseResponsesCreate = (
   request: MuseResponsesRequest,
-  options?: MuseOperationOptions,
+  options?: TranscriptOperationOptions,
 ) => Promise<unknown>
 export type MuseFetch = (input: string | URL, init?: RequestInit) => Promise<Response>
 export type AudioChunkReader = (path: string) => Promise<Buffer>
@@ -58,7 +58,7 @@ export interface AudioChunkTranscriber {
   transcribeChunks(
     chunkPaths: readonly string[],
     languages: readonly string[],
-    options?: MuseOperationOptions,
+    options?: TranscriptOperationOptions,
   ): Promise<TranscriptSegment[]>
 }
 
@@ -107,10 +107,6 @@ function abortedError(): AppError {
   return new AppError('AUDIO_PROCESS_ABORTED', 503, 'Audio processing was aborted')
 }
 
-function assertNotAborted(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) throw abortedError()
-}
-
 export class MuseAudioTranscriber implements AudioChunkTranscriber {
   readonly #create: MuseResponsesCreate
   readonly #readChunk: AudioChunkReader
@@ -123,15 +119,15 @@ export class MuseAudioTranscriber implements AudioChunkTranscriber {
   async transcribeChunks(
     chunkPaths: readonly string[],
     languages: readonly string[],
-    options?: MuseOperationOptions,
+    options?: TranscriptOperationOptions,
   ): Promise<TranscriptSegment[]> {
     const segments: TranscriptSegment[] = []
 
     try {
       for (const [index, path] of chunkPaths.entries()) {
-        assertNotAborted(options?.signal)
+        assertTranscriptOperationActive(options)
         const audio = await this.#readChunk(path)
-        assertNotAborted(options?.signal)
+        assertTranscriptOperationActive(options)
         const response = await this.#create(
           {
             model: 'muse-spark-1.2-contributor',
@@ -228,7 +224,7 @@ export function createMuseResponsesCreate(
   const now = options.now ?? Date.now
 
   return async (request, operationOptions) => {
-    assertNotAborted(operationOptions?.signal)
+    assertTranscriptOperationActive(operationOptions)
     const combined = createCombinedSignal(operationOptions?.signal, timeoutMs)
 
     try {
