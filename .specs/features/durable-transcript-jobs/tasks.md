@@ -11,7 +11,7 @@ commit per task, sequential phase batches, independent verification, and require
 ---
 
 **Design**: `.specs/features/durable-transcript-jobs/design.md`
-**Status**: Verification Fixes Round 2 Complete (third verifier pending)
+**Status**: Verified on 2026-08-26 (T1-T30 complete; independent Round 3 PASS)
 
 ---
 

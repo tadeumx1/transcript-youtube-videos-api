@@ -85,11 +85,11 @@
 
 ## Handoff
 
-- **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
-- **Phase / Task**: Execute / Verification Fix Round 2 complete, third verifier next
-- **Completed**: T1-T30; T29 normalizes manifest corruption and T30 rolls back post-publication bundles; final local gate passed 436/436 tests
-- **In-progress** (file:line): none
-- **Next step**: dispatch the third fresh verifier with the expanded discrimination sensor
-- **Blockers**: none; Railway apply/deploy remain explicitly pending separate approval
-- **Uncommitted files**: none after the T30 atomic commit
+- **Feature**: rag-lancedb (IMP-10)
+- **Phase / Task**: Specify / discovery next
+- **Completed**: durable-transcript-jobs verified 46/46 with 436 tests and 24/24 mutants killed; Railway plan remains read-only at 1 add, 2 change, 0 destroy
+- **In-progress** (file:line): none; durable validation/status closure pending commit
+- **Next step**: load confirmed lessons, inspect the IMP-10 backlog and current transcript artifact contracts, then draft the RAG/LanceDB spec for approval
+- **Blockers**: none for local planning; Railway apply/deploy remain explicitly pending separate approval
+- **Uncommitted files**: durable Round 3 validation and verified status updates pending commit
 - **Branch**: `main`

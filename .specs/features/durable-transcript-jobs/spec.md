@@ -1,6 +1,6 @@
 # Durable Transcript Jobs and Artifact Cache Specification
 
-**Status:** Approved by user on 2026-08-26
+**Status:** Verified on 2026-08-26 (46/46 requirements; 24/24 mutants killed)
 
 ## Problem Statement
 
@@ -12,13 +12,13 @@ uncertain provider call.
 
 ## Goals
 
-- [ ] Accept durable transcript jobs and expose authenticated status, JSON, and PDF retrieval.
-- [ ] Persist job state and artifacts atomically on the approved Railway Volume.
-- [ ] Recover queued and partially published work after restart without silently repeating Muse.
-- [ ] Deduplicate active/completed submissions and cache successful artifacts for a fixed TTL.
-- [ ] Reuse the persistent transcript/PDF cache from the existing synchronous endpoints.
-- [ ] Bound the durable queue and preserve the existing global execution limit.
-- [ ] Publish the additive HTTP/OpenAPI, readiness, metrics, retention, and privacy contracts.
+- [x] Accept durable transcript jobs and expose authenticated status, JSON, and PDF retrieval.
+- [x] Persist job state and artifacts atomically on the approved Railway Volume.
+- [x] Recover queued and partially published work after restart without silently repeating Muse.
+- [x] Deduplicate active/completed submissions and cache successful artifacts for a fixed TTL.
+- [x] Reuse the persistent transcript/PDF cache from the existing synchronous endpoints.
+- [x] Bound the durable queue and preserve the existing global execution limit.
+- [x] Publish the additive HTTP/OpenAPI, readiness, metrics, retention, and privacy contracts.
 
 ## Out of Scope
 
@@ -196,52 +196,52 @@ OpenAPI document without credentials.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| JOB-01 | Submit/retrieve durable jobs | T11, T12 | Completed |
-| JOB-02 | Submit/retrieve durable jobs | T2, T11, T12 | Completed |
-| JOB-03 | Submit/retrieve durable jobs | T11, T12 | Completed |
-| JOB-04 | Submit/retrieve durable jobs | T11, T12 | Completed |
-| JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Completed |
-| JOB-06 | Submit/retrieve durable jobs | T12, T13 | Completed |
-| JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Completed |
-| WORK-01 | Durable worker lifecycle | T10, T15 | Completed |
-| WORK-02 | Durable worker lifecycle | T5, T10 | Completed |
-| WORK-03 | Durable worker lifecycle | T5, T10 | Completed |
-| WORK-04 | Durable worker lifecycle | T2, T10 | Completed |
-| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Completed |
-| WORK-06 | Durable worker lifecycle | T10, T25 | Completed |
-| WORK-07 | Durable worker lifecycle | T5, T10, T21 | Completed |
-| STORE-01 | Atomic persistent store | T6 | Completed |
-| STORE-02 | Atomic persistent store | T7 | Completed |
-| STORE-03 | Atomic persistent store | T7, T23, T29 | Completed |
-| STORE-04 | Atomic persistent store | T7 | Completed |
-| STORE-05 | Atomic persistent store | T8 | Completed |
-| STORE-06 | Atomic persistent store | T7, T15, T22 | Completed |
-| STORE-07 | Atomic persistent store | T7, T8 | Completed |
-| STORE-08 | Atomic persistent store | T6, T7, T8 | Completed |
-| CACHE-01 | Deduplication/cache | T1 | Completed |
-| CACHE-02 | Deduplication/cache | T1 | Completed |
-| CACHE-03 | Deduplication/cache | T11 | Completed |
-| CACHE-04 | Deduplication/cache | T11, T21, T29 | Completed |
-| CACHE-05 | Deduplication/cache | T11, T26 | Completed |
-| CACHE-06 | Deduplication/cache | T7, T9 | Completed |
-| CACHE-07 | Deduplication/cache | T8, T11, T27, T30 | Completed |
-| CACHE-08 | Deduplication/cache | T9, T13 | Completed |
-| OPS-01 | Durable operations | T3 | Completed |
-| OPS-02 | Durable operations | T16, T17, T18 | Completed |
-| OPS-03 | Durable operations | T13, T15 | Completed |
-| OPS-04 | Durable operations | T4, T24 | Completed |
-| OPS-05 | Durable operations | T14 | Completed |
-| OPS-06 | Durable operations | T4, T13, T20 | Completed |
-| OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Completed |
-| OPS-08 | Durable operations | T20 | Completed |
-| EDGE-01 | Queue capacity edge case | T11, T26 | Completed |
-| EDGE-02 | Partial publication edge case | T7, T10, T25 | Completed |
-| EDGE-03 | Uncertain external side effect edge case | T10 | Completed |
-| EDGE-04 | Read/expiry race edge case | T7 | Completed |
-| EDGE-05 | Language identity edge case | T1 | Completed |
-| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Completed |
-| EDGE-07 | Duplicate recovery edge case | T8, T11 | Completed |
-| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Completed |
+| JOB-01 | Submit/retrieve durable jobs | T11, T12 | Verified |
+| JOB-02 | Submit/retrieve durable jobs | T2, T11, T12 | Verified |
+| JOB-03 | Submit/retrieve durable jobs | T11, T12 | Verified |
+| JOB-04 | Submit/retrieve durable jobs | T11, T12 | Verified |
+| JOB-05 | Submit/retrieve durable jobs | T8, T11, T12 | Verified |
+| JOB-06 | Submit/retrieve durable jobs | T12, T13 | Verified |
+| JOB-07 | Submit/retrieve durable jobs | T2, T11, T12 | Verified |
+| WORK-01 | Durable worker lifecycle | T10, T15 | Verified |
+| WORK-02 | Durable worker lifecycle | T5, T10 | Verified |
+| WORK-03 | Durable worker lifecycle | T5, T10 | Verified |
+| WORK-04 | Durable worker lifecycle | T2, T10 | Verified |
+| WORK-05 | Durable worker lifecycle | T5, T10, T13, T15 | Verified |
+| WORK-06 | Durable worker lifecycle | T10, T25 | Verified |
+| WORK-07 | Durable worker lifecycle | T5, T10, T21 | Verified |
+| STORE-01 | Atomic persistent store | T6 | Verified |
+| STORE-02 | Atomic persistent store | T7 | Verified |
+| STORE-03 | Atomic persistent store | T7, T23, T29 | Verified |
+| STORE-04 | Atomic persistent store | T7 | Verified |
+| STORE-05 | Atomic persistent store | T8 | Verified |
+| STORE-06 | Atomic persistent store | T7, T15, T22 | Verified |
+| STORE-07 | Atomic persistent store | T7, T8 | Verified |
+| STORE-08 | Atomic persistent store | T6, T7, T8 | Verified |
+| CACHE-01 | Deduplication/cache | T1 | Verified |
+| CACHE-02 | Deduplication/cache | T1 | Verified |
+| CACHE-03 | Deduplication/cache | T11 | Verified |
+| CACHE-04 | Deduplication/cache | T11, T21, T29 | Verified |
+| CACHE-05 | Deduplication/cache | T11, T26 | Verified |
+| CACHE-06 | Deduplication/cache | T7, T9 | Verified |
+| CACHE-07 | Deduplication/cache | T8, T11, T27, T30 | Verified |
+| CACHE-08 | Deduplication/cache | T9, T13 | Verified |
+| OPS-01 | Durable operations | T3 | Verified |
+| OPS-02 | Durable operations | T16, T17, T18 | Verified |
+| OPS-03 | Durable operations | T13, T15 | Verified |
+| OPS-04 | Durable operations | T4, T24 | Verified |
+| OPS-05 | Durable operations | T14 | Verified |
+| OPS-06 | Durable operations | T4, T13, T20 | Verified |
+| OPS-07 | Durable operations | T3, T15, T17, T18, T19 | Verified |
+| OPS-08 | Durable operations | T20 | Verified |
+| EDGE-01 | Queue capacity edge case | T11, T26 | Verified |
+| EDGE-02 | Partial publication edge case | T7, T10, T25 | Verified |
+| EDGE-03 | Uncertain external side effect edge case | T10 | Verified |
+| EDGE-04 | Read/expiry race edge case | T7 | Verified |
+| EDGE-05 | Language identity edge case | T1 | Verified |
+| EDGE-06 | Synchronous cache-write edge case | T7, T9, T13 | Verified |
+| EDGE-07 | Duplicate recovery edge case | T8, T11 | Verified |
+| EDGE-08 | Path-confinement edge case | T2, T6, T7, T8, T12 | Verified |
 
 **Coverage:** 46 total requirements, 46 listed, 0 unmapped after Tasks assigns implementation phases.
 
@@ -249,10 +249,10 @@ OpenAPI document without credentials.
 
 ## Success Criteria
 
-- [ ] All four job operations pass authenticated integration tests for every state/header/status.
-- [ ] Worker tests prove capacity waiting, claim idempotency, conservative restart, shutdown, and exact permit release.
-- [ ] Real-filesystem tests prove atomic visibility, checksum validation, quarantine, recovery, expiry, and path confinement.
-- [ ] Cache tests prove canonical identity, concurrent single-flight, hit/miss/failure/expiry, and synchronous reuse.
-- [ ] Queue and storage failures remain bounded, sanitized, observable, and readiness-aware.
-- [ ] OpenAPI 1.1, IaC Volume, metrics, documentation, and all prior contracts pass deterministic gates.
-- [ ] Independent verification maps all 46 requirements and kills mutations across state, storage, cache, HTTP, and IaC.
+- [x] All four job operations pass authenticated integration tests for every state/header/status.
+- [x] Worker tests prove capacity waiting, claim idempotency, conservative restart, shutdown, and exact permit release.
+- [x] Real-filesystem tests prove atomic visibility, checksum validation, quarantine, recovery, expiry, and path confinement.
+- [x] Cache tests prove canonical identity, concurrent single-flight, hit/miss/failure/expiry, and synchronous reuse.
+- [x] Queue and storage failures remain bounded, sanitized, observable, and readiness-aware.
+- [x] OpenAPI 1.1, IaC Volume, metrics, documentation, and all prior contracts pass deterministic gates.
+- [x] Independent verification maps all 46 requirements and kills mutations across state, storage, cache, HTTP, and IaC.
