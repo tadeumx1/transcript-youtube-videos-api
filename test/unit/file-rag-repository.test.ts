@@ -286,8 +286,8 @@ describe('FileRagRepository', () => {
     expect(recovery.queued).toEqual([queued(ingestionA)])
     await expect(store.get(ingestionB)).resolves.toMatchObject({ status: 'failed' })
     await expect(access(orphan)).rejects.toMatchObject({ code: 'ENOENT' })
-    expect(await readdir(join(root, 'v1/quarantine'))).toEqual([`${opaqueId}.invalid`])
-    expect((await readdir(join(root, 'v1/quarantine'))).join('')).not.toMatch(/secret|content|58f5/)
+    expect(await readdir(join(root, 'v2/quarantine'))).toEqual([`${opaqueId}.invalid`])
+    expect((await readdir(join(root, 'v2/quarantine'))).join('')).not.toMatch(/secret|content|58f5/)
   })
 
   it.each([
@@ -313,8 +313,8 @@ describe('FileRagRepository', () => {
     const outside = await temporaryRoot()
     const store = repository(root)
     await store.initialize()
-    await mkdir(join(root, 'v1/snapshots'), { recursive: true })
-    await symlink(outside, join(root, 'v1/snapshots/18'))
+    await mkdir(join(root, 'v2/snapshots'), { recursive: true })
+    await symlink(outside, join(root, 'v2/snapshots/18'))
 
     await expect(store.createQueued(queued(), source())).rejects.toMatchObject({
       code: 'RAG_STORAGE_UNAVAILABLE',

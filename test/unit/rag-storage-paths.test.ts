@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   assertSafeRagStorageLayout,
   createRagStoragePaths,
+  RAG_STORAGE_LAYOUT_VERSION,
 } from '../../src/infrastructure/rag/rag-storage-paths.js'
 
 const roots: string[] = []
@@ -25,7 +26,7 @@ afterEach(async () => {
 })
 
 describe('RAG storage paths', () => {
-  it('derives every recognized v1 path under one canonical root', async () => {
+  it('derives every recognized v2 path under one canonical root', async () => {
     const root = await temporaryRoot()
     const paths = createRagStoragePaths(join(root, 'nested', '..', 'rag'))
     const expectedRoot = join(root, 'rag')
@@ -45,22 +46,23 @@ describe('RAG storage paths', () => {
     ]
 
     expect(paths.root).toBe(expectedRoot)
-    expect(paths.database).toBe(join(expectedRoot, 'v1/database'))
-    expect(paths.indexManifest).toBe(join(expectedRoot, 'v1/index-manifest.json'))
+    expect(RAG_STORAGE_LAYOUT_VERSION).toBe('v2')
+    expect(paths.database).toBe(join(expectedRoot, 'v2/database'))
+    expect(paths.indexManifest).toBe(join(expectedRoot, 'v2/index-manifest.json'))
     expect(paths.ingestion(ingestionId)).toBe(
-      join(expectedRoot, 'v1/ingestions/28', `${ingestionId}.json`),
+      join(expectedRoot, 'v2/ingestions/28', `${ingestionId}.json`),
     )
     expect(paths.tombstone(ingestionId)).toBe(
-      join(expectedRoot, 'v1/tombstones/28', `${ingestionId}.json`),
+      join(expectedRoot, 'v2/tombstones/28', `${ingestionId}.json`),
     )
     expect(paths.document(documentId)).toBe(
-      join(expectedRoot, 'v1/documents/aa', `${documentId}.json`),
+      join(expectedRoot, 'v2/documents/aa', `${documentId}.json`),
     )
     expect(paths.snapshotTranscript(ingestionId)).toBe(
-      join(expectedRoot, 'v1/snapshots/28', ingestionId, 'transcript.json'),
+      join(expectedRoot, 'v2/snapshots/28', ingestionId, 'transcript.json'),
     )
     expect(paths.temporarySnapshot(ingestionId, opaqueId)).toBe(
-      join(expectedRoot, 'v1/snapshots/28', `${ingestionId}.${opaqueId}.tmp`),
+      join(expectedRoot, 'v2/snapshots/28', `${ingestionId}.${opaqueId}.tmp`),
     )
     expect(
       targets.every(
@@ -105,8 +107,8 @@ describe('RAG storage paths', () => {
     const paths = createRagStoragePaths(join(root, 'recognized'))
     await Promise.all([
       mkdir(paths.database, { recursive: true }),
-      mkdir(join(paths.root, 'v1/ingestions'), { recursive: true }),
-      mkdir(join(paths.root, 'v1/snapshots'), { recursive: true }),
+      mkdir(join(paths.root, 'v2/ingestions'), { recursive: true }),
+      mkdir(join(paths.root, 'v2/snapshots'), { recursive: true }),
     ])
     await writeFile(paths.indexManifest, '{}')
 
@@ -122,8 +124,8 @@ describe('RAG storage paths', () => {
       if (boundary === 'root') {
         await symlink(outside, root)
       } else {
-        await mkdir(join(root, 'v1'), { recursive: true })
-        await symlink(outside, join(root, 'v1/database'))
+        await mkdir(join(root, 'v2'), { recursive: true })
+        await symlink(outside, join(root, 'v2/database'))
       }
       const paths = createRagStoragePaths(root)
 
@@ -140,8 +142,8 @@ describe('RAG storage paths', () => {
   it('fails closed when the version root contains an unknown layout entry', async () => {
     const root = await temporaryRoot()
     const paths = createRagStoragePaths(root)
-    await mkdir(join(root, 'v1'), { recursive: true })
-    await writeFile(join(root, 'v1/private-secret.txt'), 'do not inspect')
+    await mkdir(join(root, 'v2'), { recursive: true })
+    await writeFile(join(root, 'v2/private-secret.txt'), 'do not inspect')
 
     await expect(assertSafeRagStorageLayout(paths)).rejects.toThrowError(
       'RAG storage layout is unavailable',

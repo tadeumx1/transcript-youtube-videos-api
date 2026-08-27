@@ -43,9 +43,9 @@ const approvedArtifacts = [
     sha256: 'a1d6bc8734a6f635dc158508bef000f8e2e5a759c7d92f984b2c86e5ff53425b',
   },
   {
-    path: 'onnx/model_int8.onnx',
-    bytes: 118_054_593,
-    sha256: '4d24e2bc01a447951524466ef533e52944bf48509e6552810bcee1a2711cb02c',
+    path: 'onnx/model_uint8.onnx',
+    bytes: 118_054_630,
+    sha256: 'ee13574a23e4384619a172d4c0c8c6b825528fde30258c56130d5e3efcc9c8f1',
   },
 ] as const
 
@@ -102,9 +102,9 @@ describe('pinned local E5 model manifest', () => {
     }).toEqual({
       repository: 'Xenova/multilingual-e5-small',
       revision: '761b726dd34fb83930e26aab4e9ac3899aa1fa78',
-      dtype: 'int8',
+      dtype: 'uint8',
       dimensions: 384,
-      policyVersion: 1,
+      policyVersion: 2,
       pooling: 'mean',
       normalized: true,
       queryPrefix: 'query: ',
@@ -119,10 +119,10 @@ describe('pinned local E5 model manifest', () => {
         JSON.stringify({
           artifacts: approvedArtifacts,
           dimensions: 384,
-          dtype: 'int8',
+          dtype: 'uint8',
           normalized: true,
           passagePrefix: 'passage: ',
-          policyVersion: 1,
+          policyVersion: 2,
           pooling: 'mean',
           queryPrefix: 'query: ',
           repository: 'Xenova/multilingual-e5-small',

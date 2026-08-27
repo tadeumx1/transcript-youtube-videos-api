@@ -486,6 +486,12 @@ embedding remoto. A aplicação recusa a migração implícita de um namespace i
 Volume com a mesma imagem/modelo ou faça uma reingestão explícita em um namespace compatível, mantendo
 o backup anterior até validar os resultados.
 
+A política de precisão UINT8 portável usa o namespace RAG `v2`. No primeiro deploy dessa versão, o
+namespace `v1` permanece intacto e fora das buscas; a aplicação cria `v2` vazio e volta a ficar pronta.
+Reenvie explicitamente os jobs-fonte ainda retidos para `/v1/rag/ingestions` — ou retranscreva uma
+fonte já expirada — e valide a busca antes de decidir sobre a retenção de `v1`. Não copie vetores ou
+metadados de fingerprint entre namespaces e não remova `v1` sem backup verificável.
+
 ## Privacidade e limitações
 
 - Áudio e blocos ficam em um diretório temporário exclusivo da requisição e são removidos em um

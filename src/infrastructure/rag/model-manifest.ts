@@ -8,9 +8,9 @@ const INTEGRITY_FAILURE_MESSAGE = 'Local RAG model assets failed integrity verif
 
 export const MODEL_REPOSITORY = 'Xenova/multilingual-e5-small' as const
 export const MODEL_REVISION = '761b726dd34fb83930e26aab4e9ac3899aa1fa78' as const
-export const EMBEDDING_DTYPE = 'int8' as const
+export const EMBEDDING_DTYPE = 'uint8' as const
 export const EMBEDDING_DIMENSIONS = 384 as const
-export const EMBEDDING_POLICY_VERSION = 1 as const
+export const EMBEDDING_POLICY_VERSION = 2 as const
 export const EMBEDDING_POOLING = 'mean' as const
 export const EMBEDDING_NORMALIZED = true as const
 export const QUERY_PREFIX = 'query: ' as const
@@ -44,9 +44,9 @@ export const MODEL_ARTIFACTS = [
     sha256: 'a1d6bc8734a6f635dc158508bef000f8e2e5a759c7d92f984b2c86e5ff53425b',
   },
   {
-    path: 'onnx/model_int8.onnx',
-    bytes: 118_054_593,
-    sha256: '4d24e2bc01a447951524466ef533e52944bf48509e6552810bcee1a2711cb02c',
+    path: 'onnx/model_uint8.onnx',
+    bytes: 118_054_630,
+    sha256: 'ee13574a23e4384619a172d4c0c8c6b825528fde30258c56130d5e3efcc9c8f1',
   },
 ] as const satisfies readonly ModelArtifactManifestEntry[]
 

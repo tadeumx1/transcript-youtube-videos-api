@@ -36,7 +36,7 @@ export interface LocalE5TransformersModule {
   pipeline(
     task: 'feature-extraction',
     model: string,
-    options: { dtype: 'int8'; local_files_only: true; revision: string },
+    options: { dtype: 'uint8'; local_files_only: true; revision: string },
   ): Promise<LocalE5Pipeline>
 }
 

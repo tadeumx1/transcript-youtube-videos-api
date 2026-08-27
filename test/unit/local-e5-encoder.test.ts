@@ -78,7 +78,7 @@ describe('LocalE5Encoder', () => {
       'feature-extraction',
       '/app/models/Xenova/multilingual-e5-small',
       {
-        dtype: 'int8',
+        dtype: 'uint8',
         local_files_only: true,
         revision: '761b726dd34fb83930e26aab4e9ac3899aa1fa78',
       },

@@ -447,7 +447,7 @@ the adapter never exports a builder or calls `fastSearch()`.
 
 ```text
 <RAG_DATA_ROOT>/
-└── v1/
+└── v2/                                  # precision-safe embedding policy; v1 is retained on upgrade
     ├── database/                         # LanceDB database URI
     │   └── rag_chunks_v1.lance/
     ├── index-manifest.json              # creating/ready + exact fingerprints/FTS policy
@@ -651,7 +651,8 @@ expected generation no longer matches. Search cannot run between delete intent a
 LanceDB declares optional Transformers 3.0.2. `package.json` adds an override forcing that optional
 edge to the directly pinned 4.2.0, preventing two Transformers/ONNX trees. The application never
 imports the LanceDB embedding registry. A temporary `npm install --ignore-scripts` plus Node 22
-LanceDB query and real offline E5 int8 smoke both passed with this exact override.
+LanceDB query and real offline E5 uint8 smoke both passed with this exact override. The unsigned
+artifact removes the signed-INT8 overflow path that produced CPU-ISA-dependent vectors in CI.
 
 ### Model manifest
 
@@ -663,7 +664,7 @@ The checked-in manifest lists exactly these runtime files:
 | `special_tokens_map.json` | 167 | `d05497f1da52c5e09554c0cd874037a083e1dc1b9cfd48034d1c717f1afc07a7` |
 | `tokenizer.json` | 17,082,730 | `0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39` |
 | `tokenizer_config.json` | 443 | `a1d6bc8734a6f635dc158508bef000f8e2e5a759c7d92f984b2c86e5ff53425b` |
-| `onnx/model_int8.onnx` | 118,054,593 | `4d24e2bc01a447951524466ef533e52944bf48509e6552810bcee1a2711cb02c` |
+| `onnx/model_uint8.onnx` | 118,054,630 | `ee13574a23e4384619a172d4c0c8c6b825528fde30258c56130d5e3efcc9c8f1` |
 
 The Docker build downloads only immutable revision URLs, verifies size/hash, and copies the model to
 `/app/models/Xenova/multilingual-e5-small`. Runtime sets `RAG_MODEL_ROOT=/app/models`,
@@ -822,7 +823,7 @@ real Railway baseline exists. The evaluation performs no network request and nee
 | Delete can race an already embedding worker | New async worker | Deleted content could reappear. | Persistent document generation/delete intent, fixed lock order, revalidation immediately before merge, delete recovery before worker recovery. |
 | Source bundle can expire between read and snapshot | `file-artifact-store.ts` cache-key lock | Accepted queued ingestion could lack source. | Callback retains artifact lock through verified RAG snapshot and queued record publication. |
 | RAG startup failure through Fastify `onReady` | `src/http/app.ts` lifecycle | `/health` and existing routes would never listen. | RAG start absorbs known failure, marks degraded, exposes fixed RAG 503, and retries locally; durable core behavior unchanged. |
-| Lance native + ORT + model image size/RAM | New dependencies; temporary install ~596 MB before pruning | Slow deploy/start or Railway memory pressure. | One Transformers override, CPU/Linux-x64-only runtime pruning, packaged int8 model, one session, batch 8, container smoke and RSS/image report before deploy. |
+| Lance native + ORT + model image size/RAM | New dependencies; temporary install ~596 MB before pruning | Slow deploy/start or Railway memory pressure. | One Transformers override, CPU/Linux-x64-only runtime pruning, packaged uint8 model, one session, batch 8, container smoke and RSS/image report before deploy. |
 | Optional LanceDB Transformers 3.0.2 duplicates 4.2.0 | npm metadata/temporary install | Two ONNX runtimes and ambiguous behavior. | Root override to 4.2.0; never use Lance embedding registry; lockfile/tree assertion and real smoke. |
 | Vulnerable transitive archive/image runtimes | `onnxruntime-node`/Transformers tree; GHSA-xcpc-8h2w-3j85 and GHSA-f88m-g3jw-g9cj | Crafted archives can exhaust memory and inherited libvips flaws affect untrusted image processing. | Exact root security overrides `adm-zip: 0.6.0` and `sharp: 0.35.4`; preserve direct/model pins; prove clean lifecycle install, native imports, audit, and real offline retrieval. |
 | FTS can omit recent rows with `fastSearch` | LanceDB FTS API | Search violates immediate publication. | Encapsulated adapter never exposes/calls it; integration test immediately after merge before optimize. |
@@ -845,7 +846,7 @@ real Railway baseline exists. The evaluation performs no network request and nee
 | Publication | `mergeInsert('chunk_id')` plus document-scoped delete | One transaction inserts target and removes all surplus old chunks. |
 | Concurrency | Document mutex + writer-preferred publication RW lock | Prevents resurrection and keeps vector/FTS on one generation. |
 | Hybrid fusion | Two bounded queries + application RRF k=60 | Enforces candidate cap, finite score, deterministic ties, and evaluation visibility. |
-| Embeddings | Pinned offline multilingual E5 int8 through application adapter | Portuguese retrieval without paid calls or runtime downloads. |
+| Embeddings | Pinned offline multilingual E5 uint8 through application adapter | Portuguese retrieval without paid calls, runtime downloads, or signed-INT8 CPU-ISA variance. |
 | Model/runtime versions | Transformers 4.2.0 override, LanceDB 0.37.1, Arrow 18.1.0 | One dependency tree, explicit schema, and smoke-tested Node 22 compatibility. |
 | Transitive security overrides | adm-zip 0.6.0 and Sharp 0.35.4 | GitHub advisories identify adm-zip 0.6.0 and Sharp 0.35.0+ as patched; exact current overrides remove known production findings without downgrading or changing the frozen direct/model pins. |
 | Chunk offsets | Unicode code points, half-open | Stable public provenance across JS/non-JS consumers without splitting surrogate pairs. |

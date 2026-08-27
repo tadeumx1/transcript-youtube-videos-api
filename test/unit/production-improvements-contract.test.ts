@@ -20,7 +20,7 @@ const expectedDeliveryRows = [
   [
     'IMP-03',
     'durable-transcript-jobs',
-    'JOB-01..07, CACHE-03..07, OPS-02..05',
+    'JOB-01..07, WORK-01..07, STORE-01..08, CACHE-03..07, OPS-02..05',
     '[validation](../durable-transcript-jobs/validation.md)',
     'Verified',
   ],
@@ -110,7 +110,7 @@ describe('production improvement backlog contract', () => {
     expect(traceability).toBeDefined()
     expect(traceability).not.toContain('In Progress')
     expect(tasks).toContain(
-      '**Status**: Verified on 2026-08-27 (T1-T40 complete; independent final PASS)',
+      '**Status**: T1-T41 complete locally; independent final re-verification pending',
     )
     expect(tasks).toContain('Exact-HEAD push run 33099114338 completed successfully')
     expect(tasks).not.toContain('account billing lock')

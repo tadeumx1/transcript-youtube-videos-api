@@ -79,7 +79,7 @@ application subsystem and worker inside the existing service.
 
 - `@lancedb/lancedb@0.37.1` in local embedded mode under `/data/lancedb`.
 - `@huggingface/transformers@4.2.0` with a pinned Transformers.js-compatible
-  `multilingual-e5-small` ONNX int8 model, 384-dimensional normalized vectors, and the required
+  `multilingual-e5-small` ONNX uint8 model, 384-dimensional normalized vectors, and the required
   `query:` / `passage:` prefixes.
 - The exact model revision and every downloaded model file are pinned and SHA-256 verified during
   image build. Runtime model downloads and remote model access are disabled.

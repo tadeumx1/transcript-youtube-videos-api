@@ -108,6 +108,10 @@ describe('local RAG documentation contract', () => {
       'reinicie a única réplica',
       'embedding fingerprint',
       'recusa a migração',
+      'namespace RAG `v2`',
+      'namespace `v1` permanece intacto',
+      'Reenvie explicitamente os jobs-fonte',
+      'não remova `v1` sem backup verificável',
     ]) {
       expect(readme).toContain(phrase)
     }

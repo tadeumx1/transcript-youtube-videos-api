@@ -18,7 +18,7 @@ const repository = 'Fixture/e5-small'
 const revision = '761b726dd34fb83930e26aab4e9ac3899aa1fa78'
 const contents = new Map([
   ['config.json', Buffer.from('{"model":"fixture"}')],
-  ['onnx/model_int8.onnx', Buffer.from('fixture-onnx')],
+  ['onnx/model_uint8.onnx', Buffer.from('fixture-onnx')],
 ])
 const manifest: readonly ModelArtifactManifestEntry[] = [...contents].map(([path, content]) => ({
   path,
@@ -88,8 +88,8 @@ describe('reproducible RAG model fetcher', () => {
     )
     expect(fetchImpl.mock.calls.map(([url]) => String(url)).join('\n')).not.toContain('/main/')
     expect(await readFile(join(result.target, 'config.json'))).toEqual(contents.get('config.json'))
-    expect(await readFile(join(result.target, 'onnx/model_int8.onnx'))).toEqual(
-      contents.get('onnx/model_int8.onnx'),
+    expect(await readFile(join(result.target, 'onnx/model_uint8.onnx'))).toEqual(
+      contents.get('onnx/model_uint8.onnx'),
     )
     expect(await readdir(join(modelRoot, 'Fixture'))).toEqual(['e5-small'])
   })

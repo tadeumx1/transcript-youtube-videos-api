@@ -14,6 +14,8 @@ const RECOGNIZED_LAYOUT = new Map<string, 'directory' | 'file'>([
   ['probe', 'directory'],
 ])
 
+export const RAG_STORAGE_LAYOUT_VERSION = 'v2' as const
+
 export interface RagStoragePaths {
   readonly root: string
   readonly versionRoot: string
@@ -45,7 +47,7 @@ function ingestionShard(versionRoot: string, area: string, ingestionId: string):
 
 export function createRagStoragePaths(configuredRoot: string): RagStoragePaths {
   const root = resolve(configuredRoot)
-  const versionRoot = join(root, 'v1')
+  const versionRoot = join(root, RAG_STORAGE_LAYOUT_VERSION)
   return {
     root,
     versionRoot,

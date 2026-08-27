@@ -12,7 +12,7 @@ discrimination sensor, traceability, and atomic commits.
 ---
 
 **Design**: `.specs/features/rag-lancedb/design.md`
-**Status**: Verified on 2026-08-27 (T1-T40 complete; independent final PASS)
+**Status**: T1-T41 complete locally; independent final re-verification pending
 
 ---
 
@@ -81,7 +81,7 @@ T24 -> T25 -> T26 -> T28 -> T27
 ### Phase 5: Validation round 1 fixes
 
 ```
-T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> T38 -> T39 -> T40 -> independent re-verification
+T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> T38 -> T39 -> T40 -> T41 -> independent re-verification
 ```
 
 ### Sequential batch packing
@@ -91,7 +91,7 @@ T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> T38 -> T39 -> T40
 | 1 | Phase 1 | T1-T9 | One sub-agent, sequential tasks, atomic commits, phase Build gate |
 | 2 | Phase 2 | T10-T18 | One fresh sub-agent after Batch 1, sequential tasks, atomic commits, Full + Offline RAG + Build gates |
 | 3 | Phases 3-4 | T19-T28 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
-| Fix 1 | Phase 5 | T29-T40 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
+| Fix 1 | Phase 5 | T29-T41 | One fresh implementer, sequential atomic fixes from `validation.md` and final CI evidence, then one fresh independent Verifier |
 
 After Batch 3, a fresh independent Verifier must validate every requirement against evidence and may
 not author fixes. The main agent owns any verifier findings, Railway approval/apply/deploy, UAT,
@@ -1475,6 +1475,53 @@ strict types, and build; Offline RAG passed 31/31 with unchanged 12-document/48-
 **Gate**: build
 **Commit**: `test(rag): make fatal recovery timing deterministic`
 
+### T41: Make quantized x64 retrieval portable without lowering quality
+
+**What**: Replace the signed INT8 artifact with the same revision's official unsigned UINT8 artifact,
+version every affected embedding/storage input, and preserve the approved Brazilian automotive
+retrieval thresholds across runner CPU instruction sets without accepting multiple golden outputs or
+lowering a threshold.
+**Where**: `src/infrastructure/rag/local-e5-encoder.ts`
+**Depends on**: T40
+**Reuses**: the immutable local E5 model, embedding fingerprint, versioned RAG namespace, exact
+golden-vector integration, real 48-qrel evaluation, and T34-T37's hermetic Linux container gate.
+**Requirement**: EMB-01, EMB-02, OPS-09, OPS-10, EDGE-07
+
+**Tools**:
+
+- MCP: GitHub read/run evidence only after push
+- Skill: `tlc-spec-driven`, `use-railway`
+- Local: `apply_patch`, Vitest, official ONNX Runtime/Hugging Face primary documentation, Railway CLI
+
+**Done when**:
+
+- [x] The manifest and encoder select exactly the immutable official `model_uint8.onnx` artifact and
+  `uint8` dtype, the policy/fingerprint changes, the exact real golden vector passes, and the previous
+  signed `model_int8.onnx` asset is rejected instead of permitting CPU-dependent outputs.
+- [x] The new embedding policy uses an empty `v2` RAG namespace while preserving `v1` untouched for
+  backup/explicit reingestion, with exact path and operator-documentation contracts.
+- [ ] Unit, real-encoder, real-index/search, three-run evaluation, Full, Offline RAG, dependency
+  audit, production-image network-none smoke, exact-HEAD GitHub CI, and Railway deployment/UAT all
+  pass with unchanged evaluation thresholds and no skipped tests.
+
+**Evidence**: GitHub run 33100284083 supplied the red gate: the same signed INT8 artifact/cache
+produced exact cosine `0.9054603305156161` on a different runner and semantic Recall@5 fell to
+`0.833333`, while local U8S8 produced `0.898167738454254`. Reproducing the failing number with the
+official x64 U8U8 switch closed CPU-ISA-dependent signed overflow as the cause. The immutable UINT8
+artifact (`118054630` bytes; SHA-256
+`ee13574a23e4384619a172d4c0c8c6b825528fde30258c56130d5e3efcc9c8f1`) now yields exact batch-shape goldens
+`0.9059203824964807` and `0.8040528966323546`; no query, RRF, fixture, or threshold changed. Three
+mutation sensors proved that reverting dtype, changing the SHA, or selecting namespace `v1` fails the
+corresponding contract. The focused real-model/evaluation set passed 58/58; two consecutive default-
+parallel Build gates passed 740/740 with lint, strict types, and build; Offline RAG passed 31/31 with
+12 documents/48 qrels, hybrid Recall@5 `0.979167`, MRR@10 `0.888889`, nDCG@10 `0.912200`, and semantic
+Recall@5 `0.958333`; dependency audit and both strict validators returned zero. Exact-HEAD CI,
+production-image smoke, Railway deployment/UAT, and independent verification remain pending.
+
+**Tests**: unit + integration
+**Gate**: container + railway + build
+**Commit**: `fix(rag): make x64 embeddings portable`
+
 ---
 
 ## Requirement-to-Task Traceability
@@ -1484,12 +1531,12 @@ strict types, and build; Offline RAG passed 31/31 with unchanged 12-document/48-
 | ING-01-08 | T10, T11, T13, T17, T18, T20-T22, T40 |
 | VER-01-08 | T2, T8, T13, T15-T18 |
 | CHUNK-01-06 | T2-T3, T6, T17 |
-| EMB-01-04 | T1, T3-T7, T14, T17, T24, T35-T37, T39 |
+| EMB-01-04 | T1, T3-T7, T14, T17, T24, T35-T37, T39, T41 |
 | SEARCH-01-08 | T2-T4, T7, T9, T14-T16, T20, T25 |
 | LIFE-01-06 | T8, T13, T15, T18, T20, T27, T29, T31-T32 |
 | CAP-01-02 | T3, T13, T18, T26 |
-| OPS-01-10 | T1-T5, T12, T14, T16, T18-T40 |
-| EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21, T29, T31 |
+| OPS-01-10 | T1-T5, T12, T14, T16, T18-T41 |
+| EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21, T29, T31, T41 |
 
 ## Phase Execution Map
 
@@ -1526,9 +1573,12 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | T38 | One Railway Volume placement correction | Contract, Build, and drift-free plan evidence | ✅ Granular |
 | T39 | One container quality documentation correction | Documentation contract + Build evidence | ✅ Granular |
 | T40 | One post-fatal integration timing correction | Existing exact integration assertions + repeated Build evidence | ✅ Granular |
+| T41 | One portable embedding/retrieval policy correction | Fingerprint, namespace, documentation, real-model/evaluation, CI, and Railway companions | ✅ Granular |
 
-No task owns more than one production source/config/document deliverable. Test files, snapshots,
-lockfiles, and generated evidence are atomic companions required to verify that deliverable.
+No task owns more than one independently releasable outcome. T41's artifact/dtype policy,
+fingerprint, namespace, and operator note are inseparable compatibility companions: omitting any one
+either mixes incompatible stored vectors, restores CPU-dependent output, or makes the upgrade unsafe.
+Test files, snapshots, lockfiles, and generated evidence remain atomic companions.
 
 ## Diagram-Definition Cross-Check
 
@@ -1545,7 +1595,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T28 | T26 | same immediately prior arrow | ✅ Match |
 | T27 | T28 | same immediately prior arrow | ✅ Match |
 | T29 | T27 | prior phase completion | ✅ Match |
-| T30-T40 | immediately prior task T29-T39 | same immediately prior arrow | ✅ Match |
+| T30-T41 | immediately prior task T29-T40 | same immediately prior arrow | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -1562,6 +1612,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T32 | Cross-store lifecycle boundary | integration | integration | ✅ OK |
 | T34-T37 | CI/container workflow | unit + integration | matching static/clean/remote evidence | ✅ OK |
 | T40 | Coordinator/worker HTTP recovery timing | integration | integration | ✅ OK |
+| T41 | Encoder/storage compatibility policy | unit + integration | unit + integration | ✅ OK |
 
 There are no deferred tests and no `Tests: none` tasks. Every task must add its required tests before
 its commit, run the named gate, compare the pre/post test count, and record evidence in this file.
@@ -1574,7 +1625,7 @@ its commit, run the named gate, compare the pre/post test count, and record evid
 - Skills: `tlc-spec-driven` for every task; `use-railway` for T24 deployment validation and T26-T27.
 - MCPs: none are required or assumed.
 - Agents: three completed sequential execution-batch sub-agents, validation round 1's fresh read-only
-  Verifier, then one fresh sequential fix implementer and one fresh independent re-Verifier. No
+  Verifier, sequential fix implementers, and fresh independent re-Verifiers after T40 and T41. No
   parallel writes.
 
 Railway `apply` and deployment are intentionally outside a worker task: after the exact final plan is

@@ -39,8 +39,8 @@ describe('real offline multilingual E5 encoder', () => {
     expect([query.length, relevant?.length, unrelated?.length]).toEqual([384, 384, 384])
     expect(dot(query, query)).toBeCloseTo(1, 5)
     expect(dot(relevant as Float32Array, relevant as Float32Array)).toBeCloseTo(1, 5)
-    expect(dot(query, relevant as Float32Array)).toBeCloseTo(0.8981677, 4)
-    expect(dot(query, unrelated as Float32Array)).toBeCloseTo(0.8044794, 4)
+    expect(dot(query, relevant as Float32Array)).toBeCloseTo(0.9059204, 4)
+    expect(dot(query, unrelated as Float32Array)).toBeCloseTo(0.8040529, 4)
     expect(dot(query, relevant as Float32Array)).toBeGreaterThan(
       dot(query, unrelated as Float32Array),
     )

@@ -13,7 +13,7 @@ the table is the authoritative completion index.
 | ----------- | ---------------- | --------------------- | -------------------- | ------ |
 | IMP-01 | production-runtime-hardening | HARD-01..06 | [validation](../production-runtime-hardening/validation.md) | Verified |
 | IMP-02 | production-runtime-hardening | PROC-01..07 | [validation](../production-runtime-hardening/validation.md) | Verified |
-| IMP-03 | durable-transcript-jobs | JOB-01..07, CACHE-03..07, OPS-02..05 | [validation](../durable-transcript-jobs/validation.md) | Verified |
+| IMP-03 | durable-transcript-jobs | JOB-01..07, WORK-01..07, STORE-01..08, CACHE-03..07, OPS-02..05 | [validation](../durable-transcript-jobs/validation.md) | Verified |
 | IMP-04 | durable-transcript-jobs | CACHE-01..08 | [validation](../durable-transcript-jobs/validation.md) | Verified |
 | IMP-05 | production-runtime-hardening | PROV-01..07 | [validation](../production-runtime-hardening/validation.md) | Verified |
 | IMP-06 | production-runtime-hardening | OBS-01..07 | [validation](../production-runtime-hardening/validation.md) | Verified |

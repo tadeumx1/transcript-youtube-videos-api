@@ -43,7 +43,7 @@ provenance, and remains safe on the approved single Railway Volume.
 | --------------------- | -------------- | --------- | ---------- |
 | Deployment boundary | RAG subsystem and worker inside the existing Fastify service | A separate Railway service cannot share the approved Volume. | yes, approved with spec on 2026-08-26 |
 | Vector store | Embedded LanceDB under `RAG_DATA_ROOT`, production `/data/lancedb` | User approved Volume/LanceDB and no new provider spend. | yes, approved before and with spec |
-| Embeddings | Pinned multilingual E5-compatible 384-dimension ONNX int8 model, packaged in image and offline at runtime | Supports Portuguese locally and makes output versionable/reproducible. | yes, approved with spec on 2026-08-26 |
+| Embeddings | Pinned multilingual E5-compatible 384-dimension ONNX uint8 model, packaged in image and offline at runtime | Supports Portuguese locally, avoids signed-INT8 CPU-ISA variance, and makes output versionable/reproducible. | yes; original choice approved on 2026-08-26 and portability correction approved under T41 on 2026-08-27 |
 | Retrieval | Hybrid cosine vector + Portuguese BM25 combined by reciprocal-rank fusion | Covers semantic paraphrases and exact automotive codes/units. | yes, approved with spec on 2026-08-26 |
 | Ingestion API | Explicit async ingestion by completed durable `jobId` | Bounds work and guarantees no retranscription. | yes, approved with spec on 2026-08-26 |
 | Document lifecycle | Persist until explicit DELETE or atomic replacement | An automatic short TTL would erase a long-lived knowledge base. | yes, approved with spec on 2026-08-26 |
@@ -268,8 +268,8 @@ the production Linux image.
 | CHUNK-04 | Deterministic chunks/embeddings | T2, T6, T15 | Complete |
 | CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | Complete |
 | CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | Complete |
-| EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | Complete |
-| EMB-02 | Deterministic chunks/embeddings | T5, T14, T24 | Complete |
+| EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24, T41 | Complete |
+| EMB-02 | Deterministic chunks/embeddings | T5, T14, T24, T41 | Complete |
 | EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | Complete |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | Complete |
 | SEARCH-01 | Hybrid retrieval | T16, T20 | Complete |
@@ -296,15 +296,15 @@ the production Linux image.
 | OPS-06 | Production/evaluation | T2, T12, T16, T19-T21, T27 | Complete |
 | OPS-07 | Production/evaluation | T23 | Complete |
 | OPS-08 | Production/evaluation | T25 | Complete |
-| OPS-09 | Production/evaluation | T25 | Complete |
-| OPS-10 | Production/evaluation | T1, T5, T24-T25, T28, T27 | Complete |
+| OPS-09 | Production/evaluation | T25, T41 | Complete |
+| OPS-10 | Production/evaluation | T1, T5, T24-T25, T28, T27, T41 | Complete |
 | EDGE-01 | Authentication order | T20-T21 | Complete |
 | EDGE-02 | Source-expiry race | T10-T11, T18 | Complete |
 | EDGE-03 | Pre-publication crash | T13, T17 | Complete |
 | EDGE-04 | Post-publication crash | T13, T17 | Complete |
 | EDGE-05 | Smaller replacement | T15, T17 | Complete |
 | EDGE-06 | Empty/whitespace source | T6, T17 | Complete |
-| EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | Complete |
+| EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15, T41 | Complete |
 | EDGE-08 | Maintenance visibility | T8, T15, T17 | Complete |
 | EDGE-09 | Post-admission capacity | T13, T17-T18 | Complete |
 | EDGE-10 | Coarse/missing timestamps | T6, T15-T17 | Complete |
