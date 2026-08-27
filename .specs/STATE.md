@@ -83,13 +83,22 @@
 - **Date**: 2026-08-26
 - **Status**: active
 
+### AD-011
+
+- **Decision**: RAG materializations use one application-owned embedded LanceDB active-chunk table plus atomic file-backed ingestion/recovery state, one local pinned multilingual encoder, and a single writer inside the existing Volume-backed service.
+- **Reason**: One per-document Lance transaction gives old-or-new searchable visibility without a paid remote vector/embedding provider or a cross-service store.
+- **Trade-off**: The service remains single-replica, the container carries native/model assets, provenance is repeated per chunk, and local storage needs explicit capacity/backup/compaction operations.
+- **Scope**: RAG ingestion, retrieval, deletion, model/index evolution, and Railway topology.
+- **Date**: 2026-08-26
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Specify / discovery next
-- **Completed**: durable-transcript-jobs verified 46/46 with 436 tests and 24/24 mutants killed; Railway plan remains read-only at 1 add, 2 change, 0 destroy
-- **In-progress** (file:line): none; durable validation/status closure pending commit
-- **Next step**: load confirmed lessons, inspect the IMP-10 backlog and current transcript artifact contracts, then draft the RAG/LanceDB spec for approval
-- **Blockers**: none for local planning; Railway apply/deploy remain explicitly pending separate approval
-- **Uncommitted files**: durable Round 3 validation and verified status updates pending commit
+- **Phase / Task**: Execute / Batch 1, T1-T9
+- **Completed**: spec, Approach A, Design, VER-03 correction, 27 tasks, coverage matrix, tools, three sequential execution batches, and independent Verifier explicitly approved
+- **In-progress** (file:line): `.specs/features/rag-lancedb/tasks.md:99`
+- **Next step**: commit the approved planning baseline, then dispatch the first sequential worker for T1-T9 with per-task gates and atomic commits
+- **Blockers**: none for local Execute; Railway apply/deploy remain separately approval-gated after a fresh exact plan
+- **Uncommitted files**: approved rag-lancedb context/spec/Design/tasks, AD-011, and Execute handoff
 - **Branch**: `main`
