@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Execute / validation round 1 fix loop; T34 locally implemented, remote Done-When evidence pending
-- **Completed**: T1-T33 plus four local T34 outcomes; T34 clean checkout and current gates passed 738/738 Full, 31/31 warning-free Offline RAG, Build, actionlint/static contracts, and audit 0
+- **Phase / Task**: Validate / round 3 complete; T34's external OPS-10 evidence remains pending
+- **Completed**: T1-T33 and T35-T39; T34's local/static and clean-checkout outcomes; public GitHub repository through `e8c45c3`; drift-free Railway IaC with the `sfo` Volume; deployment `15d6b998-29db-458f-a3cf-ba849cfd4f21` in `SUCCESS`; production health, readiness, auth, transcript JSON/PDF, restart persistence, durable job, RAG ingest/search/delete UAT; Full 738/738, Offline RAG 31/31, audit 0, and round-3 sensor 8/8
 - **In-progress** (file:line): none
-- **Next step**: request independent re-verification; the owner must separately resolve the GitHub account/repository startup failure and obtain real green source/audit/rag-smoke/production-image jobs before the final T34 checkbox can close
-- **Blockers**: GitHub Actions has repository/account-level `startup_failure` with zero jobs and needs owner-side resolution for real container evidence; Railway apply/deploy remains separately approval-gated after the verified fix commit
-- **Uncommitted files**: T34 CI workflow, static contract, local/evidence-zero task record, and this Handoff pending atomic commit
+- **Next step**: the owner resolves the GitHub billing/account lock, then reruns `.github/workflows/ci.yml` at `e8c45c3` or a later content-equivalent commit; after real green Source checks and Container build, close T34/OPS-10, rerun final evidence review, and execute `validate_state.py`
+- **Blockers**: exact-HEAD run 33094772986 started zero Source steps with `The job was not started because your account is locked due to a billing issue.` and skipped Container build; this owner-side billing state is the sole remaining evidence gap
+- **Uncommitted files**: round-3 `validation.md` and this Handoff pending one atomic documentation commit
 - **Branch**: `main`

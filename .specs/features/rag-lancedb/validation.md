@@ -1,251 +1,265 @@
-# RAG-native LanceDB Ingestion Validation — Round 2
+# RAG-native LanceDB Ingestion Validation — Round 3 (final loop)
 
 **Verdict:** FAIL
 **Date:** 2026-08-27
-**Spec:** `.specs/features/rag-lancedb/spec.md`
-**Full diff:** `4143edc21cad4e02f771753c222f4d3aab4e4734..ac78b4f1e48bf2e8fd0126a71ede580625d6e62f`
-**Fix diff:** `e63bb3d4e6fd160f00323d22a3b1c963a17aa203..ac78b4f1e48bf2e8fd0126a71ede580625d6e62f`
-**Verifier:** `/root/rag_reverifier_2`, independent fresh verifier (author != verifier)
+**Spec:** .specs/features/rag-lancedb/spec.md
+**HEAD:** e8c45c35348b17310ed45dbb7a5169a0751c809c
+**Full diff:** 4143edc21cad4e02f771753c222f4d3aab4e4734..e8c45c35348b17310ed45dbb7a5169a0751c809c
+**Round-3 diff:** ac78b4f1e48bf2e8fd0126a71ede580625d6e62f..e8c45c35348b17310ed45dbb7a5169a0751c809c
+**T39 delta:** 4da731e1cb37f4ec4ca6c7ada5b75299d6ed26c9..e8c45c35348b17310ed45dbb7a5169a0751c809c
+**Verifier:** /root/rag_reverifier_3, independent verifier (author != verifier)
 
 The implementation matches **51 of 52** acceptance criteria and **10 of 10** explicit edge cases.
-T29-T33 close the four local/code gaps from round 1 (LIFE-04, OPS-04, OPS-05, and EDGE-09), and
-T34 closes the clean-checkout model/projection/local-workflow gaps. The remaining conjunct is
-OPS-10's real Linux container/CI execution. Supplied run 33045709364 ended `startup_failure`,
-`path=BuildFailed`, with zero jobs; it is therefore evidence-zero, not a pass.
+T35-T38 close the Railway parser, CI runtime-smoke, obsolete-stage, and Volume-region fixes. T39
+closes the stale README/contract gap found during this round. The sole remaining failure is OPS-10:
+GitHub run 33094772986 targets the exact HEAD, but Source checks started zero steps because the
+account is locked for billing; Container build was skipped. The real Linux runtime-network-denied
+smoke therefore remains evidence-zero.
 
 ## Verification Boundary and Tree Integrity
 
-- Baseline porcelain before verifier work was empty; HEAD was exactly `ac78b4f1e48...` on `main`.
-- The complete `spec.md`, `design.md`, `tasks.md`, round-1 `validation.md`, full 77-file diff, and
-  six-commit fix loop were read. The full diff is 21,872 insertions/307 deletions; the fix diff is
-  1,891 insertions/200 deletions across 20 files.
-- No stash, reset, code/test/spec/task/STATE edit, commit, push, deploy, setting change, credential
-  use, or external mutation was performed. Detached temporary worktrees held all baseline,
-  clean-checkout, and mutation work and were removed/pruned.
-- The only intended real-tree change is this round-2 report. Scratch diffs were empty before their
-  removal. A first clean-checkout command was invalidated because it ran from the real cwd; it was
-  not counted, and the entire proof was repeated from a verified detached checkout.
+- The real-tree porcelain baseline was empty at 4da731e before gates and sensor work.
+- The complete spec, context, design, tasks, prior validation, full feature diff, and T35-T39 delta
+  were independently read. The full diff before this report is 77 files, 21,960 insertions, and 314
+  deletions. T39 changes only README.md, its unit contract, and tasks.md.
+- No stash, reset, code/test/task/spec/STATE edit, push, deploy, apply, restart, or remote mutation
+  was performed by this verifier.
+- Eight mutations ran one at a time in detached worktree /tmp/rag-r3-sensor.DEO6nU. Its tracked diff
+  was empty before removal; the worktree was removed and pruned. Real-tree porcelain matched the
+  original empty baseline afterward.
+- After T39, the focused documentation gate and the complete Build gate passed with empty porcelain.
+  The only intended real-tree change after this report is validation.md.
 
 ## Task Completion and Structural Gates
 
 | Check | Exact result |
 | --- | --- |
-| Tasks | 34 headings; 155 Done-When boxes checked; exactly one unchecked box at `tasks.md:1229`. |
-| T29-T33 | Complete: fatal/readiness/restart, real telemetry/privacy, maintenance threshold/lock/reset, source-lifecycle independence, and explicit score projection are executable and discriminating. |
-| T34 | **PARTIAL**: clean-checkout source/offline gates and workflow contracts pass; its deliberate remote-job checkbox remains unchecked because no GitHub job ran. |
-| Atomic commits | T29 `7bf2b78`, T30 `67aaa34`, T31 `3b45d5a`, T32 `c3b32c0`, T33 `83b4a9a`, T34 `ac78b4f`; all 38 subjects in the full range passed `check_commit.py`. |
-| Spec validator | `validate_spec.py --strict rag-lancedb`: 0 errors, 0 warnings. |
-| Tasks validator | `validate_tasks.py --strict rag-lancedb`: 0 errors, 0 warnings. |
-| Diff hygiene | Full-range `git diff --check` passes after this report replaces round 1. |
+| Tasks | 39 task headings; 170 Done-When boxes checked; exactly one unchecked box at tasks.md:1229. |
+| T1-T33 | Complete with executable local evidence retained from the feature implementation. |
+| T34 | **PARTIAL**: hermetic clean-checkout/static behavior is covered, but its explicit green GitHub source/audit/runtime-smoke/production-image checkbox remains unchecked. |
+| T35-T38 | Complete: Railway Docker parsing, single production-image runtime smoke contract, obsolete stage removal, and sfo Volume declaration. |
+| T39 | Complete: README.md:536-537 builds the production image once and runs the packaged smoke with Docker network disabled; test/unit/rag-readme-contract.test.ts:103-115 requires the exact command and rejects the removed target. |
+| Atomic commits | All 44 subjects in the full range passed check_commit.py; T39 is e8c45c3 docs(rag): document runtime container smoke. |
+| Spec validator | validate_spec.py --strict rag-lancedb: 0 errors, 0 warnings. |
+| Tasks validator | validate_tasks.py --strict rag-lancedb: 0 errors, 0 warnings. |
+| Diff hygiene | git diff --check passed for the feature and T39 ranges. |
 
 ## Spec-Anchored Acceptance Criteria
 
-Every row cites an executable assertion and its observed outcome. Adjacent static or mocked
-evidence is not substituted for a missing required conjunct.
+Each PASS cites an assertion of the spec-defined value or state. Static/mock evidence is not used to
+replace the missing OPS-10 remote execution conjunct.
 
 ### Ingestion
 
-| AC | `file:line` + assertion/outcome | Result |
+| AC | file:line + asserted outcome | Result |
 | --- | --- | --- |
-| ING-01 | `test/integration/rag-routes.test.ts:164-181` — `statusCode === 202`, exact `Location`, `Retry-After === "2"`, exact eight-field resource, and relative links pass for miss/joined/hit. | PASS |
-| ING-02 | `test/unit/file-rag-repository.test.ts:125-153` — `events` equals snapshot writes/publication before record persistence, and restart `readSnapshot(...)` equals the verified source. | PASS |
-| ING-03 | `test/unit/rag-ingestion-worker.test.ts:397-429` — recovered work reads the persisted snapshot and batches locally; `test/integration/local-e5-encoder.test.ts:37` asserts `fetchSpy` was never called. | PASS |
-| ING-04 | `test/integration/rag-routes.test.ts:185-200` — all retained states return exact 200 resources; failed output contains only the allowlisted code/message. | PASS |
-| ING-05 | `test/unit/durable-job-coordinator.test.ts:540-590` — queued/processing, failed, unknown, expired, and storage failure reject with the exact reused `JOB_*` code and zero downstream creation calls. | PASS |
-| ING-06 | `test/unit/rag-ingestion-coordinator.test.ts:733-762` — unknown rejects exact 404 `RAG_INGESTION_NOT_FOUND`; retained tombstone rejects exact 410 `RAG_INGESTION_EXPIRED`. | PASS |
-| ING-07 | `test/unit/rag-ingestion-coordinator.test.ts:637-654` — event indexes assert reconcile/recover/start precede admission readiness and the single worker is ready to claim FIFO work. | PASS |
-| ING-08 | `test/unit/rag-ingestion-worker.test.ts:377-394` — stop at a batch boundary leaves queued recoverable work/snapshot and restart completes; `test/unit/rag-ingestion-coordinator.test.ts:780-798` asserts readiness/admission close before worker shutdown. | PASS |
+| ING-01 | test/integration/rag-routes.test.ts:164-181 asserts 202, exact Location, Retry-After 2, exact eight fields, and relative links. | PASS |
+| ING-02 | test/unit/file-rag-repository.test.ts:125-153 asserts snapshot sync/publication precedes queued-record persistence and restart reads the verified snapshot. | PASS |
+| ING-03 | test/unit/rag-ingestion-worker.test.ts:397-429 asserts recovery reads only the snapshot and batches locally; test/integration/local-e5-encoder.test.ts:37 asserts zero fetch. | PASS |
+| ING-04 | test/integration/rag-routes.test.ts:185-200 asserts all retained states and the fixed allowlisted failed resource. | PASS |
+| ING-05 | test/unit/durable-job-coordinator.test.ts:540-590 asserts every exact JOB_* mapping and zero downstream creation for ineligible sources. | PASS |
+| ING-06 | test/unit/rag-ingestion-coordinator.test.ts:733-762 asserts exact 404 RAG_INGESTION_NOT_FOUND and 410 RAG_INGESTION_EXPIRED. | PASS |
+| ING-07 | test/unit/rag-ingestion-coordinator.test.ts:637-654 asserts reconcile/recover/single-worker start precede readiness. | PASS |
+| ING-08 | test/unit/rag-ingestion-worker.test.ts:377-394 and test/unit/rag-ingestion-coordinator.test.ts:780-798 assert readiness/claims stop first and batch-boundary work remains recoverable. | PASS |
 
 ### Versioning and publication
 
-| AC | `file:line` + assertion/outcome | Result |
+| AC | file:line + asserted outcome | Result |
 | --- | --- | --- |
-| VER-01 | `test/unit/rag-domain.test.ts:77-151` — independently recomputed SHA-256 identities match, frozen inputs alter only the intended identity, and no preimage appears. | PASS |
-| VER-02 | `test/unit/rag-ingestion-coordinator.test.ts:443-472` — concurrent submissions return one miss plus joined responses with identical IDs, one record, one worker notification, and one metric record per outcome. | PASS |
-| VER-03 | `test/unit/rag-ingestion-coordinator.test.ts:497-535` — retained/recreated hits are exact completed resources and snapshot, capacity, worker, and index-mutation calls remain zero. | PASS |
-| VER-04 | `test/unit/rag-ingestion-coordinator.test.ts:539-558` — an in-flight different version rejects exact 409 `RAG_DOCUMENT_UPDATE_IN_PROGRESS` with `Retry-After: 2` before new work. | PASS |
-| VER-05 | `test/unit/rag-ingestion-worker.test.ts:432-479` — prepublication failures keep replace calls at zero and preserve the prior version; `test/integration/rag-search-service.test.ts:132-179` observes complete old then complete new results. | PASS |
-| VER-06 | `test/integration/lancedb-rag-index.test.ts:242-289` — smaller/larger replacements expose exact new counts while unrelated rows remain; concurrent search assertions see only all-old or all-new versions. | PASS |
-| VER-07 | `test/unit/rag-ingestion-worker.test.ts:432-479` — snapshot/chunk/embed/validation/publication failures emit fixed reasons, keep staging invisible, and preserve the prior active version. | PASS |
-| VER-08 | `test/unit/rag-ingestion-worker.test.ts:397-429,483-502` — restart recovers local snapshots, aborts safely, and postcommit state avoids duplicate vectors; `test/unit/file-rag-repository.test.ts:266-290` deterministically repairs duplicate ownership. | PASS |
+| VER-01 | test/unit/rag-domain.test.ts:77-151 independently recomputes canonical SHA-256 identities and asserts every frozen version input. | PASS |
+| VER-02 | test/unit/rag-ingestion-coordinator.test.ts:443-472 asserts one miss, joined callers with identical IDs, one record, and one execution notification. | PASS |
+| VER-03 | test/unit/rag-ingestion-coordinator.test.ts:497-535 asserts retained/fresh completed hits preserve identities with zero snapshot/capacity/worker/index mutation. | PASS |
+| VER-04 | test/unit/rag-ingestion-coordinator.test.ts:539-558 asserts exact 409 and Retry-After 2 before work. | PASS |
+| VER-05 | test/unit/rag-ingestion-worker.test.ts:432-479 and test/integration/rag-search-service.test.ts:132-179 assert prior version preservation and complete old-then-new visibility. | PASS |
+| VER-06 | test/integration/lancedb-rag-index.test.ts:242-289 asserts exact replacement counts, surplus removal, unrelated preservation, and no mixed version. | PASS |
+| VER-07 | test/unit/rag-ingestion-worker.test.ts:432-479 asserts fixed failure reasons, invisible staging, and unchanged prior version at every prepublication boundary. | PASS |
+| VER-08 | test/unit/rag-ingestion-worker.test.ts:397-429,483-502 and test/unit/file-rag-repository.test.ts:266-290 assert deterministic local recovery, postcommit completion, and duplicate-owner collapse. | PASS |
 
 ### Chunking and embeddings
 
-| AC | `file:line` + assertion/outcome | Result |
+| AC | file:line + asserted outcome | Result |
 | --- | --- | --- |
-| CHUNK-01 | `test/unit/rag-chunker.test.ts:104-152` — two runs are equal and concatenated ordered core spans equal the exact source string byte-for-byte. | PASS |
-| CHUNK-02 | `test/unit/rag-chunker.test.ts:196-229` — preferred segment boundaries and deterministic Unicode-safe splits preserve order/content; no split starts on a combining mark. | PASS |
-| CHUNK-03 | `test/unit/rag-chunker.test.ts:155-193` — actual tokenizer counts assert passage input `<= 320`, prior overlap `<= 48`, and 319/320/321 plus 511/512/513 fixtures preserve source without truncation. | PASS |
-| CHUNK-04 | `test/unit/rag-chunker.test.ts:104-152` — exact ID/checksum, ordinal/count, core/overlap offsets, segment range, nullable seconds, and original precision are asserted. | PASS |
-| CHUNK-05 | `test/unit/rag-chunker.test.ts:123-149` — the exact provenance object contains every source/job/artifact/cache/checksum and schema/chunk/model field. | PASS |
-| CHUNK-06 | `test/unit/rag-chunker.test.ts:267-287` — exact limits pass, +1 code point/+1 chunk reject `RAG_SOURCE_TOO_LARGE`, and publication remains zero. | PASS |
-| EMB-01 | `test/unit/model-manifest.test.ts:90-113,149-226` — repository/revision/dtype/384/prefixes and all artifact hashes are exact; missing/extra/wrong-SHA artifacts fail closed. | PASS |
-| EMB-02 | `test/unit/local-e5-encoder.test.ts:61-104` — local-only flags, exact query/passage prefixes, mean pooling, and normalization pass; `test/integration/local-e5-encoder.test.ts:22-45` asserts real encoding with zero fetch. | PASS |
-| EMB-03 | `test/integration/local-e5-encoder.test.ts:39-45` — real vectors have length 384, finite unit norm, and relevant similarity; unit tests map bad dimension/nonfinite/norm to fixed model failure. | PASS |
-| EMB-04 | `test/unit/rag-ingestion-worker.test.ts:397-429` asserts batch sizes never exceed 8; `test/unit/rag-encoder-scheduler.test.ts:60-109` asserts one permit and bounded search/ingestion yield order. | PASS |
+| CHUNK-01 | test/unit/rag-chunker.test.ts:104-152 asserts two equal runs and exact ordered core reconstruction. | PASS |
+| CHUNK-02 | test/unit/rag-chunker.test.ts:196-229 asserts preferred segment boundaries and deterministic Unicode-safe splitting without loss/reorder. | PASS |
+| CHUNK-03 | test/unit/rag-chunker.test.ts:155-193 asserts passage inputs <=320 tokens, overlap <=48, and exact 319/320/321 plus 511/512/513 behavior. | PASS |
+| CHUNK-04 | test/unit/rag-chunker.test.ts:104-152 asserts ID/checksum, ordinal/count, every half-open range, nullable seconds, and source precision. | PASS |
+| CHUNK-05 | test/unit/rag-chunker.test.ts:123-149 asserts the complete source/job/artifact/cache/checksum/schema/chunk/model provenance payload. | PASS |
+| CHUNK-06 | test/unit/rag-chunker.test.ts:267-287 asserts both exact limits pass, +1 rejects RAG_SOURCE_TOO_LARGE, and no publication occurs. | PASS |
+| EMB-01 | test/unit/model-manifest.test.ts:90-113,149-226 asserts exact model/revision/dtype/dimension and five artifact hashes; missing/extra/mismatch fail closed. | PASS |
+| EMB-02 | test/unit/local-e5-encoder.test.ts:61-104 asserts local-only flags, exact prefixes, mean pooling, and normalization; real integration asserts zero fetch. | PASS |
+| EMB-03 | test/integration/local-e5-encoder.test.ts:39-45 asserts 384 finite unit-norm values; unit tests map dimension/value/norm faults to fixed failure. | PASS |
+| EMB-04 | test/unit/rag-ingestion-worker.test.ts:397-429 and test/unit/rag-encoder-scheduler.test.ts:60-109 assert batch <=8, one permit, and bounded inter-batch fairness. | PASS |
 
 ### Search
 
-| AC | `file:line` + assertion/outcome | Result |
+| AC | file:line + asserted outcome | Result |
 | --- | --- | --- |
-| SEARCH-01 | `test/integration/rag-routes.test.ts:262-280` and `test/unit/rag-search-service.test.ts:122-140` — strict query/topK/document ID bounds reject before admission, encoder, or index access. | PASS |
-| SEARCH-02 | `test/unit/rag-search-service.test.ts:161-200` — exact RRF terms/order and backend limits cap fusion at 100; real Lance vector and FTS paths return active finite candidates. | PASS |
-| SEARCH-03 | `test/unit/rag-search-service.test.ts:161-200` — exact document/version/ordinal tie order and repeated results are equal; `test/integration/rag-search-service.test.ts:94-129` asserts identical IDs/order over three real runs. | PASS |
-| SEARCH-04 | `test/unit/rag-search-service.test.ts:202-255` — exact public result/provenance and finite score pass while serialized query, vector, paths, publication, and overlap internals are absent. | PASS |
-| SEARCH-05 | `test/integration/rag-search-service.test.ts:94-129` — empty index, empty filter, and unknown/deleted filter each equal `{results: []}`. | PASS |
-| SEARCH-06 | `test/unit/rag-search-service.test.ts:143-158` — fifth concurrent search rejects exact 429/`RAG_SEARCH_CAPACITY_EXCEEDED`/Retry-After 5 before encoder/index calls. | PASS |
-| SEARCH-07 | `test/integration/lancedb-rag-index.test.ts:414-445` — fingerprint/dimension mismatch rejects fixed storage failure and rows remain intact; model faults map to fixed 503 with no rebuild/fallback. | PASS |
-| SEARCH-08 | `test/unit/rag-encoder-scheduler.test.ts:60-109` — exact scheduling bounds four admitted searches between ingestion batches without interrupting an in-flight batch or duplicating the encoder. | PASS |
+| SEARCH-01 | test/integration/rag-routes.test.ts:262-280 and test/unit/rag-search-service.test.ts:122-140 assert strict query/topK/filter bounds before encoder/index access. | PASS |
+| SEARCH-02 | test/unit/rag-search-service.test.ts:161-200 asserts exact 1/(60+rank), 50+50 backend limits, <=100 unique fusion, and <=topK active results. | PASS |
+| SEARCH-03 | test/unit/rag-search-service.test.ts:161-200 and test/integration/rag-search-service.test.ts:94-129 assert exact tie order and identical IDs/order over three runs. | PASS |
+| SEARCH-04 | test/unit/rag-search-service.test.ts:202-255 asserts exact finite public result/provenance while query, vector, path, publication, and overlap internals are absent. | PASS |
+| SEARCH-05 | test/integration/rag-search-service.test.ts:94-129 asserts empty index/filter and unknown/deleted filter all equal results: []. | PASS |
+| SEARCH-06 | test/unit/rag-search-service.test.ts:143-158 asserts fifth search rejects exact 429/code/Retry-After 5 before encoder/index. | PASS |
+| SEARCH-07 | test/integration/lancedb-rag-index.test.ts:414-445 asserts fingerprint/dimension mismatch fails fixed and preserves rows; model faults do not rebuild/fallback. | PASS |
+| SEARCH-08 | test/unit/rag-encoder-scheduler.test.ts:60-109 asserts the four-search fairness bound without interrupting an in-flight batch or duplicating the encoder. | PASS |
 
 ### Lifecycle and capacity
 
-| AC | `file:line` + assertion/outcome | Result |
+| AC | file:line + asserted outcome | Result |
 | --- | --- | --- |
-| LIFE-01 | `test/integration/rag-routes.test.ts:223-234` asserts exact 204/empty body; `test/integration/lancedb-rag-index.test.ts:373-385` asserts immediate absence from inspect/vector/FTS/hybrid paths. | PASS |
-| LIFE-02 | `test/unit/rag-ingestion-coordinator.test.ts:606-633` — unknown/repeated delete rejects exact 404 and does not access source; `test/integration/rag-routes.test.ts:237-258` rejects malformed IDs before coordinator access. | PASS |
-| LIFE-03 | `test/integration/rag-search-service.test.ts:132-209` — read/write generation fencing yields one serializable all-old/all-new/deleted outcome; `test/unit/rag-ingestion-worker.test.ts:542-558` prevents resurrection. | PASS |
-| LIFE-04 | `test/integration/rag-lifecycle-independence.test.ts:258-305` hashes and compares the real source record, transcript JSON, and PDF before/after ingest, replace, and delete; `:312-336` expires/sweeps the source, asserts durable `JOB_EXPIRED`, and asserts post-expiry RAG search equals pre-expiry text plus provenance with zero provider/network calls. | PASS |
-| LIFE-05 | `test/unit/rag-readme-contract.test.ts:116-128` requires logical deletion, fragments/compaction/backups/retention language and prohibits an immediate secure-erase promise. | PASS |
-| LIFE-06 | `test/unit/file-rag-repository.test.ts:240-263` — terminal metadata becomes a content-free tombstone at 24h and is removed after the next exact 24h, independently of completed documents. | PASS |
-| CAP-01 | `test/unit/file-rag-repository.test.ts:293-307` asserts 134,217,728 bytes passes and one byte less fails; `test/unit/rag-ingestion-coordinator.test.ts:559-581` rejects exact 507 before snapshot/work while non-miss operations remain callable. | PASS |
-| CAP-02 | `test/unit/rag-ingestion-coordinator.test.ts:539-581` — 25 queued rejects exact 429/Retry-After 30 before record creation; joined/hit paths bypass capacity and return 202. | PASS |
+| LIFE-01 | test/integration/rag-routes.test.ts:223-234 asserts exact 204/empty body; test/integration/lancedb-rag-index.test.ts:373-385 asserts immediate vector/FTS/hybrid absence. | PASS |
+| LIFE-02 | test/unit/rag-ingestion-coordinator.test.ts:606-633 and test/integration/rag-routes.test.ts:237-258 assert exact 404 and malformed-ID rejection before storage. | PASS |
+| LIFE-03 | test/integration/rag-search-service.test.ts:132-209 and test/unit/rag-ingestion-worker.test.ts:542-558 assert one serializable old/new/deleted outcome and no resurrection. | PASS |
+| LIFE-04 | test/integration/rag-lifecycle-independence.test.ts:258-336 hashes real source job/transcript/PDF bytes, proves replace/delete do not mutate them, and proves exact post-expiry RAG text/provenance with zero provider calls. | PASS |
+| LIFE-05 | test/unit/rag-readme-contract.test.ts:118-130 requires immediate logical removal plus fragment/backup/compaction/retention language and rejects secure-erase claims. | PASS |
+| LIFE-06 | test/unit/file-rag-repository.test.ts:240-263 asserts terminal metadata -> content-free 24h tombstone -> removal independently of documents. | PASS |
+| CAP-01 | test/unit/file-rag-repository.test.ts:293-307 and test/unit/rag-ingestion-coordinator.test.ts:559-581 assert the exact 134,217,728-byte boundary and 507 before miss work while non-miss operations remain callable. | PASS |
+| CAP-02 | test/unit/rag-ingestion-coordinator.test.ts:539-581 asserts 25 queued rejects exact 429/Retry-After 30 before record creation while joined/hit bypass it. | PASS |
 
 ### Operations and evidence
 
-| AC | `file:line` + assertion/outcome | Result |
+| AC | file:line + asserted outcome | Result |
 | --- | --- | --- |
-| OPS-01 | `test/unit/config.test.ts:70-132` — exact defaults and min/max bounds pass; invalid values expose only the environment variable name. | PASS |
-| OPS-02 | `test/unit/railway-contract.test.ts:21-82` — exact one replica, 1024 MB `/data` Volume, `/data/lancedb`, packaged model, preserved secrets, and no prohibited resources/secrets; `test/unit/container-contract.test.ts:128-182` checks pinned model/runtime assets. | PASS |
-| OPS-03 | `test/integration/application-composition.test.ts:169-203` and `test/unit/rag-ingestion-coordinator.test.ts:637-654` assert storage/index/model warmup, reconciliation, and both workers precede `/ready === 200`; `/health` stays public/network-free. | PASS |
-| OPS-04 | `test/unit/rag-ingestion-coordinator.test.ts:691-730` injects a real post-start worker fatal and asserts `isReady === false`, all four RAG content operations reject fixed 503s, recovery creates/restarts once, and stop prevents resurrection; `test/integration/rag-http-app.test.ts:349-419` asserts exact `/ready` 503, `/health` 200, transcript/job continuity, sanitized RAG failures, and recovery to 200. | PASS |
-| OPS-05 | `test/integration/application-composition.test.ts:499-539` performs real miss/join/process/search/delete and asserts exact production metric deltas plus active docs/chunks returning to zero; `test/unit/rag-ingestion-coordinator.test.ts:355-439` asserts reconcile/delete/sweep outcomes and failures; `test/unit/runtime-metrics.test.ts:217-246` asserts malicious dynamic values render only as `unknown` with no content/ID/path leakage. | PASS |
-| OPS-06 | `test/unit/rag-domain.test.ts:369-385` asserts fixed code/status/message and no nested cause; `test/unit/runtime-metrics.test.ts:217-246` proves credential/URL/path/query/content strings cannot enter labels. | PASS |
-| OPS-07 | `test/integration/openapi.test.ts:125-167,383-475` — OpenAPI `1.2.0`, all four RAG operations, strict schemas, Bearer security, headers/statuses/error codes, and legacy route parity are exact. | PASS |
-| OPS-08 | `test/evaluation/rag-retrieval.test.ts:792-811` — fixture/version, 12 unique documents, 48 qrels, required category counts, hashes, and ranges are exact. | PASS |
-| OPS-09 | `test/evaluation/rag-retrieval.test.ts:823-863` — three runs assert all thresholds, deterministic IDs/ranks, 8/8 disambiguation top-1, and zero network. Observed hybrid Recall@5/MRR@10/nDCG@10: `0.9791666667 / 0.8833333333 / 0.9074850862`. | PASS |
-| OPS-10 | `.github/workflows/ci.yml:27-50` now performs `npm ci`, verified model restore/fetch/cache, check, offline, and audit; `:52-74` defines `rag-smoke` and production builds. `test/unit/ci-contract.test.ts:26-106` asserts fetch is unconditional and both `push:false` builds exist. A verified clean checkout passes 738/31/audit. However supplied GitHub run 33045709364 is `startup_failure`, `path=BuildFailed`, zero jobs, and no local container runtime exists. The required real Linux job/image executions remain evidence-zero. | **FAIL** |
+| OPS-01 | test/unit/config.test.ts:70-132 asserts all exact defaults and inclusive bounds with variable-name-only failures. | PASS |
+| OPS-02 | test/unit/railway-contract.test.ts:21-82 asserts one replica, 1024 MB sfo Volume at /data, exact roots, packaged model, preserved secrets, and no prohibited resource/secret. Railway plan independently returned exit 0 and no drift. | PASS |
+| OPS-03 | test/integration/application-composition.test.ts:169-203 and test/unit/rag-ingestion-coordinator.test.ts:637-654 assert storage/index/model warmup, reconciliation, and workers before readiness; production health/ready both returned 200. | PASS |
+| OPS-04 | test/unit/rag-ingestion-coordinator.test.ts:691-730 and test/integration/rag-http-app.test.ts:349-419 assert fatal degradation, exact ready/RAG 503, health/transcript continuity, one recovery, and no post-stop resurrection. | PASS |
+| OPS-05 | test/integration/application-composition.test.ts:499-539, test/unit/rag-ingestion-coordinator.test.ts:355-439, and test/unit/runtime-metrics.test.ts:217-246 assert real operation deltas, all maintenance outcomes, exact 23 families, and no dynamic-content leakage. | PASS |
+| OPS-06 | test/unit/rag-domain.test.ts:369-385 and test/unit/runtime-metrics.test.ts:217-246 assert fixed code/status/message and absence of causes, credentials, URLs, paths, IDs, query, and content. | PASS |
+| OPS-07 | test/integration/openapi.test.ts:125-167,383-475 asserts OpenAPI 1.2.0, all four strict Bearer operations, every header/status/error, and legacy parity. | PASS |
+| OPS-08 | test/evaluation/rag-retrieval.test.ts:792-811 asserts fixture/version, 12 unique documents, 48 ranged qrels, and exact category counts. | PASS |
+| OPS-09 | test/evaluation/rag-retrieval.test.ts:823-863 asserts every global/subgroup threshold, 8/8 disambiguation top-1, identical three-run IDs/ranks, and zero network. Observed hybrid Recall@5/MRR@10/nDCG@10 = 0.9791667/0.8833333/0.9074851. | PASS |
+| OPS-10 | .github/workflows/ci.yml:27-72 statically includes check, offline, audit, one loaded production image, and docker run --network none; test/unit/ci-contract.test.ts:93-119 and test/unit/container-contract.test.ts:145-188 assert it. README.md:536-564 now matches. However exact-HEAD GitHub run 33094772986 executed zero Source steps because of the billing lock and skipped Container build. No real GitHub/Linux runtime smoke ran. | **FAIL** |
 
-**Acceptance status:** **51/52 matched**; one evidence gap (OPS-10); zero spec-precision gaps.
+**Acceptance status:** **51/52 matched**; one external execution gap; zero spec-precision gaps.
 
 ## Explicit Edge Cases
 
-| Edge | `file:line` + assertion/outcome | Result |
+| Edge | file:line + asserted outcome | Result |
 | --- | --- | --- |
-| EDGE-01 | `test/integration/rag-routes.test.ts:283-305` — malformed unauthenticated requests return exact 401/`WWW-Authenticate: Bearer` and every RAG dependency remains uncalled. | PASS |
-| EDGE-02 | `test/integration/artifact-snapshot-lock.test.ts:32-65` — expiry serializes behind the source lock and yields one complete verified snapshot or exact post-expiry error, never a dangling reference. | PASS |
-| EDGE-03 | `test/unit/rag-ingestion-worker.test.ts:659-688` — precommit/mixed crash states keep staging invisible and deterministically retry or fail without retranscription. | PASS |
-| EDGE-04 | `test/unit/rag-ingestion-worker.test.ts:561-586,635-656` — postcommit crash recovery verifies the active version, performs zero re-embedding/republication, and completes metadata. | PASS |
-| EDGE-05 | `test/integration/lancedb-rag-index.test.ts:242-289` — smaller replacement exposes only the exact new chunk count in all modes while unrelated rows remain. | PASS |
-| EDGE-06 | `test/unit/rag-chunker.test.ts:233-251` — whitespace remains covered by exact offsets, usable output is attached deterministically, and all-empty input rejects `RAG_SOURCE_UNAVAILABLE` without empty/NaN vectors. | PASS |
-| EDGE-07 | `test/integration/lancedb-rag-index.test.ts:414-445` — stored fingerprint/dimension mismatch fails closed and restoration reveals unchanged prior rows without rebuild. | PASS |
-| EDGE-08 | `test/unit/rag-ingestion-worker.test.ts:285-374` — optimize triggers exactly at 20 successful mutations/100,000 rows, serializes with competing mutation, and resets only on success; `test/integration/lancedb-rag-index.test.ts:522-586` asserts safe options and unchanged active results. | PASS |
-| EDGE-09 | `test/unit/rag-ingestion-worker.test.ts:505-539,589-632` injects fatal snapshot failure and post-admission ENOSPC, asserting fixed failure, prior version/staging cleanup, readiness degradation, and recovery; `test/unit/rag-ingestion-coordinator.test.ts:585-602` asserts exact 503/admission false/no record; `test/integration/rag-http-app.test.ts:349-419` proves exact runtime readiness/content isolation. | PASS |
-| EDGE-10 | `test/unit/rag-chunker.test.ts:209-229` — missing/coarse Muse timestamps remain nullable/chunk-precision exactly, without interpolated segment precision. | PASS |
+| EDGE-01 | test/integration/rag-routes.test.ts:283-305 asserts malformed unauthenticated requests return 401/Bearer before every dependency. | PASS |
+| EDGE-02 | test/integration/artifact-snapshot-lock.test.ts:32-65 asserts expiry yields one complete snapshot or exact post-expiry error, never a dangling reference. | PASS |
+| EDGE-03 | test/unit/rag-ingestion-worker.test.ts:659-688 asserts precommit/mixed crash staging stays invisible and retries/fails without retranscription. | PASS |
+| EDGE-04 | test/unit/rag-ingestion-worker.test.ts:561-586,635-656 asserts exact active state completes metadata with zero re-embedding/republication. | PASS |
+| EDGE-05 | test/integration/lancedb-rag-index.test.ts:242-289 asserts a smaller replacement removes every surplus old row while preserving unrelated rows. | PASS |
+| EDGE-06 | test/unit/rag-chunker.test.ts:233-251 asserts whitespace coverage/attachment and all-empty RAG_SOURCE_UNAVAILABLE without empty/NaN vectors. | PASS |
+| EDGE-07 | test/integration/lancedb-rag-index.test.ts:414-445 asserts fingerprint/dimension mismatch fails closed and leaves prior rows unchanged. | PASS |
+| EDGE-08 | test/unit/rag-ingestion-worker.test.ts:285-374 and test/integration/lancedb-rag-index.test.ts:522-586 assert exact optimize thresholds, write serialization, success-only reset, safe options, and preserved active results. | PASS |
+| EDGE-09 | test/unit/rag-ingestion-worker.test.ts:505-539,589-632, test/unit/rag-ingestion-coordinator.test.ts:585-602, and test/integration/rag-http-app.test.ts:349-419 assert post-admission storage failure, cleanup/prior-version preservation, readiness failure, and recovery. | PASS |
+| EDGE-10 | test/unit/rag-chunker.test.ts:209-229 asserts nullable/coarse Muse timestamps remain exact without interpolation. | PASS |
 
-**Edge status:** **10/10 matched**; zero gaps.
+**Edge status:** **10/10 matched**.
 
-## Round-1 Gap Closure
+## T35-T39 Closure
 
-| Prior gap | Fix/evidence | Round-2 result |
-| --- | --- | --- |
-| LIFE-04 | T32 adds real durable source/RAG lifecycle independence through replace/delete/source expiry (`rag-lifecycle-independence.test.ts:258-336`). | CLOSED |
-| OPS-04 | T29 makes fatal degradation coordinator-owned and restartable, with composed HTTP isolation (`rag-ingestion-coordinator.test.ts:691-730`; `rag-http-app.test.ts:349-419`). | CLOSED |
-| OPS-05 | T30 wires real operation telemetry/privacy; T31 wires thresholded serialized optimize with success-only reset (`application-composition.test.ts:499-539`; `rag-ingestion-worker.test.ts:285-374`). | CLOSED |
-| EDGE-09 | T29 adds post-admission/fatal storage degradation, cleanup, prior-version preservation, readiness failure, and recovery evidence (`rag-ingestion-worker.test.ts:505-539,589-632`). | CLOSED |
-| LanceDB warnings | T33 explicitly selects `_distance`/`_score`; stable vector/FTS projection tests pass and the offline gate emits zero auto-projection warnings (`lancedb-rag-index.test.ts:293-369`). | CLOSED |
-| Clean-checkout model | T34 adds manifest-keyed cache plus unconditional verified fetch; a fresh detached checkout passes all local gates (`ci-contract.test.ts:26-106`). | LOCALLY CLOSED |
-| Real CI/container | T34's remote checkbox remains unchecked; run 33045709364 created zero jobs. | OPEN / EVIDENCE-ZERO |
+| Task | Independent outcome |
+| --- | --- |
+| T35 | Dockerfile contains no Railway-unsupported RUN --network=none; focused contracts pass; Railway built the resulting image successfully. |
+| T36 | CI builds/loads exactly one production image and runs its packaged smoke with docker run --network none; 14 focused CI/container tests passed. Remote execution remains pending under T34/OPS-10. |
+| T37 | Dockerfile has no rag-smoke build stage, still packages rag-container-smoke.mjs, and retains the final runtime/non-root/data/model contracts. |
+| T38 | .railway/railway.ts:23 declares region sfo and sizeMB 1024; the contract passed 2/2 and the read-only production plan has zero drift. |
+| T39 | The pre-fix stale README command was confirmed. HEAD now documents one production build plus runtime-isolated smoke; 5/5 focused tests and the full 738-test gate pass. |
 
 ## Gate Check and Test Integrity
 
 | Gate | Exact result |
 | --- | --- |
-| `npm run check` | Exit 0: Biome 103 files; strict TypeScript; Vitest **58 files / 738 tests passed**; production build passed. |
-| `npm run test:rag:offline` | Exit 0: **7 files / 31 tests passed**; 12 documents/48 qrels; determinism and runtime network denial passed. |
-| Baseline `4143edc` | Detached checkout: **30 files / 436 tests passed**. Current delta: **+302** tests. |
-| Skips | **0** real skips; no `.skip`, `.todo`, `.only`, `xit`, `xtest`, or `xdescribe` syntax. Filter-nonselected tests during sensor runs were not gate skips. |
-| LanceDB warnings | Exact auto-projection warning count: **0**. Explicit `_distance` and `_score` projection is exercised in three stable vector and FTS runs. |
-| Dependency audit | `npm audit --omit=dev`: exit 0, **0 vulnerabilities**. |
-| Strict validators | Spec 0 errors/0 warnings; tasks 0 errors/0 warnings; all 38 commit subjects valid. |
-| Workflow syntax | Official actionlint 1.7.7 Linux x64 binary was checksum-verified in temp storage; `.github/workflows/ci.yml` exited 0. Temp files were removed. |
-| Clean checkout | Fresh detached `ac78b4f` with no `.models`: `npm ci`; build; first verified model fetch; second reuse+verify; check **738/738**; offline **31/31**; audit 0. Scratch removed. |
-| Container runtime | Docker, Podman, Buildah, Nerdctl, and Finch are unavailable locally; no local image execution is claimed. |
-
-### Remote CI/container evidence
-
-- The supplied authoritative outcome for GitHub run **33045709364** is `startup_failure`,
-  `path=BuildFailed`, with **zero jobs**. No source, audit, `rag-smoke`, or production-image command
-  executed in that run.
-- An unauthenticated read-only GitHub API request returned 404 for the private repository; no
-  credential was used. This does not replace the supplied outcome and produces no new execution
-  proof.
-- Workflow text, actionlint, static container contracts, and a clean local checkout establish local
-  hermeticity only. Under evidence-or-zero, they cannot prove an actual Linux container build/run.
+| npm run check at HEAD | Exit 0: Biome 103 files; strict TypeScript; Vitest **58 files / 738 tests passed**; production build passed. |
+| npm run test:rag:offline | Exit 0: **7 files / 31 tests passed**; 12 documents/48 qrels; deterministic retrieval and runtime network denial passed; no score auto-projection warning appeared. |
+| T39 focused | test/unit/rag-readme-contract.test.ts: **5/5 passed**. |
+| Baseline | 4143edc detached baseline had 436 tests. Current delta is **+302**, with no count regression. |
+| Skips | **0** real skips; no skip/todo/only/xit/xtest/xdescribe syntax found. |
+| Dependency audit | npm audit --omit=dev: **0 vulnerabilities**. |
+| Structural | Spec 0/0; tasks 0/0; 44/44 commit subjects valid. |
+| Local container runtime | Docker, Podman, Buildah, Nerdctl, and Finch are unavailable; no local image execution is claimed. |
 
 ## P0 Discrimination Sensor
 
-Ten mutations were applied one at a time in an isolated detached worktree with dependency/model
-symlinks, then restored before the next. Every mutant died on an outcome assertion; scratch tracked
-diff was empty before removal, the worktree was pruned, and no stash was used.
+Eight behavior-level mutations were injected one at a time in the isolated detached worktree. All
+were killed by outcome assertions. No stash was used.
 
-| ID | Risk / mutation | Exact killing assertion/outcome | Result |
+| ID | Risk / mutation | Killing assertion | Result |
 | --- | --- | --- | --- |
-| M01 | Worker fatal no longer calls coordinator degradation | `rag-ingestion-coordinator.test.ts:700`: expected `isReady === false`, received true. | KILLED |
-| M02 | Fatal leaves worker marked started, blocking restart | `rag-ingestion-coordinator.test.ts:724`: expected `worker.start` twice, received once. | KILLED |
-| M03 | Remove real submission metric recording | `application-composition.test.ts:501`: expected the miss metric sample; it was absent. | KILLED |
-| M04 | Metrics allowlist leaks raw dynamic values | `runtime-metrics.test.ts:232`: expected `unknown` and no malicious content; raw content rendered. | KILLED |
-| M05 | Optimize threshold changes from 20 to 21 | `rag-ingestion-worker.test.ts:295`: expected one optimize call, received zero. | KILLED |
-| M06 | Optimize drops the publication write lock | `rag-ingestion-worker.test.ts:365`: expected competing mutation not to enter; it entered. | KILLED |
-| M07 | Optimize failure resets retry counters | `rag-ingestion-worker.test.ts:334`: expected retry/two calls, received one. | KILLED |
-| M08 | Lifecycle test receives corrupted source expiry | `rag-lifecycle-independence.test.ts:276`: expected exact source expiry, received epoch time. | KILLED |
-| M09 | Vector query omits explicit `_distance` projection | LanceDB emitted three auto-projection warnings and `lancedb-rag-index.test.ts:357` expected `_distance`; mutant failed. | KILLED |
-| M10 | CI model fetch runs only on cache hit | `ci-contract.test.ts:90`: expected fetch step `if` to be undefined/unconditional; condition was present. | KILLED |
+| M01 | Chunk model-token limit 320 -> 321 | test/unit/rag-chunker.test.ts:164 expected <=320 and received 321; four cases failed. | KILLED |
+| M02 | RRF constant 60 -> 61 | test/unit/rag-search-service.test.ts:216 exact result/score mismatched; two cases failed. | KILLED |
+| M03 | Metrics allowlist returned raw untrusted value | test/unit/runtime-metrics.test.ts:232 expected unknown and content absence; two privacy cases failed. | KILLED |
+| M04 | Optimize mutation threshold 20 -> 21 | test/unit/rag-ingestion-worker.test.ts:386 expected a waiting writer at the exact threshold; four cases failed. | KILLED |
+| M05 | Removed Docker --network none from CI smoke | test/unit/ci-contract.test.ts and test/unit/container-contract.test.ts:181 rejected the command; two cases failed. | KILLED |
+| M06 | Railway Volume region sfo -> iad | test/unit/railway-contract.test.ts:28 exact service/Volume conjunction failed. | KILLED |
+| M07 | Removed packaged smoke script from Dockerfile | test/unit/container-contract.test.ts:148 required the exact COPY; one case failed. | KILLED |
+| M08 | Removed auth hook from RAG search | test/integration/rag-routes.test.ts:299 expected 401/Bearer and received validation 400; one case failed. | KILLED |
 
-**Sensor:** **10 injected, 10 killed, 0 survived — PASS.**
+**Sensor:** **8 injected, 8 killed, 0 survived — PASS.**
 
-## Coding-Principle Review
+## GitHub CI Evidence
+
+- Public GitHub API confirms run **33094772986** is the push run for exact HEAD
+  e8c45c35348b17310ed45dbb7a5169a0751c809c and concluded failure.
+- Source checks job **98596680486** has zero steps. Its sole failure annotation is:
+  “The job was not started because your account is locked due to a billing issue.”
+- Container build job **98596699046** is skipped with zero steps.
+- Therefore source, audit, production-image build, model verification, and runtime network-denied
+  smoke are not remote PASS evidence. Static/local green evidence cannot substitute for this
+  conjunct.
+
+## Railway Production and UAT Evidence
+
+Read-only CLI/API checks were scoped to the linked production project/service. No secret value was
+printed; variable output was filtered to the two non-secret storage roots.
+
+| Check | Observed result |
+| --- | --- |
+| Deployment | Active deployment 15d6b998-29db-458f-a3cf-ba849cfd4f21 is terminal SUCCESS with image sha256:de8e36042b8e3b5141ccf46ab9ce300d4a8836c04223f436da2d85a75a5ad5b8 and Volume mount /data. Its implementation tree is 4da731e; current HEAD changes docs/test/tasks only. |
+| Topology / roots | One running replica in sfo; 1024 MB READY Volume; DATA_ROOT=/data/transcripts and RAG_DATA_ROOT=/data/lancedb. |
+| IaC drift | railway config plan --detailed-exit-code returned 0: configuration already up to date. |
+| Health/auth probe | health 200, ready 200; unauthenticated metrics/RAG/transcripts 401; authenticated metrics 200 with 23 families; authenticated RAG search 200; authenticated invalid transcript 400. |
+| Restart/Volume | Railway logs show /data remounted, shutdown/start, then health and readiness 200. The operator recorded canary SHA 7d57ba...a56 unchanged after restart and removed it; because cleanup was complete, the historical hash is UAT evidence rather than a currently reproducible file. |
+| Real transcript UAT | Operator captured transcript 200 (7,403 bytes; youtube_captions; pt-BR; isGenerated false; caption precision; 60 segments) and PDF 200/application-pdf (Content-Disposition, 3,070 bytes, %PDF- magic). HTTP logs independently corroborate both 200 route calls without content logging. |
+| Real job/RAG UAT | POST job 202 hit -> completed; ingestion 202 miss -> completed; filtered search 200 with two results from the document; DELETE 204; post-delete search 200 with zero results. Railway HTTP logs corroborate the 202/200/204/200 route sequence. |
+
+Railway proves the production image can build, start, persist data, and serve the API. It does **not**
+replace OPS-10's required GitHub/Linux runtime smoke under explicit network denial.
+
+## Code Quality
 
 | Principle | Status | Evidence |
 | --- | --- | --- |
-| Surgical scope / no regression | PASS | Full and fix diffs stay within approved RAG/API/config/IaC/docs/tests/spec artifacts; 738 current tests and 31 offline tests pass. |
-| Behavioral contracts | PASS | Strict schemas, fixed errors/labels, publication/lifecycle locks, recovery, and privacy are asserted at domain, filesystem, LanceDB, composition, HTTP, and evaluation layers. |
-| Test integrity | PASS | +302 tests from the 436 baseline, zero real skips, 10/10 mutants killed, and no behavioral assertion weakening found. |
-| Atomic/task discipline | PARTIAL | T29-T33 are complete and conventional; T34 is intentionally partial until a real remote run executes. |
-| Runtime truthfulness | FAIL | Static/local workflow evidence is green, but real GitHub/Linux image execution is evidence-zero. |
+| Surgical scope | PASS | T35-T39 touch only their approved Docker/CI/IaC/docs contracts and task evidence; T39 has no runtime diff. |
+| Spec-anchored outcomes | PASS | 51 PASS criteria cite exact values/states; OPS-10 is not promoted from static evidence. |
+| Test integrity | PASS | 738 tests, +302 from baseline, zero skips, 8/8 mutants killed, no weakened behavioral assertion found. |
+| Payload/conjunction rule | PASS | Route, provenance, metrics, Railway Volume, CI command, and T39 documentation checks assert complete conjunctions. |
+| Runtime truthfulness | FAIL | Exact-HEAD GitHub jobs did not execute. |
 
 ## Ranked Gap and External Fix Plan
 
-### 1. Release blocker / P1 — OPS-10 real CI and container execution
+### 1. Release blocker / P1 — OPS-10 exact-HEAD GitHub/Linux execution
 
-**Gap:** the workflow is locally hermetic and statically valid, but the only supplied current run
-failed before job creation. No source gate, dependency audit, `rag-smoke`, or production image build
-ran on GitHub/Linux. OPS-10 is conjunctive, so the AC and T34 cannot be complete.
+**Gap:** the workflow and documentation are now internally consistent and all local/static gates are
+green. GitHub prevented Source checks from starting because of an account billing lock, then skipped
+Container build. Consequently the required source/audit/production-image/runtime-network-denied
+execution remains evidence-zero. T34's final checkbox stays open.
 
 **External fix plan:**
 
-1. The repository/account owner diagnoses and resolves the GitHub Actions startup failure without
-   weakening or bypassing the workflow.
-2. Rerun `.github/workflows/ci.yml` at `ac78b4f` or a later content-equivalent commit and retain a
-   run where jobs actually start.
-3. Preserve green logs/artifacts for `npm run check` (738 or later non-regressed count),
-   `npm run test:rag:offline` (31 or later), `npm audit --omit=dev`, `rag-smoke` build/run, and the
-   production image build, including model verification and runtime network denial where specified.
-4. A fresh independent verifier checks those actual job/container outcomes, closes OPS-10 and the
-   final T34 box, and only then runs traceability/state closing gates.
+1. The account owner resolves the GitHub billing/account lock without weakening the workflow.
+2. Rerun ci.yml at e8c45c3 or a later content-equivalent commit.
+3. Retain a run where Source checks executes and passes check 738 or later, offline RAG 31 or later,
+   and audit 0; then Container build must build/load the production image and pass the packaged
+   rag-container-smoke.mjs under docker run --network none.
+4. A final evidence review closes OPS-10 and T34's remaining checkbox.
 
 ## Closing Gate
 
-**Overall:** NOT READY solely because one required external execution conjunct is evidence-zero.
+**Overall:** NOT READY solely because OPS-10's external GitHub/Linux execution did not start.
 
-- ACs: **51/52 matched**; failure: OPS-10.
-- Edge cases: **10/10 matched**.
-- Local gate: **738 passed, 0 failed, 0 skipped**; baseline 436; delta **+302**.
-- Offline RAG gate: **31 passed, 0 failed, 0 skipped**; auto-projection warnings **0**.
-- Audit: **0 vulnerabilities**. Sensor: **10/10 killed**.
-- T29-T33: complete. T34: partial, one remote-execution checkbox deliberately pending.
-- Real GitHub/container execution: **evidence-zero**; run 33045709364 was
-  `startup_failure`/`BuildFailed` with zero jobs.
+- Acceptance criteria: **51/52 matched**; only OPS-10 fails.
+- Explicit edge cases: **10/10 matched**.
+- Local current-HEAD gate: **738 passed, 0 failed, 0 skipped**.
+- Offline RAG: **31 passed, 0 failed, 0 skipped**; audit: **0 vulnerabilities**.
+- Sensor: **8/8 killed**.
+- Railway deployment/runtime/UAT: operationally green, with the limitations stated above.
+- Tasks: T1-T33 and T35-T39 complete; T34 partial by one intentionally unchecked remote checkbox.
 
-Because the verdict is FAIL, `validate_state.py` was intentionally not run. The verifier did not
-modify `spec.md`, `tasks.md`, `STATE.md`, implementation, tests, or lessons; the main agent may
-distill a lesson only if this round provides a new reusable signal.
+Because the verdict is FAIL, validate_state.py was intentionally not run. No lesson artifact was
+mutated: the only remaining signal is the already-known external GitHub billing/startup blocker, and
+this verifier was authorized to rewrite validation.md only.
