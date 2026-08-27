@@ -267,17 +267,17 @@ the production Linux image.
 | CHUNK-03 | Deterministic chunks/embeddings | Specify | Proposed |
 | CHUNK-04 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
 | CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
-| CHUNK-06 | Deterministic chunks/embeddings | Specify | Proposed |
+| CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | In Progress |
 | EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | In Progress |
 | EMB-02 | Deterministic chunks/embeddings | Specify | Proposed |
 | EMB-03 | Deterministic chunks/embeddings | Specify | Proposed |
-| EMB-04 | Deterministic chunks/embeddings | Specify | Proposed |
+| EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
 | SEARCH-01 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-02 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-03 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-04 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-05 | Hybrid retrieval | Specify | Proposed |
-| SEARCH-06 | Hybrid retrieval | Specify | Proposed |
+| SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | In Progress |
 | SEARCH-07 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-08 | Hybrid retrieval | Specify | Proposed |
 | LIFE-01 | Delete/operate safely | Specify | Proposed |
@@ -286,9 +286,9 @@ the production Linux image.
 | LIFE-04 | Delete/operate safely | Specify | Proposed |
 | LIFE-05 | Delete/operate safely | Specify | Proposed |
 | LIFE-06 | Delete/operate safely | Specify | Proposed |
-| CAP-01 | Delete/operate safely | Specify | Proposed |
-| CAP-02 | Delete/operate safely | Specify | Proposed |
-| OPS-01 | Production/evaluation | Specify | Proposed |
+| CAP-01 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
+| CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
+| OPS-01 | Production/evaluation | T3, T27 | In Progress |
 | OPS-02 | Production/evaluation | Specify | Proposed |
 | OPS-03 | Production/evaluation | Specify | Proposed |
 | OPS-04 | Production/evaluation | Specify | Proposed |

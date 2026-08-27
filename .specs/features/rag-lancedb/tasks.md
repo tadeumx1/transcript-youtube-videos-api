@@ -155,7 +155,7 @@ revision-guarded transitions, fixed failure maps, and search/request/result valu
 **Gate**: quick
 **Commit**: `feat(rag): define durable retrieval domain`
 
-### T3: Parse bounded RAG configuration
+### T3: Parse bounded RAG configuration ✅
 
 **What**: Add every approved RAG environment setting with its documented default, strict numeric or
 path bound, and sanitized variable-name-only validation error.
@@ -172,11 +172,13 @@ path bound, and sanitized variable-name-only validation error.
 
 **Done when**:
 
-- [ ] All eleven RAG variables from Design have exact defaults and inclusive min/max checks.
-- [ ] Path settings reject empty values without disclosing resolved host paths.
-- [ ] Min-1, min, max, max+1, malformed, unset, and secret-redaction cases are table-tested.
-- [ ] Existing non-RAG configuration behavior remains unchanged.
-- [ ] Quick gate passes without reducing the pre-task test count.
+- [x] All twelve RAG variables from Design have exact defaults and inclusive min/max checks.
+- [x] Path settings reject empty values without disclosing resolved host paths.
+- [x] Min-1, min, max, max+1, malformed, unset, and secret-redaction cases are table-tested.
+- [x] Existing non-RAG configuration behavior remains unchanged.
+- [x] Quick gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit` passed 412 tests (377 pre-task); 35 added config cases table-cover all twelve defaults, both path rules, every integer min/max and adjacent invalid boundary, malformed secret redaction, and unchanged legacy settings.
 
 **Tests**: unit
 **Gate**: quick

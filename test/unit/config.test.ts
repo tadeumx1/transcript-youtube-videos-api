@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest'
 
 import { loadConfig } from '../../src/config.js'
 
+const RAG_INTEGER_SETTINGS = [
+  ['MAX_QUEUED_RAG_INGESTIONS', 'maxQueuedRagIngestions', 25, 1, 1_000],
+  ['MAX_CONCURRENT_RAG_SEARCHES', 'maxConcurrentRagSearches', 4, 1, 32],
+  ['RAG_SEARCH_RETRY_AFTER_SECONDS', 'ragSearchRetryAfterSeconds', 5, 1, 3_600],
+  ['FAILED_RAG_INGESTION_TTL_SECONDS', 'failedRagIngestionTtlSeconds', 86_400, 60, 604_800],
+  ['RAG_INGESTION_TOMBSTONE_TTL_SECONDS', 'ragIngestionTombstoneTtlSeconds', 86_400, 60, 604_800],
+  ['RAG_SWEEP_INTERVAL_MS', 'ragSweepIntervalMs', 60_000, 1_000, 3_600_000],
+  ['RAG_MAX_SOURCE_CODE_POINTS', 'ragMaxSourceCodePoints', 5_000_000, 10_000, 20_000_000],
+  ['RAG_MAX_CHUNKS_PER_DOCUMENT', 'ragMaxChunksPerDocument', 5_000, 1, 20_000],
+  ['RAG_EMBEDDING_BATCH_SIZE', 'ragEmbeddingBatchSize', 8, 1, 8],
+  ['RAG_MIN_FREE_BYTES', 'ragMinFreeBytes', 134_217_728, 16_777_216, 536_870_912],
+] as const
+
 describe('loadConfig', () => {
   it('loads and trims OPENCODE_API_KEY for the Muse fallback', () => {
     expect(
@@ -53,6 +66,73 @@ describe('loadConfig', () => {
       storageSweepIntervalMs: 60_000,
     })
   })
+
+  it('uses every local RAG default when variables are missing', () => {
+    expect(loadConfig({})).toMatchObject({
+      ragDataRoot: '.data/lancedb',
+      ragModelRoot: '.models',
+      maxQueuedRagIngestions: 25,
+      maxConcurrentRagSearches: 4,
+      ragSearchRetryAfterSeconds: 5,
+      failedRagIngestionTtlSeconds: 86_400,
+      ragIngestionTombstoneTtlSeconds: 86_400,
+      ragSweepIntervalMs: 60_000,
+      ragMaxSourceCodePoints: 5_000_000,
+      ragMaxChunksPerDocument: 5_000,
+      ragEmbeddingBatchSize: 8,
+      ragMinFreeBytes: 134_217_728,
+    })
+  })
+
+  it.each([
+    ['RAG_DATA_ROOT', 'ragDataRoot', '  /data/lancedb  ', '/data/lancedb'],
+    ['RAG_MODEL_ROOT', 'ragModelRoot', '  /app/models  ', '/app/models'],
+  ] as const)(
+    'accepts and trims the non-empty %s path',
+    (environmentName, configName, raw, expected) => {
+      expect(loadConfig({ [environmentName]: raw })[configName]).toBe(expected)
+    },
+  )
+
+  it.each(['RAG_DATA_ROOT', 'RAG_MODEL_ROOT'] as const)(
+    'rejects an empty %s with only its fixed path rule',
+    (environmentName) => {
+      for (const rawValue of ['', '   ']) {
+        expect(() => loadConfig({ [environmentName]: rawValue })).toThrowError(
+          `${environmentName} must be a non-empty path`,
+        )
+      }
+    },
+  )
+
+  it.each(RAG_INTEGER_SETTINGS)(
+    'uses the exact unset default for %s',
+    (_environmentName, configName, defaultValue) => {
+      expect(loadConfig({})[configName]).toBe(defaultValue)
+    },
+  )
+
+  it.each(RAG_INTEGER_SETTINGS)(
+    'accepts the inclusive minimum and maximum for %s',
+    (environmentName, configName, _defaultValue, minimum, maximum) => {
+      expect(loadConfig({ [environmentName]: String(minimum) })[configName]).toBe(minimum)
+      expect(loadConfig({ [environmentName]: String(maximum) })[configName]).toBe(maximum)
+    },
+  )
+
+  it.each(RAG_INTEGER_SETTINGS)(
+    'rejects min-1, max+1, and malformed %s without echoing input',
+    (environmentName, _configName, _defaultValue, minimum, maximum) => {
+      for (const rawValue of [String(minimum - 1), String(maximum + 1), 'sk-secret-value']) {
+        expect(() => loadConfig({ [environmentName]: rawValue })).toThrowError(
+          `${environmentName} must be an integer between ${minimum} and ${maximum}`,
+        )
+        if (rawValue === 'sk-secret-value') {
+          expect(() => loadConfig({ [environmentName]: rawValue })).not.toThrowError(rawValue)
+        }
+      }
+    },
+  )
 
   it.each([
     ['data/transcripts', 'data/transcripts'],
