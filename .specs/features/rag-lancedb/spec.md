@@ -252,16 +252,16 @@ the production Linux image.
 | ING-04 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
 | ING-05 | Submit verified transcript | T10-T11, T18, T20 | In Progress |
 | ING-06 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
-| ING-07 | Submit verified transcript | Specify | Proposed |
+| ING-07 | Submit verified transcript | T13, T17-T18, T21-T22 | In Progress |
 | ING-08 | Submit verified transcript | T7, T9, T17-T18, T21-T22 | In Progress |
 | VER-01 | Idempotent atomic versions | T2, T13, T18 | In Progress |
-| VER-02 | Idempotent atomic versions | Specify | Proposed |
-| VER-03 | Idempotent atomic versions | Specify | Proposed |
-| VER-04 | Idempotent atomic versions | Specify | Proposed |
+| VER-02 | Idempotent atomic versions | T13, T18 | In Progress |
+| VER-03 | Idempotent atomic versions | T13, T18 | In Progress |
+| VER-04 | Idempotent atomic versions | T13, T18, T20 | In Progress |
 | VER-05 | Idempotent atomic versions | Specify | Proposed |
 | VER-06 | Idempotent atomic versions | T8, T15-T17 | In Progress |
 | VER-07 | Idempotent atomic versions | Specify | Proposed |
-| VER-08 | Idempotent atomic versions | Specify | Proposed |
+| VER-08 | Idempotent atomic versions | T13, T17-T18 | In Progress |
 | CHUNK-01 | Deterministic chunks/embeddings | T6, T17 | In Progress |
 | CHUNK-02 | Deterministic chunks/embeddings | T6, T17 | In Progress |
 | CHUNK-03 | Deterministic chunks/embeddings | T6, T14, T17 | In Progress |
@@ -285,7 +285,7 @@ the production Linux image.
 | LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | In Progress |
 | LIFE-04 | Delete/operate safely | Specify | Proposed |
 | LIFE-05 | Delete/operate safely | Specify | Proposed |
-| LIFE-06 | Delete/operate safely | Specify | Proposed |
+| LIFE-06 | Delete/operate safely | T13, T18, T20 | In Progress |
 | CAP-01 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | OPS-01 | Production/evaluation | T3, T27 | In Progress |
@@ -300,11 +300,11 @@ the production Linux image.
 | OPS-10 | Production/evaluation | T1, T5, T24, T25, T27 | In Progress |
 | EDGE-01 | Authentication order | Specify | Proposed |
 | EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |
-| EDGE-03 | Pre-publication crash | Specify | Proposed |
-| EDGE-04 | Post-publication crash | Specify | Proposed |
+| EDGE-03 | Pre-publication crash | T13, T17 | In Progress |
+| EDGE-04 | Post-publication crash | T13, T17 | In Progress |
 | EDGE-05 | Smaller replacement | Specify | Proposed |
 | EDGE-06 | Empty/whitespace source | T6, T17 | In Progress |
 | EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | In Progress |
 | EDGE-08 | Maintenance visibility | T8, T15, T17 | In Progress |
-| EDGE-09 | Post-admission capacity | Specify | Proposed |
+| EDGE-09 | Post-admission capacity | T13, T17-T18 | In Progress |
 | EDGE-10 | Coarse/missing timestamps | T6, T15-T17 | In Progress |

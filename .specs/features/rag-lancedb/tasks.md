@@ -471,11 +471,18 @@ retention/tombstones, probes, cleanup/quarantine, and crash-recovery scans witho
 
 **Done when**:
 
-- [ ] Snapshot sync/rename precedes queued record; failures remove only unpublished recognized staging.
-- [ ] Hit reuse and post-expiry fresh completed-hit creation preserve document/version and mutate no snapshot/index.
-- [ ] Owners, FIFO, guarded transitions, epochs, source-independent 24h metadata/tombstone retention, free-space probe, and queue count are exact.
-- [ ] Restart/crash matrix, corruption/quarantine, duplicate-owner collapse, symlink/confinement, disk failure, and fake-clock boundaries pass with real temporary files.
-- [ ] Full gate passes without reducing the pre-task test count.
+- [x] Snapshot sync/rename precedes queued record; failures remove only unpublished recognized staging.
+- [x] Hit reuse and post-expiry fresh completed-hit creation preserve document/version and mutate no snapshot/index.
+- [x] Owners, FIFO, guarded transitions, epochs, source-independent 24h metadata/tombstone retention, free-space probe, and queue count are exact.
+- [x] Restart/crash matrix, corruption/quarantine, duplicate-owner collapse, symlink/confinement, disk failure, and fake-clock boundaries pass with real temporary files.
+- [x] Full gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit && npm run test:integration` passed 605 tests (593 pre-task).
+Nine unit cases use real files to prove snapshot-before-record ordering and rollback, exact FIFO/owner/
+epoch transitions, hit isolation, 24h+24h retention, opaque quarantine, duplicate repair, the exact
+128 MiB boundary, and symlink confinement. Three restart integration cases prove processing recovery
+from the local snapshot, corrupt-snapshot fail-closed behavior, and VER-03 fresh-hit creation after
+metadata/tombstone expiry without staging or identity changes.
 
 **Tests**: unit + integration
 **Gate**: full
