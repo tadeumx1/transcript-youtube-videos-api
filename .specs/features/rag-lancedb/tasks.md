@@ -184,7 +184,7 @@ path bound, and sanitized variable-name-only validation error.
 **Gate**: quick
 **Commit**: `feat(config): add bounded local rag settings`
 
-### T4: Check in the immutable model manifest
+### T4: Check in the immutable model manifest ✅
 
 **What**: Define the pinned model/revision/dtype/dimension, five artifact sizes and SHA-256 values,
 embedding fingerprint, and reusable fail-closed integrity verifier.
@@ -201,10 +201,12 @@ embedding fingerprint, and reusable fail-closed integrity verifier.
 
 **Done when**:
 
-- [ ] Constants exactly match the approved revision, five byte lengths/hashes, int8 dtype, 384 dimensions, and fingerprint inputs.
-- [ ] Verification rejects missing, extra, symlinked, wrong-size, and wrong-hash artifacts without remote fallback or path leakage.
-- [ ] Unit tests cover every artifact and failure class with temporary files.
-- [ ] Quick gate passes without reducing the pre-task test count.
+- [x] Constants exactly match the approved revision, five byte lengths/hashes, int8 dtype, 384 dimensions, and fingerprint inputs.
+- [x] Verification rejects missing, extra, symlinked, wrong-size, and wrong-hash artifacts without remote fallback or path leakage.
+- [x] Unit tests cover every artifact and failure class with temporary files.
+- [x] Quick gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit` passed 424 tests (412 pre-task); 12 manifest cases assert every frozen constant/fingerprint input, exact-set success, missing/extra/root-directory-file symlinks, wrong size, wrong SHA for each of five artifacts, and path/cause redaction.
 
 **Tests**: unit
 **Gate**: quick

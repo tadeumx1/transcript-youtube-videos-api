@@ -270,7 +270,7 @@ the production Linux image.
 | CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | In Progress |
 | EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | In Progress |
 | EMB-02 | Deterministic chunks/embeddings | Specify | Proposed |
-| EMB-03 | Deterministic chunks/embeddings | Specify | Proposed |
+| EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
 | SEARCH-01 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-02 | Hybrid retrieval | Specify | Proposed |
@@ -278,7 +278,7 @@ the production Linux image.
 | SEARCH-04 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-05 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | In Progress |
-| SEARCH-07 | Hybrid retrieval | Specify | Proposed |
+| SEARCH-07 | Hybrid retrieval | T4, T12, T14-T16, T18, T21 | In Progress |
 | SEARCH-08 | Hybrid retrieval | Specify | Proposed |
 | LIFE-01 | Delete/operate safely | Specify | Proposed |
 | LIFE-02 | Delete/operate safely | Specify | Proposed |
@@ -304,7 +304,7 @@ the production Linux image.
 | EDGE-04 | Post-publication crash | Specify | Proposed |
 | EDGE-05 | Smaller replacement | Specify | Proposed |
 | EDGE-06 | Empty/whitespace source | Specify | Proposed |
-| EDGE-07 | Fingerprint mismatch | Specify | Proposed |
+| EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | In Progress |
 | EDGE-08 | Maintenance visibility | Specify | Proposed |
 | EDGE-09 | Post-admission capacity | Specify | Proposed |
 | EDGE-10 | Coarse/missing timestamps | Specify | Proposed |
