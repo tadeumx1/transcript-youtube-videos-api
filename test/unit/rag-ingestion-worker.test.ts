@@ -13,6 +13,7 @@ import {
   type RagIngestionTransition,
   transitionRagIngestion,
 } from '../../src/domain/rag.js'
+import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
 import type {
   RagDocumentEpoch,
   RagSnapshotSource,
@@ -206,6 +207,7 @@ class MemoryIndex {
   replaceErrorBeforeCommit: Error | undefined
   replaceErrorAfterCommit: Error | undefined
   replaceCalls = 0
+  readonly optimize = vi.fn(async (): Promise<void> => undefined)
 
   async replaceDocument(rows: readonly RagChunkRow[]) {
     this.replaceCalls += 1
@@ -239,6 +241,8 @@ function worker(
     chunkError?: Error
     embedPassages?: (passages: readonly string[], signal?: AbortSignal) => Promise<Float32Array[]>
     onFatal?: (error: RagError) => void
+    metrics?: RuntimeMetrics
+    publicationLock?: AsyncReadWriteLock
   } = {},
 ) {
   const chunks = options.chunks ?? [chunk(0, 1)]
@@ -255,26 +259,141 @@ function worker(
           passages.map((_passage, offset) => normalizedVector(offset))),
     ),
   }
+  const publicationLock = options.publicationLock ?? new AsyncReadWriteLock()
   return {
     chunker,
     encoder,
+    publicationLock,
     value: new RagIngestionWorker({
       repository,
       chunker,
       encoder,
       scheduler: new RagEncoderScheduler(),
       index,
-      publicationLock: new AsyncReadWriteLock(),
+      publicationLock,
       documentMutex: new RagDocumentMutex(),
       embeddingBatchSize: 8,
       terminalTtlSeconds: 86_400,
       now: () => new Date('2026-08-26T13:00:00.000Z'),
+      ...(options.metrics ? { metrics: options.metrics } : {}),
       ...(options.onFatal ? { onFatal: options.onFatal } : {}),
     }),
   }
 }
 
 describe('recoverable RAG ingestion worker', () => {
+  it('optimizes once at either threshold and resets counters only after success', async () => {
+    const metrics = new RuntimeMetrics()
+    const mutationThresholdRepository = new MemoryRepository()
+    const mutationThresholdIndex = new MemoryIndex()
+    const mutations = worker(mutationThresholdRepository, mutationThresholdIndex, { metrics })
+
+    for (let count = 0; count < 19; count += 1) mutations.value.recordIndexMutation(0)
+    await Promise.resolve()
+    expect(mutationThresholdIndex.optimize).not.toHaveBeenCalled()
+    mutations.value.recordIndexMutation(0)
+    await vi.waitFor(() => expect(mutationThresholdIndex.optimize).toHaveBeenCalledOnce())
+    await vi.waitFor(async () =>
+      expect(await metrics.render()).toContain(
+        'youtube_transcript_rag_maintenance_total{operation="optimize",outcome="success"} 1',
+      ),
+    )
+
+    for (let count = 0; count < 19; count += 1) mutations.value.recordIndexMutation(0)
+    await Promise.resolve()
+    expect(mutationThresholdIndex.optimize).toHaveBeenCalledOnce()
+    mutations.value.recordIndexMutation(0)
+    await vi.waitFor(() => expect(mutationThresholdIndex.optimize).toHaveBeenCalledTimes(2))
+    await mutations.value.stop()
+
+    const rowThresholdRepository = new MemoryRepository()
+    const rowThresholdIndex = new MemoryIndex()
+    const rows = worker(rowThresholdRepository, rowThresholdIndex, { metrics })
+    rows.value.recordIndexMutation(99_999)
+    await Promise.resolve()
+    expect(rowThresholdIndex.optimize).not.toHaveBeenCalled()
+    rows.value.recordIndexMutation(1)
+    await vi.waitFor(() => expect(rowThresholdIndex.optimize).toHaveBeenCalledOnce())
+    await rows.value.stop()
+  })
+
+  it('retains threshold counters after optimize failure and retries on the next mutation', async () => {
+    const metrics = new RuntimeMetrics()
+    const repository = new MemoryRepository()
+    const index = new MemoryIndex()
+    index.optimize.mockRejectedValueOnce(new RagError('RAG_STORAGE_UNAVAILABLE'))
+    const value = worker(repository, index, { metrics })
+
+    for (let count = 0; count < 20; count += 1) value.value.recordIndexMutation(0)
+    await vi.waitFor(async () =>
+      expect(await metrics.render()).toContain(
+        'youtube_transcript_rag_maintenance_total{operation="optimize",outcome="failure"} 1',
+      ),
+    )
+    value.value.recordIndexMutation(0)
+    await vi.waitFor(() => expect(index.optimize).toHaveBeenCalledTimes(2))
+    await vi.waitFor(async () =>
+      expect(await metrics.render()).toContain(
+        'youtube_transcript_rag_maintenance_total{operation="optimize",outcome="success"} 1',
+      ),
+    )
+    await value.value.stop()
+  })
+
+  it('counts a real publication receipt and excludes search and mutation work while optimizing', async () => {
+    const metrics = new RuntimeMetrics()
+    const repository = new MemoryRepository()
+    const index = new MemoryIndex()
+    const publicationLock = new AsyncReadWriteLock()
+    const optimization = deferred<void>()
+    index.optimize.mockImplementation(async () => optimization.promise)
+    const value = worker(repository, index, { metrics, publicationLock })
+
+    for (let count = 0; count < 19; count += 1) value.value.recordIndexMutation(0)
+    await expect(value.value.processNext()).resolves.toBe(true)
+    await vi.waitFor(() => expect(index.optimize).toHaveBeenCalledOnce())
+
+    let competingMutationStarted = false
+    let searchStarted = false
+    const competingMutation = publicationLock.withWrite(undefined, async () => {
+      competingMutationStarted = true
+    })
+    const search = publicationLock.withRead(undefined, async () => {
+      searchStarted = true
+    })
+    await Promise.resolve()
+    expect(competingMutationStarted).toBe(false)
+    expect(searchStarted).toBe(false)
+    expect(publicationLock.waitingWriterCount).toBe(1)
+    expect(publicationLock.waitingReaderCount).toBe(1)
+
+    optimization.resolve()
+    await Promise.all([competingMutation, search])
+    expect(competingMutationStarted).toBe(true)
+    expect(searchStarted).toBe(true)
+    await value.value.stop()
+  })
+
+  it('cancels a queued optimize lock waiter and leaves no orphan maintenance on shutdown', async () => {
+    const metrics = new RuntimeMetrics()
+    const repository = new MemoryRepository()
+    const index = new MemoryIndex()
+    const publicationLock = new AsyncReadWriteLock()
+    const reader = await publicationLock.acquireRead()
+    const value = worker(repository, index, { metrics, publicationLock })
+
+    for (let count = 0; count < 20; count += 1) value.value.recordIndexMutation(0)
+    await vi.waitFor(() => expect(publicationLock.waitingWriterCount).toBe(1))
+    await expect(value.value.stop()).resolves.toBeUndefined()
+
+    expect(publicationLock.waitingWriterCount).toBe(0)
+    expect(index.optimize).not.toHaveBeenCalled()
+    expect(await metrics.render()).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="optimize",outcome="skipped"} 1',
+    )
+    reader.release()
+  })
+
   it('uses only the verified snapshot, embeds batches of at most eight, then publishes all rows', async () => {
     const repository = new MemoryRepository()
     const index = new MemoryIndex()

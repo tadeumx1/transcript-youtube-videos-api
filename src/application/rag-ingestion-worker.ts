@@ -21,7 +21,7 @@ import {
   validateRagChunkRows,
 } from '../infrastructure/rag/lancedb-rag-index.js'
 import type { LocalE5Encoder } from '../infrastructure/rag/local-e5-encoder.js'
-import type { AsyncReadWriteLock } from './async-read-write-lock.js'
+import { type AsyncReadWriteLock, AsyncReadWriteLockError } from './async-read-write-lock.js'
 import {
   type DeterministicRagChunk,
   type DeterministicRagChunker,
@@ -30,6 +30,8 @@ import {
 import { type RagEncoderScheduler, RagEncoderSchedulerError } from './rag-encoder-scheduler.js'
 
 const MAX_EMBEDDING_BATCH_SIZE = 8
+const OPTIMIZE_MUTATION_THRESHOLD = 20
+const OPTIMIZE_CHANGED_ROWS_THRESHOLD = 100_000
 
 export interface RagWorkerRepository {
   oldestQueued(): RagIngestionRecord | undefined
@@ -53,12 +55,14 @@ export interface RagIngestionWorkerMetrics {
   recordRagFailure(reason: string): void
   setRagActiveDocuments(count: number): void
   setRagActiveChunks(count: number): void
+  recordRagMaintenance(operation: string, outcome: string): void
 }
 
 type RagWorkerChunker = Pick<DeterministicRagChunker, 'chunk'>
 type RagWorkerEncoder = Pick<LocalE5Encoder, 'embedPassages'>
 type RagWorkerScheduler = Pick<RagEncoderScheduler, 'runIngestionBatch'>
-type RagWorkerIndex = Pick<LanceDbRagIndex, 'replaceDocument' | 'inspectDocument'>
+type RagWorkerIndex = Pick<LanceDbRagIndex, 'replaceDocument' | 'inspectDocument'> &
+  Partial<Pick<LanceDbRagIndex, 'optimize'>>
 type RagWorkerPublicationLock = Pick<AsyncReadWriteLock, 'withWrite'>
 
 export interface RagDocumentMutexLike {
@@ -342,6 +346,10 @@ export class RagIngestionWorker {
   #wake: (() => void) | undefined
   #fatal: RagError | undefined
   #stopped = false
+  #successfulMutations = 0
+  #changedRows = 0
+  #maintenanceController: AbortController | undefined
+  #maintenancePromise: Promise<void> | undefined
 
   constructor(options: RagIngestionWorkerOptions) {
     this.#repository = options.repository
@@ -399,11 +407,24 @@ export class RagIngestionWorker {
 
   async stop(): Promise<void> {
     this.#stopped = true
+    this.#maintenanceController?.abort()
     const loop = this.#loopPromise
-    if (!loop) return
-    this.#stopController?.abort()
-    this.#wake?.()
-    await loop
+    if (loop) {
+      this.#stopController?.abort()
+      this.#wake?.()
+      await loop
+    }
+    await this.#maintenancePromise
+  }
+
+  recordIndexMutation(changedRows: number): void {
+    if (!Number.isSafeInteger(changedRows) || changedRows < 0) {
+      throw new TypeError('RAG changed rows must be a non-negative integer')
+    }
+    if (this.#stopped) return
+    this.#successfulMutations = Math.min(OPTIMIZE_MUTATION_THRESHOLD, this.#successfulMutations + 1)
+    this.#changedRows = Math.min(OPTIMIZE_CHANGED_ROWS_THRESHOLD, this.#changedRows + changedRows)
+    this.#scheduleOptimization()
   }
 
   async processNext(signal: AbortSignal = new AbortController().signal): Promise<boolean> {
@@ -499,6 +520,7 @@ export class RagIngestionWorker {
           signal.throwIfAborted()
           publicationAttempted = true
           const publication = await this.#index.replaceDocument(rows)
+          this.recordIndexMutation(publication.changedRows)
           const published = await this.#index.inspectDocument(active.documentId)
           if (!stateMatchesRecord(published, active)) {
             throw new ImpossibleRagStateError()
@@ -616,6 +638,42 @@ export class RagIngestionWorker {
     const active = this.#repository.activeDocumentStats()
     this.#metrics.setRagActiveDocuments(active.documents)
     this.#metrics.setRagActiveChunks(active.chunks)
+  }
+
+  #scheduleOptimization(): void {
+    if (
+      this.#stopped ||
+      this.#maintenancePromise ||
+      !this.#index.optimize ||
+      (this.#successfulMutations < OPTIMIZE_MUTATION_THRESHOLD &&
+        this.#changedRows < OPTIMIZE_CHANGED_ROWS_THRESHOLD)
+    ) {
+      return
+    }
+    const controller = new AbortController()
+    this.#maintenanceController = controller
+    const maintenance = this.#runOptimization(controller)
+    this.#maintenancePromise = maintenance
+    void maintenance.then(() => {
+      if (this.#maintenancePromise === maintenance) this.#maintenancePromise = undefined
+      if (this.#maintenanceController === controller) this.#maintenanceController = undefined
+    })
+  }
+
+  async #runOptimization(controller: AbortController): Promise<void> {
+    try {
+      await this.#publicationLock.withWrite(controller.signal, async () => {
+        await this.#index.optimize?.()
+      })
+      this.#successfulMutations = 0
+      this.#changedRows = 0
+      this.#metrics?.recordRagMaintenance('optimize', 'success')
+    } catch (error) {
+      const aborted =
+        controller.signal.aborted ||
+        (error instanceof AsyncReadWriteLockError && error.code === 'RAG_LOCK_ACQUIRE_ABORTED')
+      this.#metrics?.recordRagMaintenance('optimize', aborted ? 'skipped' : 'failure')
+    }
   }
 
   #waitForNotification(signal: AbortSignal): Promise<void> {

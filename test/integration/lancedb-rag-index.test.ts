@@ -457,12 +457,14 @@ describe('real LanceDB RAG index', () => {
     })
     let mergeExecutedDuringOptimization = false
     let optimizing = false
+    let optimizationOptions: unknown
     const connectionFactory = async (database: string): Promise<Connection> => {
       const connection = await connect(database, { readConsistencyInterval: 0 })
       return proxyConnection(connection, (table) =>
         proxyTable(table, {
           async optimize(...args: unknown[]) {
             optimizing = true
+            optimizationOptions = args[0]
             optimizationStarted()
             await optimizationGate
             const result = await Reflect.apply(table.optimize, table, args)
@@ -491,6 +493,10 @@ describe('real LanceDB RAG index', () => {
     ])
     await Promise.resolve()
     expect(mergeExecutedDuringOptimization).toBe(false)
+    expect(optimizationOptions).toEqual({
+      cleanupOlderThan: new Date(0),
+      deleteUnverified: false,
+    })
     releaseOptimization()
     await Promise.all([optimization, replacement])
 

@@ -11,6 +11,7 @@ import {
   type RagIngestionRecord,
   type RagIngestionTombstone,
 } from '../../src/domain/rag.js'
+import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
 import type {
   RagDocumentEpoch,
   RagRecoverySnapshot,
@@ -125,6 +126,7 @@ class RepositoryFake {
   initializeFailures = 0
   createQueuedFailures = 0
   sweepFailures = 0
+  sweepResult = { terminalExpired: 0, tombstonesDeleted: 0, snapshotsDeleted: 0 }
   recovery: RagRecoverySnapshot = {
     queued: [],
     processing: [],
@@ -198,7 +200,7 @@ class RepositoryFake {
       this.sweepFailures -= 1
       throw new RagError('RAG_STORAGE_UNAVAILABLE')
     }
-    return { terminalExpired: 0, tombstonesDeleted: 0, snapshotsDeleted: 0 }
+    return structuredClone(this.sweepResult)
   }
 }
 
@@ -210,6 +212,7 @@ function fixture(
     sourceGate?: Promise<void>
     maxQueuedIngestions?: number
     onWorkerHealthChanged?: (healthy: boolean) => void
+    metrics?: RuntimeMetrics
   } = {},
 ) {
   const events = options.events ?? []
@@ -255,6 +258,9 @@ function fixture(
     }),
     notify: vi.fn(() => {
       events.push('worker.notify')
+    }),
+    recordIndexMutation: vi.fn((changedRows: number) => {
+      events.push(`worker.mutation:${changedRows}`)
     }),
     setFatalHandler: vi.fn((handler: (error: RagError) => void) => {
       fatalHandler = handler
@@ -316,6 +322,7 @@ function fixture(
     terminalTtlSeconds: 86_400,
     sweepIntervalMs: 3_600_000,
     retryIntervalMs: 1_000,
+    ...(options.metrics ? { metrics: options.metrics } : {}),
     ...(options.onWorkerHealthChanged
       ? { onWorkerHealthChanged: options.onWorkerHealthChanged }
       : {}),
@@ -345,6 +352,94 @@ afterEach(() => {
 })
 
 describe('durable RAG ingestion coordinator', () => {
+  it('records real reconcile, sweep, and delete outcomes with fixed maintenance labels', async () => {
+    vi.useFakeTimers()
+    const metrics = new RuntimeMetrics()
+    const value = fixture({ metrics })
+    value.setState(activeState())
+    value.repository.epoch = { ...activeEpoch(), generation: 1, state: 'delete_pending' }
+    value.repository.recovery.deletePending = [structuredClone(value.repository.epoch)]
+
+    await value.coordinator.start()
+    expect(value.worker.recordIndexMutation).toHaveBeenCalledWith(1)
+    value.setState(activeState())
+    value.repository.epoch = activeEpoch()
+    await expect(value.coordinator.delete(documentId)).resolves.toBeUndefined()
+    await expect(value.coordinator.delete(documentId)).rejects.toMatchObject({
+      code: 'RAG_DOCUMENT_NOT_FOUND',
+    })
+
+    await vi.advanceTimersByTimeAsync(3_600_000)
+    value.repository.sweepResult = {
+      terminalExpired: 1,
+      tombstonesDeleted: 1,
+      snapshotsDeleted: 0,
+    }
+    await vi.advanceTimersByTimeAsync(3_600_000)
+    value.repository.sweepFailures = 1
+    await vi.advanceTimersByTimeAsync(3_600_000)
+
+    const rendered = await metrics.render()
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="reconcile",outcome="success"} 1',
+    )
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="delete",outcome="success"} 1',
+    )
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="delete",outcome="skipped"} 1',
+    )
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="sweep",outcome="skipped"} 1',
+    )
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="sweep",outcome="success"} 1',
+    )
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="sweep",outcome="failure"} 1',
+    )
+    expect(rendered).not.toMatch(/documentId|provider|dQw4w9WgXcQ|[a-f0-9]{64}/)
+    expect(value.worker.recordIndexMutation).toHaveBeenNthCalledWith(1, 1)
+    expect(value.worker.recordIndexMutation).toHaveBeenNthCalledWith(2, 1)
+    await value.coordinator.stop()
+  })
+
+  it('records failed and empty maintenance executions without dynamic values', async () => {
+    const reconcileMetrics = new RuntimeMetrics()
+    const reconcile = fixture({ metrics: reconcileMetrics })
+    reconcile.setState(activeState())
+    reconcile.repository.epoch = { ...activeEpoch(), generation: 1, state: 'delete_pending' }
+    reconcile.repository.recovery.deletePending = [structuredClone(reconcile.repository.epoch)]
+    reconcile.index.deleteDocument.mockRejectedValueOnce(new RagError('RAG_STORAGE_UNAVAILABLE'))
+
+    await reconcile.coordinator.start()
+    expect(reconcile.coordinator.isReady).toBe(false)
+    expect(await reconcileMetrics.render()).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="reconcile",outcome="failure"} 1',
+    )
+    await reconcile.coordinator.stop()
+
+    const deleteMetrics = new RuntimeMetrics()
+    const deletion = fixture({ metrics: deleteMetrics })
+    await deletion.coordinator.start()
+    deletion.setState(activeState())
+    deletion.repository.epoch = activeEpoch()
+    deletion.index.deleteDocument.mockRejectedValueOnce(new RagError('RAG_STORAGE_UNAVAILABLE'))
+    await expect(deletion.coordinator.delete(documentId)).rejects.toEqual(
+      new RagError('RAG_STORAGE_UNAVAILABLE'),
+    )
+
+    const rendered = await deleteMetrics.render()
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="reconcile",outcome="skipped"} 1',
+    )
+    expect(rendered).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="delete",outcome="failure"} 1',
+    )
+    expect(rendered).not.toMatch(/documentId|provider|dQw4w9WgXcQ|[a-f0-9]{64}/)
+    await deletion.coordinator.stop()
+  })
+
   it('linearizes identical submissions into one miss and one join before capacity work', async () => {
     const value = fixture({ maxQueuedIngestions: 1 })
     await value.coordinator.start()
@@ -522,8 +617,10 @@ describe('durable RAG ingestion coordinator', () => {
       'index.inspect',
       'repository.writeEpoch:delete_pending',
       'index.delete',
+      'worker.mutation:1',
       'repository.writeEpoch:deleted',
     ])
+    expect(value.worker.recordIndexMutation).toHaveBeenCalledOnce()
     expect(value.repository.epoch).toMatchObject({
       generation: 1,
       state: 'deleted',

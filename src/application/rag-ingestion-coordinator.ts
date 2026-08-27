@@ -53,7 +53,8 @@ type RagTranscriptSource = Pick<DurableJobCoordinator, 'withVerifiedCompletedTra
 type RagCoordinatorWorker = Pick<
   RagIngestionWorker,
   'recover' | 'start' | 'stop' | 'notify' | 'setFatalHandler'
->
+> &
+  Partial<Pick<RagIngestionWorker, 'recordIndexMutation'>>
 type RagCoordinatorIndex = Pick<
   LanceDbRagIndex,
   'initialize' | 'probe' | 'inspectDocument' | 'deleteDocument' | 'close'
@@ -70,6 +71,7 @@ export interface RagIngestionCoordinatorMetrics {
   setRagActiveDocuments(count: number): void
   setRagActiveChunks(count: number): void
   setRagComponentHealthy(component: string, healthy: boolean): void
+  recordRagMaintenance(operation: string, outcome: string): void
 }
 
 export interface RagIngestionCoordinatorOptions {
@@ -363,7 +365,8 @@ export class RagIngestionCoordinator {
             updatedAt: this.#now().toISOString(),
           }
           await this.#repository.writeEpoch(observed.epoch.generation, intent)
-          await this.#index.deleteDocument(id)
+          const deletion = await this.#index.deleteDocument(id)
+          if (deletion.existed) this.#worker.recordIndexMutation?.(deletion.deletedRows)
           await this.#repository.writeEpoch(
             intent.generation,
             deletedEpoch(intent, this.#now().toISOString()),
@@ -371,7 +374,14 @@ export class RagIngestionCoordinator {
         }),
       )
       this.#refreshGauges()
+      this.#metrics?.recordRagMaintenance('delete', 'success')
     } catch (error) {
+      this.#metrics?.recordRagMaintenance(
+        'delete',
+        error instanceof RagError && error.code === 'RAG_DOCUMENT_NOT_FOUND'
+          ? 'skipped'
+          : 'failure',
+      )
       this.#handleOperationalFailure(error)
       throw error
     }
@@ -436,27 +446,40 @@ export class RagIngestionCoordinator {
   }
 
   async #reconcileDeletes(recovery: RagRecoverySnapshot): Promise<void> {
-    for (const pending of recovery.deletePending) {
-      await this.#documentMutex.withDocument(pending.documentId, () =>
-        this.#publicationLock.withWrite(undefined, async () => {
-          const current = await this.#repository.inspectEpoch(pending.documentId)
-          if (current.state !== 'delete_pending') return
-          await this.#index.deleteDocument(current.documentId)
-          await this.#repository.writeEpoch(
-            current.generation,
-            deletedEpoch(current, this.#now().toISOString()),
-          )
-        }),
-      )
+    let reconciled = false
+    try {
+      for (const pending of recovery.deletePending) {
+        await this.#documentMutex.withDocument(pending.documentId, () =>
+          this.#publicationLock.withWrite(undefined, async () => {
+            const current = await this.#repository.inspectEpoch(pending.documentId)
+            if (current.state !== 'delete_pending') return
+            const deletion = await this.#index.deleteDocument(current.documentId)
+            if (deletion.existed) this.#worker.recordIndexMutation?.(deletion.deletedRows)
+            await this.#repository.writeEpoch(
+              current.generation,
+              deletedEpoch(current, this.#now().toISOString()),
+            )
+            reconciled = true
+          }),
+        )
+      }
+      this.#metrics?.recordRagMaintenance('reconcile', reconciled ? 'success' : 'skipped')
+    } catch (error) {
+      this.#metrics?.recordRagMaintenance('reconcile', 'failure')
+      throw error
     }
   }
 
   async #runSweep(): Promise<void> {
     if (!this.#ready || this.#stopped) return
     try {
-      await this.#repository.sweep(this.#now())
+      const result = await this.#repository.sweep(this.#now())
       this.#refreshGauges()
+      const changed =
+        result.terminalExpired + result.tombstonesDeleted + result.snapshotsDeleted > 0
+      this.#metrics?.recordRagMaintenance('sweep', changed ? 'success' : 'skipped')
     } catch {
+      this.#metrics?.recordRagMaintenance('sweep', 'failure')
       this.#metrics?.setRagComponentHealthy('repository', false)
       this.#degrade()
     }

@@ -1101,11 +1101,24 @@ and instrument reconcile/sweep/optimize/delete outcomes on their real paths.
 
 **Done when**:
 
-- [ ] The twentieth successful mutation or cumulative 100,000 changed rows schedules exactly one optimize under the publication write lock; sub-threshold work does not.
-- [ ] Counters reset only after successful optimize, failed/aborted maintenance remains retryable, and shutdown leaves no orphan maintenance promise or lock waiter.
-- [ ] Optimization uses the existing non-destructive cleanup policy, preserves active results and immediate FTS visibility, and cannot interleave with publication/delete/search.
-- [ ] Real reconcile, sweep, optimize, and delete operations emit exact success/failure/skipped maintenance outcomes without dynamic labels.
-- [ ] Focused mutation/real-index tests and the Full, Offline RAG, and Build gates pass without test-count regression.
+- [x] The twentieth successful mutation or cumulative 100,000 changed rows schedules exactly one optimize under the publication write lock; sub-threshold work does not.
+- [x] Counters reset only after successful optimize, failed/aborted maintenance remains retryable, and shutdown leaves no orphan maintenance promise or lock waiter.
+- [x] Optimization uses the existing non-destructive cleanup policy, preserves active results and immediate FTS visibility, and cannot interleave with publication/delete/search.
+- [x] Real reconcile, sweep, optimize, and delete operations emit exact success/failure/skipped maintenance outcomes without dynamic labels.
+- [x] Focused mutation/real-index tests and the Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Evidence**: unit tests prove no optimize at 19 mutations or 99,999 changed rows and exactly one
+at mutation 20 or row 100,000. A real worker publication receipt supplies the twentieth mutation.
+The optimize holds the writer-preferred publication lock while a competing writer and search both
+wait. Counters reset after success, remain above threshold after failure for the next-mutation retry,
+and shutdown aborts a queued writer with zero orphan waiters and a fixed skipped outcome. The real
+LanceDB test asserts `cleanupOlderThan: new Date(0)` and `deleteUnverified: false`, preserves the
+active FTS result set, and serializes replacement. Coordinator tests drive real reconcile, scheduled
+sweep, and delete paths through success/failure/skipped outcomes; publication/reconcile/delete
+receipts feed their exact changed-row counts without dynamic metric values. Focused maintenance,
+worker, coordinator, search, composition, and real-index suites passed 52 tests; `npm run check`
+passed 737 tests (731 pre-task), lint, strict types, and build; Offline RAG passed 30 tests with
+unchanged 12-document/48-qrel thresholds; `npm audit --omit=dev` found zero vulnerabilities.
 
 **Tests**: unit + integration
 **Gate**: offline rag
