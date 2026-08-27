@@ -268,7 +268,7 @@ the production Linux image.
 | CHUNK-04 | Deterministic chunks/embeddings | Specify | Proposed |
 | CHUNK-05 | Deterministic chunks/embeddings | Specify | Proposed |
 | CHUNK-06 | Deterministic chunks/embeddings | Specify | Proposed |
-| EMB-01 | Deterministic chunks/embeddings | Specify | Proposed |
+| EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | In Progress |
 | EMB-02 | Deterministic chunks/embeddings | Specify | Proposed |
 | EMB-03 | Deterministic chunks/embeddings | Specify | Proposed |
 | EMB-04 | Deterministic chunks/embeddings | Specify | Proposed |
@@ -297,7 +297,7 @@ the production Linux image.
 | OPS-07 | Production/evaluation | Specify | Proposed |
 | OPS-08 | Production/evaluation | Specify | Proposed |
 | OPS-09 | Production/evaluation | Specify | Proposed |
-| OPS-10 | Production/evaluation | Specify | Proposed |
+| OPS-10 | Production/evaluation | T1, T24, T25, T27 | In Progress |
 | EDGE-01 | Authentication order | Specify | Proposed |
 | EDGE-02 | Source-expiry race | Specify | Proposed |
 | EDGE-03 | Pre-publication crash | Specify | Proposed |

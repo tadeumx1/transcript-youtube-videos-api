@@ -96,7 +96,7 @@ traceability completion, and final state/goal closure.
 
 ### Phase 1: Deterministic foundation
 
-### T1: Pin the local RAG dependency tree
+### T1: Pin the local RAG dependency tree ✅
 
 **What**: Add exact LanceDB, Arrow, and Transformers production dependencies, force the single
 Transformers version, and expose stable offline-model/evaluation scripts; regenerate only the npm
@@ -114,11 +114,13 @@ lockfile as mechanical output.
 
 **Done when**:
 
-- [ ] `@lancedb/lancedb@0.37.1`, `apache-arrow@18.1.0`, and `@huggingface/transformers@4.2.0` are exact production pins.
-- [ ] The Lance optional Transformers edge resolves to 4.2.0 and only the intended Linux x64 CPU runtime is depended upon.
-- [ ] Unit contract tests reject version drift, duplicate Transformers/ONNX trees, missing scripts, and non-exact pins.
-- [ ] The generated `package-lock.json` is committed with this single dependency change and `npm ls` succeeds.
-- [ ] Build gate passes without reducing the pre-task test count.
+- [x] `@lancedb/lancedb@0.37.1`, `apache-arrow@18.1.0`, and `@huggingface/transformers@4.2.0` are exact production pins.
+- [x] The Lance optional Transformers edge resolves to 4.2.0 and only the intended Linux x64 CPU runtime is depended upon.
+- [x] Unit contract tests reject version drift, duplicate Transformers/ONNX trees, missing scripts, and non-exact pins.
+- [x] The generated `package-lock.json` is committed with this single dependency change and `npm ls` succeeds.
+- [x] Build gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run check` passed 439 tests (436 baseline); `npm ls @lancedb/lancedb apache-arrow @huggingface/transformers onnxruntime-node --all` reported one deduplicated Transformers 4.2.0 tree and one ONNX Runtime Node tree.
 
 **Tests**: unit
 **Gate**: build
