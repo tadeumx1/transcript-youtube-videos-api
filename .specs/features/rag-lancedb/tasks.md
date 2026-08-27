@@ -1226,7 +1226,7 @@ cache only the verified asset tree, and expose a manual rerun trigger without we
 - [x] CI supports push, pull request, and manual dispatch; after `npm ci` it restores/fetches `.models`, then the fetcher verifies the exact manifest before `npm run check`.
 - [x] Cache identity changes with the checked-in model manifest and an empty/poisoned cache cannot bypass hash/size/exact-set verification.
 - [x] A clean-checkout simulation with no pre-existing `.models` passes the same source/offline gates without secrets or provider credentials.
-- [ ] GitHub jobs actually start and retain green source, audit, runtime smoke, and production-image evidence; a repository/account startup failure remains evidence-zero and must not be reported as PASS.
+- [x] GitHub jobs actually start and retain green source, audit, runtime smoke, and production-image evidence; a repository/account startup failure remains evidence-zero and must not be reported as PASS.
 - [x] Static CI contracts, actionlint, Full, Offline RAG, dependency audit, and Build gates pass without test-count regression.
 
 **Evidence**: the workflow now supports `workflow_dispatch` and orders the source job as locked
@@ -1242,10 +1242,15 @@ container, fetcher, and manifest contracts passed 34 tests. The YAML passed chec
 then re-ran the fetcher to prove cache-hit verification. That checkout passed Full 738/738, Offline
 RAG 31/31 with zero auto-projection warnings and unchanged 12-document/48-qrel thresholds, Build,
 and audit 0; its temporary model/worktree were removed afterward. The current worktree repeated Full
-738/738, Offline 31/31, Build, and audit 0. Remote execution remains evidence-zero:
-public-repository run 33093616414 created a source job with zero steps and the exact annotation
-`The job was not started because your account is locked due to a billing issue.`; its container job
-was skipped. No source, audit, runtime-smoke, or production-image job is reported as PASS.
+738/738, Offline 31/31, Build, and audit 0.
+After the owner resolved the GitHub account lock, public-repository workflow-dispatch run
+33097473365 executed exact HEAD `a7ca2c1` and completed `success`. Source checks job 98606042832
+passed locked install, verified model restore/fetch/cache, Full 738/738, Offline RAG 31/31, and
+production audit with zero vulnerabilities. Container build job 98606412395 built and loaded the
+single unpublished production image (manifest
+`sha256:b03dbb912a174c0127add5d1159541c551272c5533d93d369a5356ce6be690c9`) and passed the packaged
+smoke through the production entrypoint with `docker run --rm --network none`. Both jobs and every
+required step retain green remote evidence.
 
 **Tests**: unit + integration
 **Gate**: container + build
