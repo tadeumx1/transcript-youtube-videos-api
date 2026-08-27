@@ -259,7 +259,7 @@ the production Linux image.
 | VER-03 | Idempotent atomic versions | Specify | Proposed |
 | VER-04 | Idempotent atomic versions | Specify | Proposed |
 | VER-05 | Idempotent atomic versions | Specify | Proposed |
-| VER-06 | Idempotent atomic versions | Specify | Proposed |
+| VER-06 | Idempotent atomic versions | T8, T15-T17 | In Progress |
 | VER-07 | Idempotent atomic versions | Specify | Proposed |
 | VER-08 | Idempotent atomic versions | Specify | Proposed |
 | CHUNK-01 | Deterministic chunks/embeddings | T6, T17 | In Progress |
@@ -282,7 +282,7 @@ the production Linux image.
 | SEARCH-08 | Hybrid retrieval | T7, T16-T17 | In Progress |
 | LIFE-01 | Delete/operate safely | Specify | Proposed |
 | LIFE-02 | Delete/operate safely | Specify | Proposed |
-| LIFE-03 | Delete/operate safely | Specify | Proposed |
+| LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | In Progress |
 | LIFE-04 | Delete/operate safely | Specify | Proposed |
 | LIFE-05 | Delete/operate safely | Specify | Proposed |
 | LIFE-06 | Delete/operate safely | Specify | Proposed |
@@ -305,6 +305,6 @@ the production Linux image.
 | EDGE-05 | Smaller replacement | Specify | Proposed |
 | EDGE-06 | Empty/whitespace source | T6, T17 | In Progress |
 | EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | In Progress |
-| EDGE-08 | Maintenance visibility | Specify | Proposed |
+| EDGE-08 | Maintenance visibility | T8, T15, T17 | In Progress |
 | EDGE-09 | Post-admission capacity | Specify | Proposed |
 | EDGE-10 | Coarse/missing timestamps | T6, T15-T17 | In Progress |

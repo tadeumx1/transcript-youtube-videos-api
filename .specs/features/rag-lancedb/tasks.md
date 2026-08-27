@@ -298,7 +298,7 @@ consecutive waiting searches before one waiting ingestion batch.
 **Gate**: quick
 **Commit**: `feat(rag): schedule local embeddings fairly`
 
-### T8: Serialize publications with writer preference
+### T8: Serialize publications with writer preference ✅
 
 **What**: Implement an abort-safe read/write lock in which queued writers prevent later readers,
 and every lease releases exactly once.
@@ -315,10 +315,12 @@ and every lease releases exactly once.
 
 **Done when**:
 
-- [ ] Concurrent readers coexist, writers are exclusive, and new readers cannot starve a queued writer.
-- [ ] Abort-before/admission, queued abort, shutdown, exception, double-release, and order races are deterministic unit tests.
-- [ ] No unresolved waiter or permit remains after every failure path.
-- [ ] Quick gate passes without reducing the pre-task test count.
+- [x] Concurrent readers coexist, writers are exclusive, and new readers cannot starve a queued writer.
+- [x] Abort-before/admission, queued abort, shutdown, exception, double-release, and order races are deterministic unit tests.
+- [x] No unresolved waiter or permit remains after every failure path.
+- [x] Quick gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit` passed 461 tests (453 pre-task); eight lock cases assert concurrent readers, exclusive/FIFO writer preference, abort-before/queued listener cleanup, both abort-release race orders, idempotent leases, exception-safe helpers, shutdown, and zero residual waiters/leases.
 
 **Tests**: unit
 **Gate**: quick
