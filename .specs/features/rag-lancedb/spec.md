@@ -268,8 +268,8 @@ the production Linux image.
 | CHUNK-04 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
 | CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
 | CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | In Progress |
-| EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | In Progress |
-| EMB-02 | Deterministic chunks/embeddings | T5, T14, T24 | In Progress |
+| EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | Complete |
+| EMB-02 | Deterministic chunks/embeddings | T5, T14, T24 | Complete |
 | EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
 | SEARCH-01 | Hybrid retrieval | T16, T20 | Complete |
@@ -289,7 +289,7 @@ the production Linux image.
 | CAP-01 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | OPS-01 | Production/evaluation | T3, T27 | In Progress |
-| OPS-02 | Production/evaluation | Specify | Proposed |
+| OPS-02 | Production/evaluation | T24, T26 | In Progress |
 | OPS-03 | Production/evaluation | T18, T21-T22, T27 | In Progress |
 | OPS-04 | Production/evaluation | T18, T21-T22, T27 | In Progress |
 | OPS-05 | Production/evaluation | T19 | Complete |

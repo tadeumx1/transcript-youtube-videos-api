@@ -816,11 +816,22 @@ data, and a `rag-smoke` stage that executes real offline encoder plus Lance repl
 
 **Done when**:
 
-- [ ] Build downloads only the approved revision, verifies five hashes, packages `/app/models`, and sets runtime-local model configuration.
-- [ ] Only other-platform ORT binaries are pruned; Linux x64 CPU artifacts remain and execute after pruning.
-- [ ] Smoke denies network/credentials, validates a real 384-vector, Lance replacement/search/delete, non-root `/data` write, and reports image/RSS/index sizes.
-- [ ] Static container contract plus actual `rag-smoke` and production builds pass; no existing media/runtime tool regresses.
-- [ ] Container and Build gates pass without reducing the pre-task test count.
+- [x] Build downloads only the approved revision, verifies five hashes, packages `/app/models`, and sets runtime-local model configuration.
+- [x] Only other-platform ORT binaries are pruned; Linux x64 CPU artifacts remain and execute after pruning.
+- [x] Smoke denies network/credentials, validates a real 384-vector, Lance replacement/search/delete, non-root `/data` write, and reports image/RSS/index sizes.
+- [x] Static container contract plus actual `rag-smoke` and production builds pass; no existing media/runtime tool regresses.
+- [x] Container and Build gates pass without reducing the pre-task test count.
+
+**Evidence**: 22 focused container/fetch/CI cases and `npm run check` passed 716 tests (712
+pre-task), lint, typecheck, and build without skips. The real smoke also ran directly as UID 1000
+against the five verified local model artifacts with process-network denial and reported 384 dimensions,
+norm `0.9999999693`, one vector hit, one FTS hit, 39,196 index bytes, 751,874,048 RSS bytes,
+135,138,591 model bytes, and 1,267,260,767 local application bytes after replacement and deletion.
+Docker, Podman, Buildah, Nerdctl, and Finch are absent in this execution environment, so local image
+build output is evidence-zero rather than inferred; the fail-closed CI contract now builds both
+`rag-smoke` and production targets without publishing. Mechanical corrections only: the prior
+runtime-stage assertion now scopes root startup to the production stage, the existing CI step-count
+assertion now expects both builds, and Biome wrapped one long assertion; outcomes were not weakened.
 
 **Tests**: unit + integration
 **Gate**: container

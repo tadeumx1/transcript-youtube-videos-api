@@ -8,6 +8,8 @@ import { describe, expect, it } from 'vitest'
 const executeFile = promisify(execFile)
 const entrypoint = join(process.cwd(), 'docker-entrypoint.sh')
 const dockerfile = join(process.cwd(), 'Dockerfile')
+const ciWorkflow = join(process.cwd(), '.github/workflows/ci.yml')
+const ragSmoke = join(process.cwd(), 'scripts/rag-container-smoke.mjs')
 
 async function writeExecutable(path: string, source: string): Promise<void> {
   await writeFile(path, source, { mode: 0o755 })
@@ -94,7 +96,8 @@ describe('Docker runtime contract', () => {
   it('retains the pinned runtime, media tools, healthcheck, and application command', async () => {
     const source = await readFile(dockerfile, 'utf8')
 
-    expect(source).toContain('FROM node:22-bookworm-slim AS runtime')
+    expect(source).toContain('FROM node:22-bookworm-slim AS runtime-base')
+    expect(source).toContain('FROM runtime-base AS runtime')
     expect(source).toContain('ARG YT_DLP_VERSION=2026.8.19')
     expect(source).toMatch(
       /apt-get install --yes --no-install-recommends ca-certificates ffmpeg gosu python3 python3-pip/,
@@ -117,7 +120,65 @@ describe('Docker runtime contract', () => {
     expect(copyIndex).toBeGreaterThan(-1)
     expect(entrypointIndex).toBeGreaterThan(copyIndex)
     expect(commandIndex).toBeGreaterThan(entrypointIndex)
-    expect(source).not.toMatch(/^USER\s+/m)
+    const productionStage = source.slice(source.indexOf('FROM runtime-base AS runtime'))
+    expect(productionStage).not.toMatch(/^USER\s+/m)
     expect(source.match(/\bgosu\b/g)).toHaveLength(1)
+  })
+
+  it('packages the verified pinned model and retains only the Linux x64 ORT platform', async () => {
+    const source = await readFile(dockerfile, 'utf8')
+
+    expect(source).toContain('FROM build AS rag-model')
+    expect(source).toContain('ENV RAG_MODEL_ROOT=/app/models')
+    expect(source).toContain('RUN npm run rag:model:fetch')
+    expect(source).toContain('COPY --from=rag-model /app/models /app/models')
+    expect(source).toContain('node_modules/onnxruntime-node/bin/napi-v6/darwin')
+    expect(source).toContain('node_modules/onnxruntime-node/bin/napi-v6/win32')
+    expect(source).toContain('node_modules/onnxruntime-node/bin/napi-v6/linux/arm64')
+    expect(source).toContain(
+      'node_modules/onnxruntime-node/bin/napi-v6/linux/x64/onnxruntime_binding.node',
+    )
+    expect(source).toContain("import('onnxruntime-node')")
+    expect(source).not.toMatch(/(?:MODEL_REPOSITORY|MODEL_REVISION|MODEL_SHA256)=/)
+  })
+
+  it('executes a credential-free non-root offline RAG smoke stage', async () => {
+    const source = await readFile(dockerfile, 'utf8')
+
+    expect(source).toContain('FROM runtime-base AS rag-smoke')
+    expect(source).toContain(
+      'COPY scripts/rag-container-smoke.mjs ./scripts/rag-container-smoke.mjs',
+    )
+    expect(source).toContain('USER node')
+    expect(source).toMatch(/RUN --network=none[\s\\]+env -u API_ACCESS_KEY/)
+    expect(source).toContain('node scripts/rag-container-smoke.mjs')
+    expect(source).toContain('FROM runtime-base AS runtime')
+    expect(source).toContain('RAG_DATA_ROOT=/data/lancedb')
+  })
+
+  it('smokes real embedding and Lance replacement, search, deletion, and size reporting', async () => {
+    const source = await readFile(ragSmoke, 'utf8')
+
+    expect(source).toContain("from '../dist/infrastructure/rag/local-e5-encoder.js'")
+    expect(source).toContain("from '../dist/infrastructure/rag/lancedb-rag-index.js'")
+    expect(source).toContain('await index.replaceDocument(')
+    expect(source).toContain('await index.vectorCandidates(')
+    expect(source).toContain('await index.textCandidates(')
+    expect(source).toContain('await index.deleteDocument(')
+    expect(source).toContain('vector.length !== 384')
+    expect(source).toContain('process.getuid?.() === 0')
+    expect(source).toContain('imageFilesystemBytes')
+    expect(source).toContain('rssBytes')
+    expect(source).toContain('indexBytes')
+    expect(source).toContain('RAG_SMOKE_OK')
+  })
+
+  it('builds both the offline smoke target and the production image in CI without publishing', async () => {
+    const source = await readFile(ciWorkflow, 'utf8')
+
+    expect(source).toContain('name: Build offline RAG smoke image')
+    expect(source).toContain('target: rag-smoke')
+    expect(source).toContain('name: Build production image without publishing')
+    expect(source.match(/push: false/g)).toHaveLength(2)
   })
 })

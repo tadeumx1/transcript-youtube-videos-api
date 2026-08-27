@@ -69,6 +69,16 @@ describe('CI workflow contract', () => {
       'actions/checkout@v4',
       'docker/setup-buildx-action@v3',
       'docker/build-push-action@v6',
+      'docker/build-push-action@v6',
+    ])
+    const builds = container.steps.filter((step) => step.uses === 'docker/build-push-action@v6')
+    expect(builds).toEqual([
+      expect.objectContaining({
+        with: { context: '.', file: 'Dockerfile', target: 'rag-smoke', push: false },
+      }),
+      expect.objectContaining({
+        with: { context: '.', file: 'Dockerfile', push: false },
+      }),
     ])
     expect(container.steps.at(-1)?.with).toEqual({
       context: '.',
