@@ -762,7 +762,7 @@ export class LanceDbRagIndex {
       let query = this.#requiredTable()
         .vectorSearch(vector)
         .distanceType('cosine')
-        .select([...PUBLIC_COLUMNS])
+        .select([...PUBLIC_COLUMNS, '_distance'])
         .limit(bounded)
       if (predicate) query = query.where(predicate)
       const values = (await query.toArray({ timeoutMs: MERGE_TIMEOUT_MS })) as Record<
@@ -788,7 +788,7 @@ export class LanceDbRagIndex {
       let query = this.#requiredTable()
         .query()
         .fullTextSearch(text, { columns: 'text' })
-        .select([...PUBLIC_COLUMNS])
+        .select([...PUBLIC_COLUMNS, '_score'])
         .limit(bounded)
       if (predicate) query = query.where(predicate)
       const values = (await query.toArray({ timeoutMs: MERGE_TIMEOUT_MS })) as Record<

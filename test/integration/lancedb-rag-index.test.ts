@@ -54,6 +54,24 @@ function proxyTable(
   return proxyFluent(table, overrides)
 }
 
+function captureSelect<T extends object>(
+  query: T,
+  capture: (columns: readonly string[]) => void,
+): T {
+  return proxyFluent(query, {
+    select(...args: unknown[]) {
+      const columns = args[0]
+      if (!Array.isArray(columns) || columns.some((column) => typeof column !== 'string')) {
+        throw new Error('expected a selected-column array')
+      }
+      capture(columns)
+      const select = Reflect.get(query, 'select', query)
+      if (typeof select !== 'function') throw new Error('expected a select function')
+      return Reflect.apply(select, query, args)
+    },
+  })
+}
+
 function proxyMergeBuilder(
   builder: MergeInsertBuilder,
   executeOverride: (current: MergeInsertBuilder, args: unknown[]) => unknown,
@@ -274,21 +292,81 @@ describe('real LanceDB RAG index', () => {
 
   it('returns capped selected-column vector and fresh Portuguese FTS candidates without vectors', async () => {
     const root = await temporaryRoot()
-    const index = new LanceDbRagIndex({ root })
+    const seed = new LanceDbRagIndex({ root })
+    await seed.initialize()
+    await seed.replaceDocument([row(0), row(1)])
+    await seed.close()
+    const selections: { kind: 'fts' | 'vector'; columns: readonly string[] }[] = []
+    const connectionFactory = async (database: string): Promise<Connection> => {
+      const connection = await connect(database, { readConsistencyInterval: 0 })
+      return proxyConnection(connection, (table) =>
+        proxyTable(table, {
+          vectorSearch(...args: unknown[]) {
+            const query = Reflect.apply(table.vectorSearch, table, args)
+            return captureSelect(query, (columns) => selections.push({ kind: 'vector', columns }))
+          },
+          query(...args: unknown[]) {
+            const query = Reflect.apply(table.query, table, args)
+            return proxyFluent(query, {
+              fullTextSearch(...searchArgs: unknown[]) {
+                const search = Reflect.apply(
+                  Reflect.get(query, 'fullTextSearch', query),
+                  query,
+                  searchArgs,
+                )
+                if (typeof search !== 'object' || search === null) {
+                  throw new Error('expected a full-text query')
+                }
+                return captureSelect(search, (columns) => selections.push({ kind: 'fts', columns }))
+              },
+            })
+          },
+        }),
+      )
+    }
+    const index = new LanceDbRagIndex({ root, connectionFactory })
     await index.initialize()
-    await index.replaceDocument([row(0), row(1)])
 
-    const vectors = await index.vectorCandidates(vector(0), { documentIds: [documentA] }, 50)
-    const text = await index.textCandidates('firefly corrente', { documentIds: [documentA] }, 50)
+    const vectors = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        index.vectorCandidates(vector(0), { documentIds: [documentA] }, 50),
+      ),
+    )
+    const text = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        index.textCandidates('firefly corrente', { documentIds: [documentA] }, 50),
+      ),
+    )
     const unknown = await index.textCandidates('firefly', { documentIds: [documentB] }, 50)
 
-    expect(vectors).toHaveLength(2)
-    expect(vectors[0]).toMatchObject({ chunk_id: '1'.repeat(64), document_id: documentA })
-    expect(Number.isFinite(vectors[0]?.score)).toBe(true)
-    expect(text[0]).toMatchObject({ chunk_id: '1'.repeat(64), document_id: documentA })
-    expect(Number.isFinite(text[0]?.score)).toBe(true)
+    expect(vectors[0]).toHaveLength(2)
+    expect(vectors[0]?.[0]).toMatchObject({ chunk_id: '1'.repeat(64), document_id: documentA })
+    expect(vectors[1]).toEqual(vectors[0])
+    expect(vectors[2]).toEqual(vectors[0])
+    expect(vectors[0]?.every(({ score }) => Number.isFinite(score))).toBe(true)
+    expect(text[0]?.[0]).toMatchObject({ chunk_id: '1'.repeat(64), document_id: documentA })
+    expect(text[1]).toEqual(text[0])
+    expect(text[2]).toEqual(text[0])
+    expect(text[0]?.every(({ score }) => Number.isFinite(score))).toBe(true)
     expect(unknown).toEqual([])
-    expect(JSON.stringify([...vectors, ...text])).not.toContain('"vector"')
+    const vectorSelections = selections.filter(({ kind }) => kind === 'vector')
+    const ftsSelections = selections.filter(({ kind }) => kind === 'fts')
+    expect(vectorSelections).toHaveLength(3)
+    expect(ftsSelections).toHaveLength(4)
+    for (const { columns } of vectorSelections) {
+      expect(columns.at(-1)).toBe('_distance')
+      expect(columns).not.toContain('_score')
+      expect(columns).not.toContain('vector')
+    }
+    for (const { columns } of ftsSelections) {
+      expect(columns.at(-1)).toBe('_score')
+      expect(columns).not.toContain('_distance')
+      expect(columns).not.toContain('vector')
+    }
+    const serialized = JSON.stringify([...vectors.flat(), ...text.flat()])
+    expect(serialized).not.toContain('"vector"')
+    expect(serialized).not.toContain('"_distance"')
+    expect(serialized).not.toContain('"_score"')
     await index.close()
   })
 

@@ -1185,10 +1185,22 @@ deprecated score auto-projection and offline runs remain warning-free for this b
 
 **Done when**:
 
-- [ ] Vector queries explicitly project `_distance` and FTS queries explicitly project `_score` while public candidates still exclude internal metadata and vectors.
-- [ ] Finite score and stable-rank tests pass with scoring auto-projection disabled/future behavior adopted where the pinned API supports it.
-- [ ] The Offline RAG gate emits zero `_distance`/`_score` auto-projection warnings and preserves all retrieval thresholds/determinism.
-- [ ] Full and Build gates pass without test-count regression.
+- [x] Vector queries explicitly project `_distance` and FTS queries explicitly project `_score` while public candidates still exclude internal metadata and vectors.
+- [x] Finite score and stable-rank tests pass with scoring auto-projection disabled/future behavior adopted where the pinned API supports it.
+- [x] The Offline RAG gate emits zero `_distance`/`_score` auto-projection warnings and preserves all retrieval thresholds/determinism.
+- [x] Full and Build gates pass without test-count regression.
+
+**Evidence**: the real-index RED captured three vector and four FTS candidate projections without
+their score columns and emitted the native deprecation warnings. The production adapter now selects
+`_distance` only for vector candidates and `_score` only for FTS candidates. A wrapped real LanceDB
+connection records every projection and proves the stored `vector` plus the opposite/internal score
+column are absent. Three runs per query return identical ordering and finite application scores;
+serialized public candidates exclude `vector`, `_distance`, and `_score`. LanceDB 0.37.1 exposes no
+scoring-auto-projection disable method, so explicit projection directly adopts the documented future
+behavior. The focused real-index suite passed 10 tests with zero warnings. Offline RAG passed 31
+tests with `AUTOPROJECTION_WARNING_COUNT 0`, unchanged 12-document/48-qrel quality metrics, and
+deterministic index sizes. `npm run check` passed all 738 tests, lint, strict types, and build;
+`npm audit --omit=dev` found zero vulnerabilities.
 
 **Tests**: unit + integration
 **Gate**: offline rag

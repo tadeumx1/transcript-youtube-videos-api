@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Execute / validation round 1 fix loop; T33 next
-- **Completed**: T1-T32; T32 gates passed 738/738 local tests and 31/31 offline RAG tests with real source/RAG byte and retention independence evidence and zero provider/network calls
+- **Phase / Task**: Execute / validation round 1 fix loop; T34 next
+- **Completed**: T1-T33; T33 gates passed 738/738 local tests and 31/31 warning-free offline RAG tests with explicit LanceDB `_distance`/`_score` projection, finite scores, stable ranks, and unchanged quality
 - **In-progress** (file:line): none
-- **Next step**: implement T33 explicit LanceDB score projection and warning-free offline evidence, then T34 hermetic clean-checkout CI before independent re-verification
+- **Next step**: implement T34 hermetic clean-checkout CI and local clean-checkout evidence, retain evidence-zero for the remote startup failure, then request independent re-verification
 - **Blockers**: GitHub Actions has repository/account-level `startup_failure` with zero jobs and needs owner-side resolution for real container evidence; Railway apply/deploy remains separately approval-gated after the verified fix commit
-- **Uncommitted files**: T32 lifecycle test, offline-script contract, task evidence, and this Handoff pending atomic commit
+- **Uncommitted files**: T33 LanceDB score projections, real-index assertions, task evidence, and this Handoff pending atomic commit
 - **Branch**: `main`
