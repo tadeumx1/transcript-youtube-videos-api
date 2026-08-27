@@ -272,10 +272,10 @@ the production Linux image.
 | EMB-02 | Deterministic chunks/embeddings | T5, T14, T24 | In Progress |
 | EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
-| SEARCH-01 | Hybrid retrieval | Specify | Proposed |
+| SEARCH-01 | Hybrid retrieval | T16, T20 | In Progress |
 | SEARCH-02 | Hybrid retrieval | T15-T16 | In Progress |
 | SEARCH-03 | Hybrid retrieval | T15-T16 | In Progress |
-| SEARCH-04 | Hybrid retrieval | Specify | Proposed |
+| SEARCH-04 | Hybrid retrieval | T16, T20 | In Progress |
 | SEARCH-05 | Hybrid retrieval | T15-T16 | In Progress |
 | SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | In Progress |
 | SEARCH-07 | Hybrid retrieval | T4, T12, T14-T16, T18, T21 | In Progress |

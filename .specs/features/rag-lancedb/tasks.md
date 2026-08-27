@@ -564,11 +564,11 @@ normalization and application-owned RRF, filters, public provenance mapping, and
 
 **Done when**:
 
-- [ ] Query/topK/filter validation and capacity occur before encoder/index access.
-- [ ] At most 100 unique candidates use `1 / (60 + rank)` with finite scores and exact stable document/version/ordinal ties.
-- [ ] The publication read lock spans both candidate queries and mapping releases all permits in `finally`.
-- [ ] Unit and real-index integration cover empty/unknown filters, ties, duplicates, three-run order, concurrent replacement/delete, abort, corruption, and response redaction.
-- [ ] Full and Offline RAG gates pass without reducing the pre-task test count.
+- [x] Query/topK/filter validation and capacity occur before encoder/index access.
+- [x] At most 100 unique candidates use `1 / (60 + rank)` with finite scores and exact stable document/version/ordinal ties.
+- [x] The publication read lock spans both candidate queries and mapping releases all permits in `finally`.
+- [x] Unit and real-index integration cover empty/unknown filters, ties, duplicates, three-run order, concurrent replacement/delete, abort, corruption, and response redaction.
+- [x] Full and Offline RAG gates pass without reducing the pre-task test count.
 
 **Tests**: unit + integration
 **Gate**: offline rag

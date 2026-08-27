@@ -14,7 +14,7 @@
     "test": "vitest run --passWithNoTests",
     "test:unit": "vitest run --passWithNoTests test/unit",
     "test:integration": "vitest run --passWithNoTests test/integration",
-    "test:rag:offline": "vitest run test/unit/rag-chunker.test.ts test/integration/local-e5-encoder.test.ts test/integration/lancedb-rag-index.test.ts test/evaluation",
+    "test:rag:offline": "vitest run test/unit/rag-chunker.test.ts test/integration/local-e5-encoder.test.ts test/integration/lancedb-rag-index.test.ts test/integration/rag-search-service.test.ts test/evaluation",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome format --write .",
