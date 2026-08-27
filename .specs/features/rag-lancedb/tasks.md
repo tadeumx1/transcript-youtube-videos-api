@@ -326,7 +326,7 @@ and every lease releases exactly once.
 **Gate**: quick
 **Commit**: `feat(rag): add writer preferred publication lock`
 
-### T9: Bound concurrent RAG searches
+### T9: Bound concurrent RAG searches ✅
 
 **What**: Implement a separate four-request admission controller with configured retry metadata,
 abort propagation, readiness rejection, shutdown cancellation, and idempotent permits.
@@ -343,9 +343,14 @@ abort propagation, readiness rejection, shutdown cancellation, and idempotent pe
 
 **Done when**:
 
-- [ ] The exact configured capacity is enforced before encoder/index access and exposes fixed retry seconds.
-- [ ] Capacity, abort, shutdown, permit-release, readiness, and independent transcript-controller cases are unit-tested.
-- [ ] Quick gate and Phase 1 Build gate pass without reducing the pre-task test count.
+- [x] The exact configured capacity is enforced before encoder/index access and exposes fixed retry seconds.
+- [x] Capacity, abort, shutdown, permit-release, readiness, and independent transcript-controller cases are unit-tested.
+- [x] Quick gate and Phase 1 Build gate pass without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit` passed 471 tests (461 pre-task) and `npm run check` passed
+570 tests; ten focused cases assert the exact admission boundary and retry metadata, caller abort,
+readiness recovery, idempotent shutdown/release, metrics, invalid bounds, and isolation from the
+transcript `ExecutionController`.
 
 **Tests**: unit
 **Gate**: build

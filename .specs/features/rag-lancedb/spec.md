@@ -279,7 +279,7 @@ the production Linux image.
 | SEARCH-05 | Hybrid retrieval | Specify | Proposed |
 | SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | In Progress |
 | SEARCH-07 | Hybrid retrieval | T4, T12, T14-T16, T18, T21 | In Progress |
-| SEARCH-08 | Hybrid retrieval | T7, T16-T17 | In Progress |
+| SEARCH-08 | Hybrid retrieval | T7, T9, T16-T17 | In Progress |
 | LIFE-01 | Delete/operate safely | Specify | Proposed |
 | LIFE-02 | Delete/operate safely | Specify | Proposed |
 | LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | In Progress |
