@@ -174,12 +174,16 @@ describe('Docker runtime contract', () => {
     expect(source).toContain('RAG_SMOKE_OK')
   })
 
-  it('builds both the offline smoke target and the production image in CI without publishing', async () => {
+  it('builds the production image and runs its RAG smoke with Docker networking disabled', async () => {
     const source = await readFile(ciWorkflow, 'utf8')
 
-    expect(source).toContain('name: Build offline RAG smoke image')
-    expect(source).toContain('target: rag-smoke')
     expect(source).toContain('name: Build production image without publishing')
-    expect(source.match(/push: false/g)).toHaveLength(2)
+    expect(source).toContain('load: true')
+    expect(source).toContain('tags: transcript-youtube-videos-api:ci')
+    expect(source).toContain('name: Run offline RAG smoke in production image')
+    expect(source).toContain(
+      'docker run --rm --network none transcript-youtube-videos-api:ci node scripts/rag-container-smoke.mjs',
+    )
+    expect(source.match(/push: false/g)).toHaveLength(1)
   })
 })

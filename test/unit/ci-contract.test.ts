@@ -90,7 +90,7 @@ describe('CI workflow contract', () => {
     expect(verify?.if).toBeUndefined()
   })
 
-  it('builds the checked-in Dockerfile after source checks without publishing', async () => {
+  it('builds and smokes the checked-in production image after source checks', async () => {
     const { workflow } = await readWorkflow()
     const container = workflow.jobs.container
 
@@ -100,21 +100,22 @@ describe('CI workflow contract', () => {
       'actions/checkout@v4',
       'docker/setup-buildx-action@v3',
       'docker/build-push-action@v6',
-      'docker/build-push-action@v6',
     ])
     const builds = container.steps.filter((step) => step.uses === 'docker/build-push-action@v6')
     expect(builds).toEqual([
       expect.objectContaining({
-        with: { context: '.', file: 'Dockerfile', target: 'rag-smoke', push: false },
-      }),
-      expect.objectContaining({
-        with: { context: '.', file: 'Dockerfile', push: false },
+        with: {
+          context: '.',
+          file: 'Dockerfile',
+          load: true,
+          push: false,
+          tags: 'transcript-youtube-videos-api:ci',
+        },
       }),
     ])
-    expect(container.steps.at(-1)?.with).toEqual({
-      context: '.',
-      file: 'Dockerfile',
-      push: false,
+    expect(container.steps.at(-1)).toMatchObject({
+      name: 'Run offline RAG smoke in production image',
+      run: 'docker run --rm --network none transcript-youtube-videos-api:ci node scripts/rag-container-smoke.mjs',
     })
   })
 

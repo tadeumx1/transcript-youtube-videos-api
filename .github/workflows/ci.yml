@@ -59,16 +59,14 @@ jobs:
         uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build offline RAG smoke image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          target: rag-smoke
-          push: false
       - name: Build production image without publishing
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
+          load: true
           push: false
+          tags: transcript-youtube-videos-api:ci
+      - name: Run offline RAG smoke in production image
+        run: >-
+          docker run --rm --network none transcript-youtube-videos-api:ci node scripts/rag-container-smoke.mjs
