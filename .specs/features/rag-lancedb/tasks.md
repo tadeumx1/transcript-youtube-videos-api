@@ -440,10 +440,15 @@ quarantine, and probe paths derived only from validated UUID/SHA identities.
 
 **Done when**:
 
-- [ ] Every designed path stays under one canonical root and uses only recognized schema paths.
-- [ ] Traversal, absolute path, symlinked root/database, malformed UUID/SHA, and unknown-layout cases fail closed without leaking paths.
-- [ ] Unit tests use real temporary filesystem boundaries.
-- [ ] Quick gate passes without reducing the pre-task test count.
+- [x] Every designed path stays under one canonical root and uses only recognized schema paths.
+- [x] Traversal, absolute path, symlinked root/database, malformed UUID/SHA, and unknown-layout cases fail closed without leaking paths.
+- [x] Unit tests use real temporary filesystem boundaries.
+- [x] Quick gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit` passed 492 tests (482 pre-task). Ten focused cases use real
+temporary directories to assert every exact versioned path and canonical confinement, five invalid
+identity variants, missing/recognized layouts, symlinked root/database boundaries, fixed redacted
+errors, and fail-closed unknown layout entries.
 
 **Tests**: unit
 **Gate**: quick
