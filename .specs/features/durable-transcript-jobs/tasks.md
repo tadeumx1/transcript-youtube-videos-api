@@ -11,7 +11,7 @@ commit per task, sequential phase batches, independent verification, and require
 ---
 
 **Design**: `.specs/features/durable-transcript-jobs/design.md`
-**Status**: Verification Fixes Round 2 (automatic after re-verifier FAIL on 2026-08-26)
+**Status**: Verification Fixes Round 2 Complete (third verifier pending)
 
 ---
 
@@ -829,7 +829,7 @@ artifact as corruption before operational I/O mapping, then invalidate/quarantin
 **Gate**: quick
 **Commit**: `fix(storage): normalize manifest corruption`
 
-### T30: Roll back bundles when pointer publication fails
+### T30: Roll back bundles when pointer publication fails ✅
 
 **What**: Track final-directory publication and remove only the newly published bundle if the cache
 pointer cannot be committed.
@@ -839,10 +839,10 @@ pointer cannot be committed.
 
 **Done when**:
 
-- [ ] Injected pointer-write failure leaves no new manifest/JSON/PDF directory and returns the existing sanitized storage failure.
-- [ ] A later equivalent lookup is a clean miss, while any prior/unrelated pointer and bundle remain intact.
-- [ ] Cleanup handles both pre-rename and post-rename failure without deleting content it does not own.
-- [ ] `npm run check` passes with at least 423 total tests and no silent deletions.
+- [x] Injected pointer-write failure leaves no new manifest/JSON/PDF directory and returns the existing sanitized storage failure.
+- [x] A later equivalent lookup is a clean miss, while any prior/unrelated pointer and bundle remain intact.
+- [x] Cleanup handles both pre-rename and post-rename failure without deleting content it does not own.
+- [x] `npm run check` passes with at least 423 total tests and no silent deletions.
 
 **Tests**: unit/real filesystem
 **Gate**: build
@@ -903,7 +903,7 @@ boundaries are the only batch boundaries.
 | T27 | One expiry/resubmission integration scenario | ✅ Complete |
 | T28 | One Railway plan evidence artifact | ✅ Complete |
 | T29 | One malformed-manifest corruption boundary | ✅ Complete |
-| T30 | One post-rename publication rollback | Verification fix |
+| T30 | One post-rename publication rollback | ✅ Complete |
 
 ## Diagram-Definition Cross-Check
 

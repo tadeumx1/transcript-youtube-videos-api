@@ -86,10 +86,10 @@
 ## Handoff
 
 - **Feature**: durable-transcript-jobs (IMP-03/IMP-04)
-- **Phase / Task**: Execute / Verification Fix Round 2, T29 next
-- **Completed**: T1-T28; Round 2 verifier matched 43/46 and killed 14/14 mutants; FAIL report at `19e6f47`; lessons L-011/L-012 recorded
-- **In-progress** (file:line): `.specs/features/durable-transcript-jobs/tasks.md:1` Round 2 fix plan pending commit
-- **Next step**: execute T29-T30 sequentially, then dispatch the third fresh verifier
+- **Phase / Task**: Execute / Verification Fix Round 2 complete, third verifier next
+- **Completed**: T1-T30; T29 normalizes manifest corruption and T30 rolls back post-publication bundles; final local gate passed 436/436 tests
+- **In-progress** (file:line): none
+- **Next step**: dispatch the third fresh verifier with the expanded discrimination sensor
 - **Blockers**: none; Railway apply/deploy remain explicitly pending separate approval
-- **Uncommitted files**: Round 2 fix plan, traceability statuses, and Handoff pending planning commit
+- **Uncommitted files**: none after the T30 atomic commit
 - **Branch**: `main`

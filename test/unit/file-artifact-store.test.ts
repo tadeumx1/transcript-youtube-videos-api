@@ -27,6 +27,8 @@ const quarantineId = 'ef1e02cb-9f68-41e0-bc40-c1425052108f'
 const unrelatedJobId = 'de99ce88-f43c-4881-8ff4-cd68c1d4c359'
 const unrelatedArtifactId = '7ff2f0e7-2a7c-4fb1-a40c-0524bf484e4e'
 const unrelatedTemporaryId = '8b8d9b12-ed59-469a-838b-44a2fcc017db'
+const replacementArtifactId = 'a15c6210-ee4d-4b35-95bb-0ebad5f958fd'
+const replacementTemporaryId = 'dbd3e1dd-aee5-4c83-a9f1-d090d5348c36'
 const cacheKey = 'a'.repeat(64)
 const unrelatedCacheKey = 'b'.repeat(64)
 const createdAt = '2026-08-26T12:00:00.000Z'
@@ -179,6 +181,148 @@ describe('FileArtifactStore', () => {
       artifactId,
       expiresAt,
     })
+  })
+
+  it('removes a newly published bundle when its cache pointer cannot be committed', async () => {
+    const root = await temporaryRoot()
+    const paths = createStoragePaths(root)
+    const delegate = new AtomicFileWriter(root)
+    const writer: ArtifactStoreAtomicWriter = {
+      write: (path, bytes) => delegate.write(path, bytes),
+      async writeJson(path, value) {
+        if (path === paths.cache(cacheKey)) {
+          throw Object.assign(new Error('/data/private pointer failure'), { code: 'EIO' })
+        }
+        await delegate.writeJson(path, value)
+      },
+      publishDirectory: (temporary, target) => delegate.publishDirectory(temporary, target),
+    }
+    const ids = [artifactId, temporaryId]
+    const store = new FileArtifactStore({
+      root,
+      writer,
+      createId: () => ids.shift() ?? temporaryId,
+    })
+
+    await expect(store.publishBundle(publishingInput())).rejects.toEqual(
+      expect.objectContaining({
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+    await expect(access(paths.artifact(artifactId))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(store.find(cacheKey, new Date(createdAt))).resolves.toBeUndefined()
+  })
+
+  it('preserves prior and unrelated pointers and bundles after a replacement pointer failure', async () => {
+    const root = await temporaryRoot()
+    const paths = createStoragePaths(root)
+    const initialIds = [artifactId, temporaryId, unrelatedArtifactId, unrelatedTemporaryId]
+    const initial = new FileArtifactStore({
+      root,
+      createId: () => initialIds.shift() ?? unrelatedTemporaryId,
+    })
+    await initial.publishBundle(publishingInput())
+    await initial.publishBundle({
+      ...publishingInput(),
+      cacheKey: unrelatedCacheKey,
+      producerJobId: unrelatedJobId,
+    })
+    const delegate = new AtomicFileWriter(root)
+    const writer: ArtifactStoreAtomicWriter = {
+      write: (path, bytes) => delegate.write(path, bytes),
+      async writeJson(path, value) {
+        if (path === paths.cache(cacheKey))
+          throw Object.assign(new Error('failed'), { code: 'EIO' })
+        await delegate.writeJson(path, value)
+      },
+      publishDirectory: (temporary, target) => delegate.publishDirectory(temporary, target),
+    }
+    const replacementIds = [replacementArtifactId, replacementTemporaryId]
+    const replacing = new FileArtifactStore({
+      root,
+      writer,
+      createId: () => replacementIds.shift() ?? replacementTemporaryId,
+    })
+
+    await expect(replacing.publishBundle(publishingInput())).rejects.toBeInstanceOf(
+      ArtifactStorageError,
+    )
+    await expect(access(paths.artifact(replacementArtifactId))).rejects.toMatchObject({
+      code: 'ENOENT',
+    })
+    expect(JSON.parse(await readFile(paths.cache(cacheKey), 'utf8')).artifactId).toBe(artifactId)
+    await expect(initial.find(cacheKey, new Date(createdAt))).resolves.toMatchObject({
+      reference: { artifactId },
+      transcript,
+      pdf,
+    })
+    await expect(initial.find(unrelatedCacheKey, new Date(createdAt))).resolves.toMatchObject({
+      reference: { artifactId: unrelatedArtifactId },
+      transcript,
+      pdf,
+    })
+  })
+
+  it('does not delete a pre-existing target when directory publication fails before rename', async () => {
+    const root = await temporaryRoot()
+    const paths = createStoragePaths(root)
+    const initial = new FileArtifactStore({ root, createId: () => artifactId })
+    await initial.publishBundle(publishingInput())
+    const delegate = new AtomicFileWriter(root)
+    const writer: ArtifactStoreAtomicWriter = {
+      write: (path, bytes) => delegate.write(path, bytes),
+      writeJson: (path, value) => delegate.writeJson(path, value),
+      async publishDirectory() {
+        throw Object.assign(new Error('pre-rename failure'), { code: 'EIO' })
+      },
+    }
+    const ids = [artifactId, replacementTemporaryId]
+    const store = new FileArtifactStore({
+      root,
+      writer,
+      createId: () => ids.shift() ?? replacementTemporaryId,
+    })
+
+    await expect(store.publishBundle(publishingInput())).rejects.toBeInstanceOf(
+      ArtifactStorageError,
+    )
+    await expect(readFile(join(paths.artifact(artifactId), 'manifest.json'))).resolves.toBeDefined()
+    expect(JSON.parse(await readFile(paths.cache(cacheKey), 'utf8')).artifactId).toBe(artifactId)
+    await expect(initial.find(cacheKey, new Date(createdAt))).resolves.toMatchObject({
+      reference: { artifactId },
+      transcript,
+      pdf,
+    })
+  })
+
+  it('removes the target when directory publication fails after rename', async () => {
+    const root = await temporaryRoot()
+    const paths = createStoragePaths(root)
+    const delegate = new AtomicFileWriter(root)
+    const writer: ArtifactStoreAtomicWriter = {
+      write: (path, bytes) => delegate.write(path, bytes),
+      writeJson: (path, value) => delegate.writeJson(path, value),
+      async publishDirectory(temporary, target) {
+        await delegate.publishDirectory(temporary, target)
+        throw Object.assign(new Error('post-rename failure'), { code: 'EIO' })
+      },
+    }
+    const ids = [artifactId, temporaryId]
+    const store = new FileArtifactStore({
+      root,
+      writer,
+      createId: () => ids.shift() ?? temporaryId,
+    })
+
+    await expect(store.publishBundle(publishingInput())).rejects.toBeInstanceOf(
+      ArtifactStorageError,
+    )
+    await expect(access(paths.artifact(artifactId))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(access(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(store.find(cacheKey, new Date(createdAt))).resolves.toBeUndefined()
   })
 
   it('returns every original transcript field and byte-identical PDF without sliding expiry', async () => {

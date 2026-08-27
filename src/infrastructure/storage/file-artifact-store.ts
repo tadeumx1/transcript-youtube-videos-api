@@ -341,13 +341,20 @@ export class FileArtifactStore {
         transcript: metadata(transcriptBytes),
         pdf: metadata(input.pdf),
       }
+      let targetPublished = false
 
       try {
         await this.#operations.mkdir(temporary)
         await this.#writer.write(join(temporary, 'transcript.json'), transcriptBytes)
         await this.#writer.write(join(temporary, 'transcript.pdf'), input.pdf)
         await this.#writer.writeJson(join(temporary, 'manifest.json'), manifest)
-        await this.#writer.publishDirectory(temporary, target)
+        try {
+          await this.#writer.publishDirectory(temporary, target)
+          targetPublished = true
+        } catch (error) {
+          targetPublished = await this.#directoryWasPublished(temporary, target).catch(() => false)
+          throw error
+        }
         await this.#readBundle(reference)
         const pointer: CachePointer = {
           schemaVersion: 1,
@@ -359,6 +366,14 @@ export class FileArtifactStore {
         return reference
       } catch {
         await this.#operations.remove(temporary, true).catch(() => undefined)
+        if (targetPublished) {
+          try {
+            await this.#removePointerIfOwned(reference)
+            await this.#operations.remove(target, true)
+          } catch {
+            // Preserve a target if its pointer ownership cannot be established safely.
+          }
+        }
         this.#setHealthy(false)
         throw new ArtifactStorageError()
       }
@@ -609,6 +624,23 @@ export class FileArtifactStore {
       }
     } catch (error) {
       if (!isMissing(error)) throw error
+    }
+  }
+
+  async #directoryWasPublished(temporary: string, target: string): Promise<boolean> {
+    try {
+      await this.#operations.readFile(join(temporary, 'manifest.json'))
+      return false
+    } catch (error) {
+      if (!isMissing(error)) throw error
+    }
+
+    try {
+      await this.#operations.readFile(join(target, 'manifest.json'))
+      return true
+    } catch (error) {
+      if (isMissing(error)) return false
+      throw error
     }
   }
 
