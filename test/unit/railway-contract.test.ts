@@ -47,7 +47,7 @@ describe('Railway infrastructure contract', () => {
         'transcript-data': {
           volume: 'volume.transcript-data',
           mountPath: '/data',
-          volumeConfig: { sizeMB: 1024 },
+          volumeConfig: { region: 'sfo', sizeMB: 1024 },
         },
       },
     })

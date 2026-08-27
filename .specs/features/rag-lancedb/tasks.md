@@ -81,7 +81,7 @@ T24 -> T25 -> T26 -> T28 -> T27
 ### Phase 5: Validation round 1 fixes
 
 ```
-T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> independent re-verification
+T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> T38 -> independent re-verification
 ```
 
 ### Sequential batch packing
@@ -91,7 +91,7 @@ T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> independent re-ve
 | 1 | Phase 1 | T1-T9 | One sub-agent, sequential tasks, atomic commits, phase Build gate |
 | 2 | Phase 2 | T10-T18 | One fresh sub-agent after Batch 1, sequential tasks, atomic commits, Full + Offline RAG + Build gates |
 | 3 | Phases 3-4 | T19-T28 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
-| Fix 1 | Phase 5 | T29-T37 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
+| Fix 1 | Phase 5 | T29-T38 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
 
 After Batch 3, a fresh independent Verifier must validate every requirement against evidence and may
 not author fixes. The main agent owns any verifier findings, Railway approval/apply/deploy, UAT,
@@ -1359,6 +1359,38 @@ healthcheck, and reached terminal `SUCCESS` with image digest
 **Gate**: container + build
 **Commit**: `refactor(container): remove unused smoke stage`
 
+### T38: Preserve the provisioned Railway Volume region
+
+**What**: Declare the existing `sfo` region on the Volume resource so the checked-in desired state
+matches the provisioned resource and no follow-up plan attempts to unset its placement.
+**Where**: `.railway/railway.ts`
+**Depends on**: T37
+**Reuses**: the existing `transcript-data` Volume and single `sfo` application replica.
+**Requirement**: OPS-02, OPS-10
+
+**Tools**:
+
+- MCP: Railway read-only plan evidence
+- Skill: `tlc-spec-driven`, `use-railway`
+- Local: `apply_patch`, Vitest, TypeScript, Railway CLI
+
+**Done when**:
+
+- [x] The Volume declares `region: 'sfo'` with its existing 1024 MB size and `/data` attachment.
+- [x] The Railway contract and Build gate pass without test-count regression.
+- [x] A fresh read-only Railway plan reports zero add/change/destroy operations.
+
+**Evidence**: the focused RED proved the generated Volume node lacked `region: 'sfo'` while retaining
+the correct size. `.railway/railway.ts` now declares the remote placement explicitly, and
+`test/unit/railway-contract.test.ts:46`-`51` proves the Volume reference, `/data` mount, `sfo`
+region, and 1024 MB size as one conjunction. The focused contract passed 2/2, the Build gate passed
+738/738 with zero skipped tests, and a fresh `railway config plan` reported that the production
+configuration is already up to date, with zero add/change/destroy operations.
+
+**Tests**: unit
+**Gate**: railway plan + build
+**Commit**: `fix(railway): preserve volume region`
+
 ---
 
 ## Requirement-to-Task Traceability
@@ -1372,7 +1404,7 @@ healthcheck, and reached terminal `SUCCESS` with image digest
 | SEARCH-01-08 | T2-T4, T7, T9, T14-T16, T20, T25 |
 | LIFE-01-06 | T8, T13, T15, T18, T20, T27, T29, T31-T32 |
 | CAP-01-02 | T3, T13, T18, T26 |
-| OPS-01-10 | T1-T5, T12, T14, T16, T18-T37 |
+| OPS-01-10 | T1-T5, T12, T14, T16, T18-T38 |
 | EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21, T29, T31 |
 
 ## Phase Execution Map
@@ -1407,6 +1439,7 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | T35 | One Railway-compatible container smoke correction | Static, Build, and Railway image evidence | ✅ Granular |
 | T36 | One runtime-isolated CI smoke correction | Static workflow and Build evidence | ✅ Granular |
 | T37 | One superseded Docker stage removal | Static, Build, and Railway image evidence | ✅ Granular |
+| T38 | One Railway Volume placement correction | Contract, Build, and drift-free plan evidence | ✅ Granular |
 
 No task owns more than one production source/config/document deliverable. Test files, snapshots,
 lockfiles, and generated evidence are atomic companions required to verify that deliverable.
@@ -1426,13 +1459,13 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T28 | T26 | same immediately prior arrow | ✅ Match |
 | T27 | T28 | same immediately prior arrow | ✅ Match |
 | T29 | T27 | prior phase completion | ✅ Match |
-| T30-T37 | immediately prior task T29-T36 | same immediately prior arrow | ✅ Match |
+| T30-T38 | immediately prior task T29-T37 | same immediately prior arrow | ✅ Match |
 
 ## Test Co-location Validation
 
 | Task(s) | Code layer created/modified | Matrix requires | Task says | Status |
 | ------- | --------------------------- | --------------- | --------- | ------ |
-| T1, T3-T5, T19, T26-T28 | Config/manifest/metrics/script/IaC/dependency/docs contract | unit | unit | ✅ OK |
+| T1, T3-T5, T19, T26-T28, T38 | Config/manifest/metrics/script/IaC/dependency/docs contract | unit | unit | ✅ OK |
 | T2, T6-T9 | Domain/application policy | unit | unit | ✅ OK |
 | T10-T13 | Artifact/repository boundary | unit + integration (path helper: unit) | matching per task | ✅ OK |
 | T14-T18 | Encoder/index/worker/coordinator | unit + integration | unit + integration | ✅ OK |

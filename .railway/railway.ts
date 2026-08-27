@@ -20,7 +20,7 @@ export default defineRailway(() => {
       RAG_DATA_ROOT: '/data/lancedb',
     },
     volumeMounts: {
-      '/data': volume('transcript-data', { sizeMB: 1024 }),
+      '/data': volume('transcript-data', { region: 'sfo', sizeMB: 1024 }),
     },
   })
 
