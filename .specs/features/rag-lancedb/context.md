@@ -128,6 +128,9 @@ incompatible model/schema/dimension change requires a new physical index and an 
 ## Specific References
 
 - User approval: Volume/LanceDB, subagents, implementation tools, and three execution batches.
+- Execute test-correction authorization: a genuine mechanical test bug may be corrected without a
+  new pause only when the specification outcome remains identical. Requirement/design changes,
+  weakened/removed/skipped assertions, and remote actions remain excluded.
 - Durable source contract: `.specs/features/durable-transcript-jobs/spec.md`.
 - Production backlog: `.specs/features/railway-production-deploy/improvements.md` (IMP-10).
 - LanceDB local/hybrid/FTS documentation and Transformers.js offline/model documentation were

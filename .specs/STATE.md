@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Execute / Batch 2, T14 complete; T15 next
-- **Completed**: T1-T13 committed through `c6d6d72`; T14 offline encoder implementation and gates complete with eight focused unit cases and 15 Offline RAG tests
-- **In-progress** (file:line): none; T14 is ready for its atomic commit
-- **Next step**: commit T14 atomically, then implement T15 LanceDB publication/query and continue T16-T18 sequentially
+- **Phase / Task**: Execute / Batch 2, T15 complete; T16 next
+- **Completed**: T1-T14 committed through `dfe7c79`; T15 real LanceDB publication/query passed 15 focused tests, 25 Offline RAG tests, and the 630-test full gate
+- **In-progress** (file:line): none
+- **Next step**: implement T16 deterministic hybrid fusion, then continue T17-T18 sequentially
 - **Blockers**: none for local Batch 2 execution; Railway apply/deploy remain separately approval-gated after a fresh exact plan
-- **Uncommitted files**: T14 local encoder implementation/tests, task status, and this handoff update
+- **Uncommitted files**: none expected after the atomic T15 commit
 - **Branch**: `main`

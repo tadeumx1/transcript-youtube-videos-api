@@ -537,11 +537,11 @@ atomic document replacement/delete, exact candidates, inspection, probe, and saf
 
 **Done when**:
 
-- [ ] Explicit 384-float schema and approved FTS are created only for a safe absent/empty table and exact manifest.
-- [ ] One validated document-scoped merge activates the complete target and deletes all surplus old chunks; no raw input reaches SQL.
-- [ ] Vector/FTS queries cap at 50 each, never call `fastSearch`, select public fields only, and immediately see fresh rows.
-- [ ] Real tests cover replace smaller/larger, unrelated preservation, restart, delete, filters, corrupt/incomplete/mixed state, timeout inspection, optimize serialization, and fingerprint/dimension failure.
-- [ ] Offline RAG and Full gates pass without reducing the pre-task test count.
+- [x] Explicit 384-float schema and approved FTS are created only for a safe absent/empty table and exact manifest.
+- [x] One validated document-scoped merge activates the complete target and deletes all surplus old chunks; no raw input reaches SQL.
+- [x] Vector/FTS queries cap at 50 each, never call `fastSearch`, select public fields only, and immediately see fresh rows.
+- [x] Real tests cover replace smaller/larger, unrelated preservation, restart, delete, filters, corrupt/incomplete/mixed state, timeout inspection, optimize serialization, and fingerprint/dimension failure.
+- [x] Offline RAG and Full gates pass without reducing the pre-task test count.
 
 **Tests**: unit + integration
 **Gate**: offline rag

@@ -258,9 +258,9 @@ the production Linux image.
 | VER-02 | Idempotent atomic versions | T13, T18 | In Progress |
 | VER-03 | Idempotent atomic versions | T13, T18 | In Progress |
 | VER-04 | Idempotent atomic versions | T13, T18, T20 | In Progress |
-| VER-05 | Idempotent atomic versions | Specify | Proposed |
+| VER-05 | Idempotent atomic versions | T15, T17 | In Progress |
 | VER-06 | Idempotent atomic versions | T8, T15-T17 | In Progress |
-| VER-07 | Idempotent atomic versions | Specify | Proposed |
+| VER-07 | Idempotent atomic versions | T15, T17 | In Progress |
 | VER-08 | Idempotent atomic versions | T13, T17-T18 | In Progress |
 | CHUNK-01 | Deterministic chunks/embeddings | T6, T17 | In Progress |
 | CHUNK-02 | Deterministic chunks/embeddings | T6, T17 | In Progress |
@@ -273,17 +273,17 @@ the production Linux image.
 | EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
 | SEARCH-01 | Hybrid retrieval | Specify | Proposed |
-| SEARCH-02 | Hybrid retrieval | Specify | Proposed |
-| SEARCH-03 | Hybrid retrieval | Specify | Proposed |
+| SEARCH-02 | Hybrid retrieval | T15-T16 | In Progress |
+| SEARCH-03 | Hybrid retrieval | T15-T16 | In Progress |
 | SEARCH-04 | Hybrid retrieval | Specify | Proposed |
-| SEARCH-05 | Hybrid retrieval | Specify | Proposed |
+| SEARCH-05 | Hybrid retrieval | T15-T16 | In Progress |
 | SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | In Progress |
 | SEARCH-07 | Hybrid retrieval | T4, T12, T14-T16, T18, T21 | In Progress |
 | SEARCH-08 | Hybrid retrieval | T7, T9, T16-T17 | In Progress |
-| LIFE-01 | Delete/operate safely | Specify | Proposed |
-| LIFE-02 | Delete/operate safely | Specify | Proposed |
+| LIFE-01 | Delete/operate safely | T15, T18, T20 | In Progress |
+| LIFE-02 | Delete/operate safely | T15, T18, T20 | In Progress |
 | LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | In Progress |
-| LIFE-04 | Delete/operate safely | Specify | Proposed |
+| LIFE-04 | Delete/operate safely | T15, T18 | In Progress |
 | LIFE-05 | Delete/operate safely | Specify | Proposed |
 | LIFE-06 | Delete/operate safely | T13, T18, T20 | In Progress |
 | CAP-01 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
@@ -302,7 +302,7 @@ the production Linux image.
 | EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |
 | EDGE-03 | Pre-publication crash | T13, T17 | In Progress |
 | EDGE-04 | Post-publication crash | T13, T17 | In Progress |
-| EDGE-05 | Smaller replacement | Specify | Proposed |
+| EDGE-05 | Smaller replacement | T15, T17 | In Progress |
 | EDGE-06 | Empty/whitespace source | T6, T17 | In Progress |
 | EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | In Progress |
 | EDGE-08 | Maintenance visibility | T8, T15, T17 | In Progress |

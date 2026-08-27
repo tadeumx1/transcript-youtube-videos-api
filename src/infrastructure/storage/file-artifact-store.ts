@@ -619,9 +619,7 @@ export class FileArtifactStore {
     }
   }
 
-  async #readVerifiedTranscript(
-    reference: ArtifactReference,
-  ): Promise<VerifiedArtifactTranscript> {
+  async #readVerifiedTranscript(reference: ArtifactReference): Promise<VerifiedArtifactTranscript> {
     const artifactPath = this.#paths.artifact(reference.artifactId)
     let manifestValue: unknown
     try {
