@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Execute / Batch 2, T17 complete; T18 next
-- **Completed**: T1-T16 committed through `2096d40`; T17 recoverable ingestion worker passed eight focused tests, 28 Offline RAG tests, and the 647-test full gate
+- **Phase / Task**: Execute / Batch 2 and Phase 2 complete; T19 next
+- **Completed**: T1-T17 committed through `0917984`; T18 durable RAG coordinator passed eleven focused tests, 28 Offline RAG tests, 538 unit tests, 120 integration tests, and the Build gate
 - **In-progress** (file:line): none
-- **Next step**: implement T18 durable RAG coordinator and complete Batch 2
+- **Next step**: begin Batch 3 with T19 fixed-label RAG telemetry
 - **Blockers**: none for local Batch 2 execution; Railway apply/deploy remain separately approval-gated after a fresh exact plan
-- **Uncommitted files**: none expected after the atomic T17 commit
+- **Uncommitted files**: none expected after the atomic T18 commit
 - **Branch**: `main`

@@ -246,7 +246,7 @@ the production Linux image.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| ING-01 | Submit verified transcript | Specify | Proposed |
+| ING-01 | Submit verified transcript | T18, T20 | In Progress |
 | ING-02 | Submit verified transcript | T10, T13, T18 | In Progress |
 | ING-03 | Submit verified transcript | T10-T11, T17 | In Progress |
 | ING-04 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
@@ -290,8 +290,8 @@ the production Linux image.
 | CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | OPS-01 | Production/evaluation | T3, T27 | In Progress |
 | OPS-02 | Production/evaluation | Specify | Proposed |
-| OPS-03 | Production/evaluation | Specify | Proposed |
-| OPS-04 | Production/evaluation | Specify | Proposed |
+| OPS-03 | Production/evaluation | T18, T21-T22, T27 | In Progress |
+| OPS-04 | Production/evaluation | T18, T21-T22, T27 | In Progress |
 | OPS-05 | Production/evaluation | Specify | Proposed |
 | OPS-06 | Production/evaluation | T2, T12, T16, T19-T21, T27 | In Progress |
 | OPS-07 | Production/evaluation | Specify | Proposed |

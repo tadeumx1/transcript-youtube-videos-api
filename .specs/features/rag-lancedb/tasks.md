@@ -618,11 +618,17 @@ status, search, delete epochs, capacity order, sweeps, and RAG-only readiness/de
 
 **Done when**:
 
-- [ ] Linearized submit checks hit, join, update conflict, queue, free space, locked source snapshot, then durable acceptance in the designed order.
-- [ ] VER-03 reuses retained completed metadata or creates only a new completed hit after expiry, with zero snapshot/chunk/embed/index mutation.
-- [ ] Delete intent/epoch prevents stale-worker resurrection and changes no source artifacts; startup reconciles delete before work.
-- [ ] Known RAG init failures keep the server-capable coordinator degraded, retry locally, and never degrade existing transcript state.
-- [ ] Full crash/race/capacity/retention/shutdown/retry integration matrix and Phase 2 Build gate pass with no forbidden calls or test-count regression.
+- [x] Linearized submit checks hit, join, update conflict, queue, free space, locked source snapshot, then durable acceptance in the designed order.
+- [x] VER-03 reuses retained completed metadata or creates only a new completed hit after expiry, with zero snapshot/chunk/embed/index mutation.
+- [x] Delete intent/epoch prevents stale-worker resurrection and changes no source artifacts; startup reconciles delete before work.
+- [x] Known RAG init failures keep the server-capable coordinator degraded, retry locally, and never degrade existing transcript state.
+- [x] Full crash/race/capacity/retention/shutdown/retry integration matrix and Phase 2 Build gate pass with no forbidden calls or test-count regression.
+
+**Evidence**: eleven focused unit/integration cases cover ordered miss/join/hit/update/capacity
+decisions, real atomic snapshot persistence/restart, delete intent recovery, low-disk hit admission,
+status/search, retention sweep degradation, startup retry, and concurrent shutdown. The Phase 2 gates
+passed 538 unit + 120 integration tests, 28 real Offline RAG tests, and `npm run build` with no skips
+or remote provider calls.
 
 **Tests**: unit + integration
 **Gate**: build

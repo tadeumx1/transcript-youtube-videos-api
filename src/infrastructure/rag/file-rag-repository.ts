@@ -47,6 +47,7 @@ export interface RagDocumentEpoch {
 export interface RagRecoverySnapshot {
   queued: RagIngestionRecord[]
   processing: RagIngestionRecord[]
+  deletePending: RagDocumentEpoch[]
   repairedDuplicates: number
 }
 
@@ -417,6 +418,10 @@ export class FileRagRepository {
             .filter((record) => record.status === 'processing')
             .sort(compareRecords)
             .map(cloneRecord),
+          deletePending: [...epochs.values()]
+            .filter((epoch) => epoch.state === 'delete_pending')
+            .sort((left, right) => left.documentId.localeCompare(right.documentId))
+            .map((epoch) => structuredClone(epoch)),
           repairedDuplicates,
         }
       } catch (error) {
