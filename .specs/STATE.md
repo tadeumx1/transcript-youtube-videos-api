@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Execute / Batch 1, T1-T9
-- **Completed**: spec, Approach A, Design, VER-03 correction, 27 tasks, coverage matrix, tools, three sequential execution batches, and independent Verifier explicitly approved
-- **In-progress** (file:line): `.specs/features/rag-lancedb/tasks.md:99`
-- **Next step**: commit the approved planning baseline, then dispatch the first sequential worker for T1-T9 with per-task gates and atomic commits
-- **Blockers**: none for local Execute; Railway apply/deploy remain separately approval-gated after a fresh exact plan
-- **Uncommitted files**: approved rag-lancedb context/spec/Design/tasks, AD-011, and Execute handoff
+- **Phase / Task**: Execute / Batch 2, T14 complete; T15 next
+- **Completed**: T1-T13 committed through `c6d6d72`; T14 offline encoder implementation and gates complete with eight focused unit cases and 15 Offline RAG tests
+- **In-progress** (file:line): none; T14 is ready for its atomic commit
+- **Next step**: commit T14 atomically, then implement T15 LanceDB publication/query and continue T16-T18 sequentially
+- **Blockers**: none for local Batch 2 execution; Railway apply/deploy remain separately approval-gated after a fresh exact plan
+- **Uncommitted files**: T14 local encoder implementation/tests, task status, and this handoff update
 - **Branch**: `main`

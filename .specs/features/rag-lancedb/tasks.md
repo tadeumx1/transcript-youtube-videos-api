@@ -505,10 +505,16 @@ prefixes, tokenizer access, mean pooling, normalization, vector validation, warm
 
 **Done when**:
 
-- [ ] Remote models and runtime network are disabled before import/pipeline construction; only the exact local revision is loaded.
-- [ ] Query/passage prefixes, tokenizer counts, mean pooling, L2 normalization, 384 finite values, norm tolerance, fingerprint, warmup, abort boundaries, and close are enforced.
-- [ ] Unit loader failures and real offline model 319/320/321 plus golden-cosine tests pass without credentials or skips.
-- [ ] Offline RAG gate passes without reducing the pre-task test count.
+- [x] Remote models and runtime network are disabled before import/pipeline construction; only the exact local revision is loaded.
+- [x] Query/passage prefixes, tokenizer counts, mean pooling, L2 normalization, 384 finite values, norm tolerance, fingerprint, warmup, abort boundaries, and close are enforced.
+- [x] Unit loader failures and real offline model 319/320/321 plus golden-cosine tests pass without credentials or skips.
+- [x] Offline RAG gate passes without reducing the pre-task test count.
+
+**Evidence**: eight focused unit cases passed for exact offline loader configuration, prefixes,
+tokenizer special-token counts, pooling/normalization, invalid dimension/value/norm outputs, abort
+boundaries, redaction, and idempotent disposal. `npm run test:rag:offline` passed 15 tests including
+the real pinned int8 model, 319/320/321 token boundaries, 384-dimensional normalized vectors,
+golden cosine values, fingerprint, and runtime fetch denial with no credentials or skips.
 
 **Tests**: unit + integration
 **Gate**: offline rag
