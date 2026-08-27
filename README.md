@@ -138,8 +138,8 @@ A imagem inclui FFmpeg, fixa o `yt-dlp` na versão `2026.8.19` e empacota os cin
 verificados do modelo E5; a execução não baixa modelo. O entrypoint inicia como root apenas para
 criar e ajustar a propriedade da raiz `/data`; em seguida usa `gosu` e substitui o processo pelo
 Node como usuário sem privilégios. Como o YouTube muda com frequência, atualize a versão do
-`yt-dlp` quando necessário. O target `rag-smoke`, descrito em [Qualidade](#qualidade), valida o
-encoder e o LanceDB sem credenciais nem rede antes da imagem final.
+`yt-dlp` quando necessário. A verificação descrita em [Qualidade](#qualidade) constrói a mesma
+imagem de produção e executa nela o encoder e o LanceDB sem credenciais nem rede.
 
 ## Rotas
 
@@ -533,12 +533,13 @@ npm exec -- vitest run test/integration/lancedb-rag-index.test.ts test/integrati
 npm exec -- vitest run test/integration/openapi.test.ts test/unit/rag-readme-contract.test.ts
 npm audit --omit=dev
 npm ls
-docker build --target rag-smoke -t transcript-rag:smoke .
 docker build -t transcript-rag:local .
+docker run --rm --network none transcript-rag:local node scripts/rag-container-smoke.mjs
 ```
 
-O `rag-smoke` nega credenciais/rede e comprova vetor real de 384 dimensões, substituição, busca
-vetorial/FTS, deleção, usuário sem privilégios e escrita em `/data`. Por fim, execute o gate completo:
+O smoke executado na imagem de produção nega credenciais/rede e comprova vetor real de 384
+dimensões, substituição, busca vetorial/FTS, deleção, usuário sem privilégios e escrita em `/data`.
+Por fim, execute o gate completo:
 
 ```bash
 npm run check
@@ -559,4 +560,5 @@ obrigatórios:
 - `Container build`
 
 O primeiro executa `npm ci` e `npm run check` no Node.js 22. O segundo só começa após o primeiro,
-constrói o target `rag-smoke` e a imagem de produção, sem publicá-las.
+constrói e carrega a imagem de produção sem publicá-la e executa nela o smoke com
+`docker run --network none`.

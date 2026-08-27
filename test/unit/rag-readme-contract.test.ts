@@ -100,7 +100,7 @@ describe('local RAG documentation contract', () => {
       'não incluem consulta, texto, vetor, URL, ID, caminho ou credencial',
       'npm run rag:model:fetch',
       'npm run test:rag:offline',
-      'docker build --target rag-smoke -t transcript-rag:smoke .',
+      'docker run --rm --network none transcript-rag:local node scripts/rag-container-smoke.mjs',
       'npm audit --omit=dev',
       'backup verificável antes de qualquer compactação',
       'railway volume files download',
@@ -111,6 +111,8 @@ describe('local RAG documentation contract', () => {
     ]) {
       expect(readme).toContain(phrase)
     }
+
+    expect(readme).not.toContain('docker build --target rag-smoke')
   })
 
   it('promises logical absence while explicitly rejecting secure physical erase claims', async () => {
