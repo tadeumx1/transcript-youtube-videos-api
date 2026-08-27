@@ -894,14 +894,28 @@ Volume/mount/service, preserved secrets, Docker build, and absence of paid remot
 
 **Done when**:
 
-- [ ] Static tests assert one service/replica/Volume, 1024 MB `/data`, exact transcript/RAG roots, preserved existing secrets, and no database/bucket/remote-model secret.
-- [ ] A fresh Railway plan is captured read-only and contains only the expected additive/change operations with zero destroy.
-- [ ] No apply/deploy occurs until the main agent presents that exact plan and obtains the separately required user approval.
-- [ ] Quick and Build gates pass without reducing the pre-task test count.
+- [x] Static tests assert one service/replica/Volume, 1024 MB `/data`, exact transcript/RAG roots, preserved existing secrets, and no database/bucket/remote-model secret.
+- [x] A fresh Railway plan is captured read-only and contains only the expected additive/change operations with zero destroy.
+- [x] No apply/deploy occurs until the main agent presents that exact plan and obtains the separately required user approval.
+- [x] Quick and Build gates pass without reducing the pre-task test count.
+
+**Evidence**: two static IaC cases prove exactly one Dockerfile service/replica, one 1024 MB
+`transcript-data` Volume mounted at `/data`, exact `/data/transcripts` and `/data/lancedb` roots,
+preserved `API_ACCESS_KEY`/`OPENCODE_API_KEY`, and absence of databases, buckets, remote-model
+credentials, managed public domains, or Railway UUIDs. A fresh authenticated Railway CLI 5.45.0
+read-only plan against the linked `production` environment reported `1 to add, 3 to change, 0 to
+destroy`: create the declared Volume, attach it at `/data`, reconcile the already-declared
+`DATA_ROOT`, and add `RAG_DATA_ROOT`; values remained hidden. No apply, deploy, push, variable write,
+link, or other remote mutation ran. The current CLI uses `config plan --file` and no longer accepts
+the task table's legacy `plan --environment` syntax; environment identity was verified read-only
+before planning. Quick passed 544 unit tests and `npm run check` passed all 718 tests, lint,
+typecheck, and build without skips or count reduction.
+Mechanical correction only: the proposed `ops(...)` commit type is not accepted by the TLC
+Conventional Commits validator, so the metadata uses its equivalent allowed `chore(...)` type.
 
 **Tests**: unit
 **Gate**: railway plan
-**Commit**: `ops(railway): persist embedded rag data`
+**Commit**: `chore(railway): persist embedded rag data`
 
 ### T27: Document RAG operation and deletion semantics
 

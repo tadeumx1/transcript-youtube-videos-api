@@ -17,6 +17,7 @@ export default defineRailway(() => {
       API_ACCESS_KEY: preserve(),
       DATA_ROOT: '/data/transcripts',
       OPENCODE_API_KEY: preserve(),
+      RAG_DATA_ROOT: '/data/lancedb',
     },
     volumeMounts: {
       '/data': volume('transcript-data', { sizeMB: 1024 }),

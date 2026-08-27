@@ -41,6 +41,7 @@ describe('Railway infrastructure contract', () => {
         API_ACCESS_KEY: { type: 'preserve' },
         OPENCODE_API_KEY: { type: 'preserve' },
         DATA_ROOT: { type: 'literal', value: '/data/transcripts' },
+        RAG_DATA_ROOT: { type: 'literal', value: '/data/lancedb' },
       },
       volumeAttachments: {
         'transcript-data': {
@@ -70,6 +71,14 @@ describe('Railway infrastructure contract', () => {
       API_ACCESS_KEY: { type: 'preserve' },
       OPENCODE_API_KEY: { type: 'preserve' },
       DATA_ROOT: { type: 'literal', value: '/data/transcripts' },
+      RAG_DATA_ROOT: { type: 'literal', value: '/data/lancedb' },
     })
+    expect(Object.keys(web?.variables ?? {}).sort()).toEqual([
+      'API_ACCESS_KEY',
+      'DATA_ROOT',
+      'OPENCODE_API_KEY',
+      'RAG_DATA_ROOT',
+    ])
+    expect(source).not.toMatch(/(?:MODEL|HF|HUGGING_FACE|OPENAI|ANTHROPIC)_(?:KEY|TOKEN|SECRET)/)
   })
 })

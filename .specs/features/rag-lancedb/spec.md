@@ -286,10 +286,10 @@ the production Linux image.
 | LIFE-04 | Delete/operate safely | T15, T18 | In Progress |
 | LIFE-05 | Delete/operate safely | Specify | Proposed |
 | LIFE-06 | Delete/operate safely | T13, T18, T20 | Complete |
-| CAP-01 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
+| CAP-01 | Delete/operate safely | T3, T13, T18, T26 | Complete |
 | CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | OPS-01 | Production/evaluation | T3, T27 | In Progress |
-| OPS-02 | Production/evaluation | T24, T26 | In Progress |
+| OPS-02 | Production/evaluation | T24, T26 | Complete |
 | OPS-03 | Production/evaluation | T18, T21-T22, T27 | In Progress |
 | OPS-04 | Production/evaluation | T18, T21-T22, T27 | In Progress |
 | OPS-05 | Production/evaluation | T19 | Complete |
