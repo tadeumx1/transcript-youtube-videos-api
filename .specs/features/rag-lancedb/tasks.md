@@ -270,7 +270,7 @@ identity/checksum, segment/timestamp provenance, and source/chunk size enforceme
 **Gate**: offline rag
 **Commit**: `feat(rag): chunk transcripts deterministically`
 
-### T7: Schedule one encoder fairly
+### T7: Schedule one encoder fairly ✅
 
 **What**: Implement abort-aware FIFO scheduling for one model instance, with no more than four
 consecutive waiting searches before one waiting ingestion batch.
@@ -287,10 +287,12 @@ consecutive waiting searches before one waiting ingestion batch.
 
 **Done when**:
 
-- [ ] Exactly one callback runs at a time and search/ingestion FIFO order is deterministic within class.
-- [ ] The four-search fairness bound, ingestion yielding between batches, queued/active abort, post-call abort, and idempotent stop are unit-tested.
-- [ ] No signal disposes or interrupts an in-flight shared model call.
-- [ ] Quick gate passes without reducing the pre-task test count.
+- [x] Exactly one callback runs at a time and search/ingestion FIFO order is deterministic within class.
+- [x] The four-search fairness bound, ingestion yielding between batches, queued/active abort, post-call abort, and idempotent stop are unit-tested.
+- [x] No signal disposes or interrupts an in-flight shared model call.
+- [x] Quick gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit` passed 453 tests (445 pre-task); eight scheduler cases assert peak concurrency one, per-class FIFO, exact four-search fairness, inter-batch yield, pre/queued/post-call abort, listener cleanup, exception release, and idempotent stop without interrupting the active callback.
 
 **Tests**: unit
 **Gate**: quick
