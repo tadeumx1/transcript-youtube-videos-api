@@ -51,6 +51,13 @@ export interface ArtifactBundle {
   pdf: Buffer
 }
 
+export interface VerifiedArtifactTranscript {
+  reference: ArtifactReference
+  manifest: ArtifactManifest
+  transcript: Transcript
+  transcriptBytes: Buffer
+}
+
 export interface WorkTranscriptReference {
   jobId: string
   transcript: ArtifactFileMetadata
@@ -441,6 +448,31 @@ export class FileArtifactStore {
     })
   }
 
+  async withVerifiedTranscript<T>(
+    reference: ArtifactReference,
+    consume: (source: VerifiedArtifactTranscript) => Promise<T>,
+  ): Promise<T> {
+    const key = assertSha256(reference.cacheKey)
+    assertJobId(reference.artifactId)
+    return this.#withKey(key, async () => {
+      let source: VerifiedArtifactTranscript
+      try {
+        source = await this.#readVerifiedTranscript(reference)
+      } catch (error) {
+        if (error instanceof CorruptArtifactError) {
+          try {
+            await this.#removePointerIfOwned(reference)
+            await this.#quarantine(this.#paths.artifact(reference.artifactId))
+          } catch {
+            this.#setHealthy(false)
+          }
+        }
+        throw new ArtifactStorageError()
+      }
+      return consume(source)
+    })
+  }
+
   async saveWorkTranscript(
     jobId: string,
     transcript: Transcript,
@@ -584,6 +616,53 @@ export class FileArtifactStore {
       manifest,
       transcript: parseTranscript(value),
       pdf,
+    }
+  }
+
+  async #readVerifiedTranscript(
+    reference: ArtifactReference,
+  ): Promise<VerifiedArtifactTranscript> {
+    const artifactPath = this.#paths.artifact(reference.artifactId)
+    let manifestValue: unknown
+    try {
+      manifestValue = await this.#readJson(join(artifactPath, 'manifest.json'))
+    } catch (error) {
+      if (isMissing(error)) throw new MissingArtifactError()
+      throw error
+    }
+    const manifest = parseManifest(manifestValue)
+    if (
+      manifest.artifactId !== reference.artifactId ||
+      manifest.cacheKey !== reference.cacheKey ||
+      manifest.expiresAt !== reference.expiresAt
+    ) {
+      throw new CorruptArtifactError()
+    }
+
+    let transcriptBytes: Buffer
+    try {
+      transcriptBytes = await this.#operations.readFile(join(artifactPath, 'transcript.json'))
+    } catch (error) {
+      if (isMissing(error)) throw new CorruptArtifactError()
+      throw error
+    }
+    this.#verifyBytes(transcriptBytes, manifest.transcript)
+    let value: unknown
+    try {
+      value = JSON.parse(transcriptBytes.toString('utf8'))
+    } catch {
+      throw new CorruptArtifactError()
+    }
+    return {
+      reference: {
+        artifactId: manifest.artifactId,
+        cacheKey: manifest.cacheKey,
+        producerJobId: manifest.producerJobId,
+        expiresAt: manifest.expiresAt,
+      },
+      manifest,
+      transcript: parseTranscript(value),
+      transcriptBytes,
     }
   }
 

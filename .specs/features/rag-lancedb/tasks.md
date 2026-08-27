@@ -375,10 +375,16 @@ while holding the existing cache-key lock until the consumer durably finishes.
 
 **Done when**:
 
-- [ ] PDF is never read and the callback sees verified raw transcript bytes plus the parsed transcript and artifact metadata.
-- [ ] Expiry/read/delete/corruption/consumer-failure races prove old read methods remain compatible and lock release is exception-safe.
-- [ ] Temporary-files integration proves expiry cannot enqueue a dangling RAG snapshot.
-- [ ] Full gate passes without reducing the pre-task test count.
+- [x] PDF is never read and the callback sees verified raw transcript bytes plus the parsed transcript and artifact metadata.
+- [x] Expiry/read/delete/corruption/consumer-failure races prove old read methods remain compatible and lock release is exception-safe.
+- [x] Temporary-files integration proves expiry cannot enqueue a dangling RAG snapshot.
+- [x] Full gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit && npm run test:integration` passed 574 tests (570 pre-task).
+Three focused unit cases prove the exact verified payload, PDF exclusion, lock-held expiry,
+exception-safe release, legacy read compatibility, and sanitized corruption behavior. A real
+temporary-files integration case proves a durable transcript-only snapshot completes before source
+expiry can remove the bundle.
 
 **Tests**: unit + integration
 **Gate**: full

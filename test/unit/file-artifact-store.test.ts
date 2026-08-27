@@ -638,6 +638,93 @@ describe('FileArtifactStore', () => {
     expect(expiryFinished).toBe(true)
   })
 
+  it('holds the cache-key lock through a verified transcript consumer without reading PDF bytes', async () => {
+    const root = await temporaryRoot()
+    const initial = new FileArtifactStore({ root, createId: () => artifactId })
+    const reference = await initial.publishBundle(publishingInput())
+    let releaseConsumer: (() => void) | undefined
+    const consumerWaiting = new Promise<void>((resolve) => {
+      releaseConsumer = resolve
+    })
+    let announceConsumer: (() => void) | undefined
+    const consumerStarted = new Promise<void>((resolve) => {
+      announceConsumer = resolve
+    })
+    const readFileSpy = vi.fn(nodeArtifactStoreFileOperations.readFile)
+    const store = new FileArtifactStore({
+      root,
+      operations: { ...nodeArtifactStoreFileOperations, readFile: readFileSpy },
+      createId: () => artifactId,
+    })
+
+    const consuming = store.withVerifiedTranscript(reference, async (source) => {
+      const transcriptBytes = Buffer.from(JSON.stringify(transcript))
+      expect(source).toEqual({
+        reference,
+        manifest: expect.objectContaining({
+          artifactId,
+          cacheKey,
+          expiresAt,
+          transcript: { bytes: transcriptBytes.byteLength, sha256: sha256(transcriptBytes) },
+        }),
+        transcript,
+        transcriptBytes,
+      })
+      announceConsumer?.()
+      await consumerWaiting
+      return 'snapshot-durable'
+    })
+    await consumerStarted
+    let expiryFinished = false
+    const expiring = store.expire(reference).then(() => {
+      expiryFinished = true
+    })
+
+    await Promise.resolve()
+    expect(expiryFinished).toBe(false)
+    expect(readFileSpy.mock.calls.map(([path]) => basename(path))).not.toContain('transcript.pdf')
+    releaseConsumer?.()
+    await expect(consuming).resolves.toBe('snapshot-durable')
+    await expiring
+    expect(expiryFinished).toBe(true)
+  })
+
+  it('releases the cache-key lock after consumer failure and preserves old read compatibility', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    const reference = await store.publishBundle(publishingInput())
+    const consumerFailure = new Error('consumer rejected')
+
+    await expect(
+      store.withVerifiedTranscript(reference, async () => {
+        throw consumerFailure
+      }),
+    ).rejects.toBe(consumerFailure)
+
+    await expect(store.readForJob(reference)).resolves.toMatchObject({ transcript, pdf })
+    await expect(store.expire(reference)).resolves.toBeUndefined()
+  })
+
+  it('maps corrupt transcript-only reads to the existing sanitized storage failure', async () => {
+    const root = await temporaryRoot()
+    const store = new FileArtifactStore({ root, createId: () => artifactId })
+    const reference = await store.publishBundle(publishingInput())
+    await writeFile(
+      join(createStoragePaths(root).artifact(artifactId), 'transcript.json'),
+      Buffer.from('corrupt'),
+    )
+    const consume = vi.fn()
+
+    await expect(store.withVerifiedTranscript(reference, consume)).rejects.toEqual(
+      expect.objectContaining({
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+    expect(consume).not.toHaveBeenCalled()
+  })
+
   it.each(['ENOSPC', 'EROFS'] as const)(
     'maps %s publication/probe failure to sanitized unhealthy storage and recovers on probe',
     async (code) => {

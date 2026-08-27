@@ -247,10 +247,10 @@ the production Linux image.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | ING-01 | Submit verified transcript | Specify | Proposed |
-| ING-02 | Submit verified transcript | Specify | Proposed |
-| ING-03 | Submit verified transcript | Specify | Proposed |
+| ING-02 | Submit verified transcript | T10, T13, T18 | In Progress |
+| ING-03 | Submit verified transcript | T10-T11, T17 | In Progress |
 | ING-04 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
-| ING-05 | Submit verified transcript | Specify | Proposed |
+| ING-05 | Submit verified transcript | T10-T11, T18, T20 | In Progress |
 | ING-06 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
 | ING-07 | Submit verified transcript | Specify | Proposed |
 | ING-08 | Submit verified transcript | T7, T9, T17-T18, T21-T22 | In Progress |
@@ -299,7 +299,7 @@ the production Linux image.
 | OPS-09 | Production/evaluation | Specify | Proposed |
 | OPS-10 | Production/evaluation | T1, T5, T24, T25, T27 | In Progress |
 | EDGE-01 | Authentication order | Specify | Proposed |
-| EDGE-02 | Source-expiry race | Specify | Proposed |
+| EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |
 | EDGE-03 | Pre-publication crash | Specify | Proposed |
 | EDGE-04 | Post-publication crash | Specify | Proposed |
 | EDGE-05 | Smaller replacement | Specify | Proposed |
