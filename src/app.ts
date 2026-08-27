@@ -1,7 +1,14 @@
 import { DurableJobCoordinator } from './application/durable-job-coordinator.js'
 import { DurableJobWorker } from './application/durable-job-worker.js'
+import { AsyncReadWriteLock } from './application/async-read-write-lock.js'
 import { ExecutionController } from './application/execution-controller.js'
 import { HybridTranscriptService } from './application/hybrid-transcript-service.js'
+import { DeterministicRagChunker } from './application/rag-chunker.js'
+import { RagEncoderScheduler } from './application/rag-encoder-scheduler.js'
+import { RagIngestionCoordinator } from './application/rag-ingestion-coordinator.js'
+import { RagDocumentMutex, RagIngestionWorker } from './application/rag-ingestion-worker.js'
+import { RagSearchController } from './application/rag-search-controller.js'
+import { RagSearchService } from './application/rag-search-service.js'
 import { TranscriptArtifactCoordinator } from './application/transcript-artifact-coordinator.js'
 import {
   type BuildAppOptions,
@@ -18,6 +25,10 @@ import {
 import { NodeProcessRunner } from './infrastructure/audio/process-runner.js'
 import { RuntimeMetrics } from './infrastructure/observability/runtime-metrics.js'
 import { TranscriptPdfRenderer } from './infrastructure/pdf/transcript-pdf.js'
+import { FileRagRepository } from './infrastructure/rag/file-rag-repository.js'
+import { LanceDbRagIndex } from './infrastructure/rag/lancedb-rag-index.js'
+import { LocalE5Encoder } from './infrastructure/rag/local-e5-encoder.js'
+import { EMBEDDING_FINGERPRINT } from './infrastructure/rag/model-manifest.js'
 import { FileArtifactStore } from './infrastructure/storage/file-artifact-store.js'
 import { FileJobRepository } from './infrastructure/storage/file-job-repository.js'
 import { YouTubeCaptionProvider } from './infrastructure/youtube/youtube-caption-provider.js'
@@ -39,11 +50,29 @@ export interface ApplicationConfig {
   failedJobTtlSeconds?: number
   jobTombstoneTtlSeconds?: number
   storageSweepIntervalMs?: number
+  ragDataRoot?: string
+  ragModelRoot?: string
+  maxQueuedRagIngestions?: number
+  maxConcurrentRagSearches?: number
+  ragSearchRetryAfterSeconds?: number
+  failedRagIngestionTtlSeconds?: number
+  ragIngestionTombstoneTtlSeconds?: number
+  ragSweepIntervalMs?: number
+  ragMaxSourceCodePoints?: number
+  ragMaxChunksPerDocument?: number
+  ragEmbeddingBatchSize?: number
+  ragMinFreeBytes?: number
 }
+
+export type ApplicationRagEncoder = Pick<
+  LocalE5Encoder,
+  'initialize' | 'close' | 'countModelTokens' | 'embedQuery' | 'embedPassages'
+>
 
 export interface ApplicationCompositionOverrides {
   transcriptService?: TranscriptApplicationService
   pdfRenderer?: PdfRenderer
+  ragEncoder?: ApplicationRagEncoder
 }
 
 export function createApplication(
@@ -117,6 +146,68 @@ export function createApplication(
     maxQueuedJobs: config.maxQueuedJobs ?? 100,
     sweepIntervalMs: config.storageSweepIntervalMs ?? 60_000,
   })
+  const ragDataRoot = config.ragDataRoot ?? '.data/lancedb'
+  const ragTerminalTtlSeconds = config.failedRagIngestionTtlSeconds ?? 86_400
+  const ragRepository = new FileRagRepository({
+    root: ragDataRoot,
+    terminalTtlSeconds: ragTerminalTtlSeconds,
+    tombstoneTtlSeconds: config.ragIngestionTombstoneTtlSeconds ?? 86_400,
+  })
+  const ragIndex = new LanceDbRagIndex({ root: ragDataRoot })
+  const ragEncoder =
+    overrides.ragEncoder ?? new LocalE5Encoder({ modelRoot: config.ragModelRoot ?? '.models' })
+  const ragScheduler = new RagEncoderScheduler()
+  const ragPublicationLock = new AsyncReadWriteLock()
+  const ragDocumentMutex = new RagDocumentMutex()
+  const ragSearchAdmission = new RagSearchController(
+    config.maxConcurrentRagSearches ?? 4,
+    config.ragSearchRetryAfterSeconds ?? 5,
+    metrics,
+  )
+  const ragChunker = new DeterministicRagChunker(ragEncoder, {
+    embeddingFingerprint: EMBEDDING_FINGERPRINT,
+    maxSourceCodePoints: config.ragMaxSourceCodePoints ?? 5_000_000,
+    maxChunksPerDocument: config.ragMaxChunksPerDocument ?? 5_000,
+  })
+  const ragSearchService = new RagSearchService({
+    admission: ragSearchAdmission,
+    encoder: ragEncoder,
+    index: ragIndex,
+    scheduler: ragScheduler,
+    publicationLock: ragPublicationLock,
+  })
+  const ragWorker = new RagIngestionWorker({
+    repository: ragRepository,
+    chunker: ragChunker,
+    encoder: ragEncoder,
+    scheduler: ragScheduler,
+    index: ragIndex,
+    publicationLock: ragPublicationLock,
+    documentMutex: ragDocumentMutex,
+    embeddingBatchSize: config.ragEmbeddingBatchSize ?? 8,
+    terminalTtlSeconds: ragTerminalTtlSeconds,
+    onFatal: () => {
+      metrics.setRagComponentHealthy('worker', false)
+      ragSearchAdmission.markUnavailable()
+    },
+  })
+  const ragCoordinator = new RagIngestionCoordinator({
+    repository: ragRepository,
+    durableSource: jobCoordinator,
+    worker: ragWorker,
+    index: ragIndex,
+    encoder: ragEncoder,
+    scheduler: ragScheduler,
+    searchService: ragSearchService,
+    searchAdmission: ragSearchAdmission,
+    publicationLock: ragPublicationLock,
+    documentMutex: ragDocumentMutex,
+    maxQueuedIngestions: config.maxQueuedRagIngestions ?? 25,
+    minFreeBytes: config.ragMinFreeBytes ?? 134_217_728,
+    terminalTtlSeconds: ragTerminalTtlSeconds,
+    sweepIntervalMs: config.ragSweepIntervalMs ?? 60_000,
+    retryIntervalMs: 1_000,
+  })
 
   return buildApp(
     {
@@ -124,6 +215,7 @@ export function createApplication(
       pdfRenderer,
       artifactCoordinator,
       jobCoordinator,
+      ragCoordinator,
     },
     {
       ...options,

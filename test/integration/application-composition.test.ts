@@ -4,9 +4,13 @@ import { dirname, join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createApplication } from '../../src/app.js'
+import {
+  type ApplicationRagEncoder,
+  createApplication,
+} from '../../src/app.js'
 import { ExecutionController } from '../../src/application/execution-controller.js'
 import { AppError } from '../../src/domain/errors.js'
+import { RagError } from '../../src/domain/rag.js'
 import type { Transcript } from '../../src/domain/transcript.js'
 import { normalizeTranscriptRequest } from '../../src/domain/transcript-request.js'
 import type { TranscriptApplicationService } from '../../src/http/app.js'
@@ -40,6 +44,20 @@ async function temporaryRoot(): Promise<string> {
   return join(parent, 'transcripts')
 }
 
+function createRagEncoder(): ApplicationRagEncoder {
+  const vector = new Float32Array(384)
+  vector[0] = 1
+  return {
+    initialize: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+    countModelTokens: vi.fn((text: string) => Array.from(text).length + 2),
+    embedQuery: vi.fn().mockImplementation(async () => vector.slice()),
+    embedPassages: vi
+      .fn()
+      .mockImplementation(async (passages: readonly string[]) => passages.map(() => vector.slice())),
+  }
+}
+
 function createOverrides() {
   const getTranscript = vi
     .fn<TranscriptApplicationService['getTranscript']>()
@@ -50,6 +68,7 @@ function createOverrides() {
     overrides: {
       transcriptService: { getTranscript },
       pdfRenderer: { render },
+      ragEncoder: createRagEncoder(),
     },
     render,
   }
@@ -66,6 +85,18 @@ function config(dataRoot: string) {
     failedJobTtlSeconds: 86_400,
     jobTombstoneTtlSeconds: 86_400,
     storageSweepIntervalMs: 1_000,
+    ragDataRoot: join(dirname(dataRoot), 'lancedb'),
+    ragModelRoot: join(dirname(dataRoot), 'models'),
+    maxQueuedRagIngestions: 25,
+    maxConcurrentRagSearches: 4,
+    ragSearchRetryAfterSeconds: 5,
+    failedRagIngestionTtlSeconds: 86_400,
+    ragIngestionTombstoneTtlSeconds: 86_400,
+    ragSweepIntervalMs: 1_000,
+    ragMaxSourceCodePoints: 5_000_000,
+    ragMaxChunksPerDocument: 5_000,
+    ragEmbeddingBatchSize: 8,
+    ragMinFreeBytes: 16_777_216,
   }
 }
 
@@ -111,6 +142,96 @@ describe('production durable application composition', () => {
     const readiness = await app.inject({ method: 'GET', url: '/ready' })
     expect(readiness.statusCode).toBe(200)
     expect(readiness.json()).toEqual({ status: 'ready' })
+    await app.close()
+  })
+
+  it('shares one local encoder and worker across durable ingestion, RAG publication, and search', async () => {
+    const dataRoot = await temporaryRoot()
+    const fixture = createOverrides()
+    const ragEncoder = fixture.overrides.ragEncoder
+    const app = createApplication(config(dataRoot), {}, fixture.overrides)
+    await app.ready()
+
+    const jobSubmission = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs',
+      headers: authorization,
+      payload: { url: firstUrl },
+    })
+    const durableJobId = jobSubmission.json().jobId as string
+    await waitForCompleted(app, durableJobId)
+
+    const ragSubmission = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/ingestions',
+      headers: authorization,
+      payload: { jobId: durableJobId },
+    })
+    expect(ragSubmission.statusCode).toBe(202)
+    expect(ragSubmission.json()).toMatchObject({ status: 'queued', disposition: 'miss' })
+    const ragIngestionId = ragSubmission.json().ingestionId as string
+    await vi.waitFor(
+      async () => {
+        const status = await app.inject({
+          method: 'GET',
+          url: `/v1/rag/ingestions/${ragIngestionId}`,
+          headers: authorization,
+        })
+        expect(status.statusCode).toBe(200)
+        expect(status.json().status).toBe('completed')
+      },
+      { timeout: 5_000 },
+    )
+
+    const search = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/search',
+      headers: authorization,
+      payload: { query: 'Transcript', topK: 5 },
+    })
+    expect(search.statusCode).toBe(200)
+    expect(search.json().results).toHaveLength(1)
+    expect(search.json().results[0]).toMatchObject({
+      rank: 1,
+      text: transcript().text,
+      source: { sourceJobId: durableJobId },
+    })
+    expect(ragEncoder.initialize).toHaveBeenCalledOnce()
+    expect(ragEncoder.embedPassages).toHaveBeenCalledOnce()
+    expect(ragEncoder.embedQuery).toHaveBeenCalledOnce()
+
+    await app.close()
+    expect(ragEncoder.close).toHaveBeenCalledOnce()
+  })
+
+  it('isolates a local RAG warmup failure and retries without provider or server restart', async () => {
+    const dataRoot = await temporaryRoot()
+    const fixture = createOverrides()
+    const ragEncoder = fixture.overrides.ragEncoder
+    vi.mocked(ragEncoder.initialize)
+      .mockRejectedValueOnce(new RagError('RAG_MODEL_UNAVAILABLE'))
+      .mockResolvedValue(undefined)
+    const app = createApplication(config(dataRoot), {}, fixture.overrides)
+    await app.ready()
+
+    const health = await app.inject({ method: 'GET', url: '/health' })
+    const firstReadiness = await app.inject({ method: 'GET', url: '/ready' })
+    expect(health.statusCode).toBe(200)
+    expect(health.json()).toEqual({ status: 'ok' })
+    expect(firstReadiness.statusCode).toBe(503)
+    expect(firstReadiness.json()).toEqual({ status: 'not_ready' })
+    expect(fixture.getTranscript).not.toHaveBeenCalled()
+
+    await vi.waitFor(
+      async () => {
+        const readiness = await app.inject({ method: 'GET', url: '/ready' })
+        expect(readiness.statusCode).toBe(200)
+        expect(readiness.json()).toEqual({ status: 'ready' })
+      },
+      { timeout: 3_000, interval: 100 },
+    )
+    expect(ragEncoder.initialize).toHaveBeenCalledTimes(2)
+    expect(fixture.getTranscript).not.toHaveBeenCalled()
     await app.close()
   })
 
@@ -186,6 +307,7 @@ describe('production durable application composition', () => {
       {
         transcriptService: { getTranscript },
         pdfRenderer: { render: vi.fn().mockResolvedValue(pdf) },
+        ragEncoder: createRagEncoder(),
       },
     )
 
@@ -232,6 +354,7 @@ describe('production durable application composition', () => {
       {
         transcriptService: { getTranscript },
         pdfRenderer: { render: vi.fn().mockResolvedValue(pdf) },
+        ragEncoder: createRagEncoder(),
       },
     )
     await app.ready()

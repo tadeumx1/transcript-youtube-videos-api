@@ -749,10 +749,16 @@ locks, and coordinator from config, sharing the existing service/Volume lifecycl
 
 **Done when**:
 
-- [ ] Production creates one encoder session, one RAG worker/writer, and no remote embedding/search/provider adapter.
-- [ ] RAG paths/config/metrics/lifecycle are wired without changing transcript concurrency or artifact retention.
-- [ ] Composition tests use fakes/temporary roots to prove start/stop order, degraded isolation, retry, and no hidden network/API key.
-- [ ] Full gate passes without reducing the pre-task test count.
+- [x] Production creates one encoder session, one RAG worker/writer, and no remote embedding/search/provider adapter.
+- [x] RAG paths/config/metrics/lifecycle are wired without changing transcript concurrency or artifact retention.
+- [x] Composition tests use fakes/temporary roots to prove start/stop order, degraded isolation, retry, and no hidden network/API key.
+- [x] Full gate passes without reducing the pre-task test count.
+
+**Evidence**: production now composes one local repository/index/model/scheduler/worker/search/
+coordinator graph from the approved config and passes only the shared metrics instance to admission.
+Two focused composition cases prove one fake encoder initializes once, serves ingestion and search,
+closes once, and retries one sanitized warmup failure locally while health/providers remain untouched.
+The Full gate passed 540 unit + 171 integration tests, adding two cases with no skips.
 
 **Tests**: integration
 **Gate**: full

@@ -252,8 +252,8 @@ the production Linux image.
 | ING-04 | Submit verified transcript | T2, T13, T18, T20 | Complete |
 | ING-05 | Submit verified transcript | T10-T11, T18, T20 | Complete |
 | ING-06 | Submit verified transcript | T2, T13, T18, T20 | Complete |
-| ING-07 | Submit verified transcript | T13, T17-T18, T21-T22 | In Progress |
-| ING-08 | Submit verified transcript | T7, T9, T17-T18, T21-T22 | In Progress |
+| ING-07 | Submit verified transcript | T13, T17-T18, T21-T22 | Complete |
+| ING-08 | Submit verified transcript | T7, T9, T17-T18, T21-T22 | Complete |
 | VER-01 | Idempotent atomic versions | T2, T13, T18 | In Progress |
 | VER-02 | Idempotent atomic versions | T13, T18 | In Progress |
 | VER-03 | Idempotent atomic versions | T13, T18 | In Progress |
