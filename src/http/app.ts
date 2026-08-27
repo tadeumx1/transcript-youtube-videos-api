@@ -13,6 +13,7 @@ import type {
   TranscriptArtifactCoordinator,
 } from '../application/transcript-artifact-coordinator.js'
 import { AppError, type AppErrorCode } from '../domain/errors.js'
+import { RagError } from '../domain/rag.js'
 import {
   type Transcript,
   type TranscriptOperationOptions,
@@ -32,6 +33,11 @@ import {
   JobRouteValidationError,
   registerJobRoutes,
 } from './job-routes.js'
+import {
+  type RagRouteCoordinator,
+  RagRouteValidationError,
+  registerRagRoutes,
+} from './rag-routes.js'
 import {
   healthRouteSchema,
   metricsRouteSchema,
@@ -64,6 +70,12 @@ export interface DurableApplicationCoordinator extends JobRouteCoordinator {
   stop(): Promise<void>
 }
 
+export interface RagApplicationCoordinator extends RagRouteCoordinator {
+  readonly isReady: boolean
+  start(): Promise<void>
+  stop(): Promise<void>
+}
+
 export type SynchronousArtifactCoordinator = Pick<
   TranscriptArtifactCoordinator,
   'prepare' | 'find' | 'produceSync'
@@ -73,6 +85,7 @@ export interface AppDependencies {
   transcriptService: TranscriptApplicationService
   pdfRenderer: PdfRenderer
   jobCoordinator?: DurableApplicationCoordinator
+  ragCoordinator?: RagApplicationCoordinator
   artifactCoordinator?: SynchronousArtifactCoordinator
 }
 
@@ -253,7 +266,20 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
         })
       }
 
-      if (error instanceof JobRouteValidationError) {
+      if (error instanceof RagError) {
+        request.log.warn({ code: error.code, statusCode: error.statusCode }, 'request failed')
+        if (error.retryAfterSeconds !== undefined) {
+          reply.header('retry-after', String(error.retryAfterSeconds))
+        }
+        return reply.status(error.statusCode).send({
+          error: {
+            code: error.code,
+            message: error.message,
+          },
+        })
+      }
+
+      if (error instanceof JobRouteValidationError || error instanceof RagRouteValidationError) {
         request.log.warn({ code: error.code, statusCode: error.statusCode }, 'request failed')
         return reply.status(400).send({
           error: {
@@ -275,7 +301,11 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
     app.get('/health', { schema: healthRouteSchema }, async () => ({ status: 'ok' }))
 
     app.get('/ready', { schema: readinessRouteSchema }, async (_request, reply) => {
-      if (!executionController.isReady || dependencies.jobCoordinator?.isReady === false) {
+      if (
+        !executionController.isReady ||
+        dependencies.jobCoordinator?.isReady === false ||
+        dependencies.ragCoordinator?.isReady === false
+      ) {
         return reply.status(503).send({ status: 'not_ready' })
       }
       return reply.send({ status: 'ready' })
@@ -286,6 +316,9 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
     if (dependencies.jobCoordinator) {
       registerJobRoutes(app, dependencies.jobCoordinator, authenticate)
     }
+    if (dependencies.ragCoordinator) {
+      registerRagRoutes(app, dependencies.ragCoordinator, authenticate)
+    }
 
     app.get(
       '/metrics',
@@ -295,10 +328,12 @@ export function buildApp(dependencies: AppDependencies, options: BuildAppOptions
 
     app.addHook('onReady', async () => {
       await dependencies.jobCoordinator?.start()
+      await dependencies.ragCoordinator?.start()
     })
 
     app.addHook('preClose', async () => {
       executionController.beginShutdown()
+      await dependencies.ragCoordinator?.stop()
       await dependencies.jobCoordinator?.stop()
     })
 

@@ -716,11 +716,17 @@ sequence degraded start/retry plus stop without preventing health or existing ro
 
 **Done when**:
 
-- [ ] `/ready` requires durable transcript and RAG readiness; `/health` stays public and network-free.
-- [ ] A RAG-only model/index/repository/worker failure returns fixed RAG 503 while health and existing authenticated transcript/job handlers remain callable.
-- [ ] Auth precedes parsing/dependencies and unexpected errors/logs contain only fixed safe fields.
-- [ ] Startup retry, shutdown order, waiter cancellation, and existing lifecycle regressions pass integration tests.
-- [ ] Full gate passes without reducing the pre-task test count.
+- [x] `/ready` requires durable transcript and RAG readiness; `/health` stays public and network-free.
+- [x] A RAG-only model/index/repository/worker failure returns fixed RAG 503 while health and existing authenticated transcript/job handlers remain callable.
+- [x] Auth precedes parsing/dependencies and unexpected errors/logs contain only fixed safe fields.
+- [x] Startup retry, shutdown order, waiter cancellation, and existing lifecycle regressions pass integration tests.
+- [x] Full gate passes without reducing the pre-task test count.
+
+**Evidence**: 15 focused integration cases prove shared auth-first behavior, exact validation/RAG
+errors and retry headers, public network-free health, combined readiness, callable transcript/job
+routes during RAG degradation, fixed-field error logs, and durable-start/RAG-start then RAG-stop/
+durable-stop order. Coordinator tests from T18 continue to cover local retry and waiter shutdown. The
+Full gate passed 540 unit + 169 integration tests, adding 15 cases with no skips.
 
 **Tests**: integration
 **Gate**: full
