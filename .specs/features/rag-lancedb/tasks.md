@@ -1223,11 +1223,29 @@ cache only the verified asset tree, and expose a manual rerun trigger without we
 
 **Done when**:
 
-- [ ] CI supports push, pull request, and manual dispatch; after `npm ci` it restores/fetches `.models`, then the fetcher verifies the exact manifest before `npm run check`.
-- [ ] Cache identity changes with the checked-in model manifest and an empty/poisoned cache cannot bypass hash/size/exact-set verification.
-- [ ] A clean-checkout simulation with no pre-existing `.models` passes the same source/offline gates without secrets or provider credentials.
+- [x] CI supports push, pull request, and manual dispatch; after `npm ci` it restores/fetches `.models`, then the fetcher verifies the exact manifest before `npm run check`.
+- [x] Cache identity changes with the checked-in model manifest and an empty/poisoned cache cannot bypass hash/size/exact-set verification.
+- [x] A clean-checkout simulation with no pre-existing `.models` passes the same source/offline gates without secrets or provider credentials.
 - [ ] GitHub jobs actually start and retain green source, audit, `rag-smoke`, and production-image evidence; a repository/account `startup_failure` remains evidence-zero and must not be reported as PASS.
-- [ ] Static CI contracts, actionlint, Full, Offline RAG, dependency audit, and Build gates pass without test-count regression.
+- [x] Static CI contracts, actionlint, Full, Offline RAG, dependency audit, and Build gates pass without test-count regression.
+
+**Evidence**: the workflow now supports `workflow_dispatch` and orders the source job as locked
+install, manifest-keyed cache restore, model-manifest build, unconditional immutable fetch/verification,
+cache-miss save, Full, Offline RAG, and production dependency audit. Restore/save use
+`actions/cache/*@v4`, `.models`, and exactly
+`hashFiles('src/infrastructure/rag/model-manifest.ts')`; only a miss is saved and save follows the
+verification. The fetch step has no cache-hit condition. Existing model/fetch tests prove exact-set,
+size, digest, symlink, missing/extra, immutable-revision, and invalid-target behavior. Focused CI,
+container, fetcher, and manifest contracts passed 34 tests. The YAML passed checksum-verified official
+`actionlint` 1.7.7. A detached clean checkout at `83b4a9a` began without `.models`, installed with
+`npm ci`, built the manifest, fetched and verified all pinned bytes without provider credentials,
+then re-ran the fetcher to prove cache-hit verification. That checkout passed Full 738/738, Offline
+RAG 31/31 with zero auto-projection warnings and unchanged 12-document/48-qrel thresholds, Build,
+and audit 0; its temporary model/worktree were removed afterward. The current worktree repeated Full
+738/738, Offline 31/31, Build, and audit 0. Remote container evidence remains zero: the implementation
+was not pushed or dispatched, and the verifier-supplied GitHub runs 33042513294 and 33042563567 both
+ended `startup_failure`/`BuildFailed` with zero jobs. No source, audit, `rag-smoke`, or production-image
+job is reported as PASS.
 
 **Tests**: unit + integration
 **Gate**: container + build

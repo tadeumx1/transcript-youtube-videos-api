@@ -5,6 +5,7 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,8 +26,28 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install locked dependencies
         run: npm ci
+      - name: Restore pinned RAG model cache
+        id: rag-model-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .models
+          key: rag-model-${{ runner.os }}-${{ hashFiles('src/infrastructure/rag/model-manifest.ts') }}
+      - name: Build model manifest
+        run: npm run build
+      - name: Fetch and verify pinned RAG model
+        run: npm run rag:model:fetch
+      - name: Save verified pinned RAG model cache
+        if: steps.rag-model-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .models
+          key: rag-model-${{ runner.os }}-${{ hashFiles('src/infrastructure/rag/model-manifest.ts') }}
       - name: Run source gates
         run: npm run check
+      - name: Run offline RAG gates
+        run: npm run test:rag:offline
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
 
   container:
     name: Container build

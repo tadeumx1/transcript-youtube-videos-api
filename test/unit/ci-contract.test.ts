@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 
 interface WorkflowStep {
+  id?: string
+  if?: string
   name?: string
   run?: string
   uses?: string
@@ -23,6 +25,7 @@ interface WorkflowContract {
   on: {
     push: { branches: string[] }
     pull_request: unknown
+    workflow_dispatch: unknown
   }
   permissions: Record<string, string>
   jobs: {
@@ -37,15 +40,17 @@ async function readWorkflow() {
 }
 
 describe('CI workflow contract', () => {
-  it('runs the Node 22 source gate on main pushes and pull requests with least privilege', async () => {
+  it('runs hermetic Node 22 source, offline, and audit gates on every supported trigger', async () => {
     const { workflow } = await readWorkflow()
-    const setupNode = workflow.jobs.source.steps.find(
-      (step) => step.uses === 'actions/setup-node@v4',
-    )
+    const steps = workflow.jobs.source.steps
+    const setupNode = steps.find((step) => step.uses === 'actions/setup-node@v4')
+    const restore = steps.find((step) => step.uses === 'actions/cache/restore@v4')
+    const save = steps.find((step) => step.uses === 'actions/cache/save@v4')
 
     expect(workflow.name).toBe('CI')
     expect(workflow.on.push.branches).toEqual(['main'])
     expect(Object.hasOwn(workflow.on, 'pull_request')).toBe(true)
+    expect(Object.hasOwn(workflow.on, 'workflow_dispatch')).toBe(true)
     expect(workflow.permissions).toEqual({ contents: 'read' })
     expect(workflow.jobs.source.name).toBe('Source checks')
     expect(setupNode?.with).toEqual({
@@ -53,10 +58,36 @@ describe('CI workflow contract', () => {
       cache: 'npm',
       'cache-dependency-path': 'package-lock.json',
     })
-    expect(workflow.jobs.source.steps.filter((step) => step.run).map((step) => step.run)).toEqual([
+    const modelCache = {
+      path: '.models',
+      key: `rag-model-\${{ runner.os }}-\${{ hashFiles('src/infrastructure/rag/model-manifest.ts') }}`,
+    }
+    expect(restore).toEqual({
+      name: 'Restore pinned RAG model cache',
+      id: 'rag-model-cache',
+      uses: 'actions/cache/restore@v4',
+      with: modelCache,
+    })
+    expect(save).toEqual({
+      name: 'Save verified pinned RAG model cache',
+      if: "steps.rag-model-cache.outputs.cache-hit != 'true'",
+      uses: 'actions/cache/save@v4',
+      with: modelCache,
+    })
+    expect(steps.map((step) => step.run ?? step.uses)).toEqual([
+      'actions/checkout@v4',
+      'actions/setup-node@v4',
       'npm ci',
+      'actions/cache/restore@v4',
+      'npm run build',
+      'npm run rag:model:fetch',
+      'actions/cache/save@v4',
       'npm run check',
+      'npm run test:rag:offline',
+      'npm audit --omit=dev',
     ])
+    const verify = steps.find((step) => step.run === 'npm run rag:model:fetch')
+    expect(verify?.if).toBeUndefined()
   })
 
   it('builds the checked-in Dockerfile after source checks without publishing', async () => {
