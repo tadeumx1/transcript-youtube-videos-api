@@ -684,10 +684,16 @@ document delete with exact bodies, headers, public envelopes, and exported schem
 
 **Done when**:
 
-- [ ] All four operations reject extra/malformed body/params and use the coordinator only after authentication and validation.
-- [ ] Every designed success/error status, exact body shape, `Location`, `Retry-After`, and 204 empty body is covered.
-- [ ] Spies prove auth-first and capacity/validation-before-dependency access; existing route contracts remain unchanged.
-- [ ] Full gate passes without reducing the pre-task test count.
+- [x] All four operations reject extra/malformed body/params and use the coordinator only after authentication and validation.
+- [x] Every designed success/error status, exact body shape, `Location`, `Retry-After`, and 204 empty body is covered.
+- [x] Spies prove auth-first and capacity/validation-before-dependency access; existing route contracts remain unchanged.
+- [x] Full gate passes without reducing the pre-task test count.
+
+**Evidence**: 34 focused route cases cover miss/join/hit, every ingestion state, exact public search
+provenance, empty DELETE, strict route/domain validation, auth-first behavior on all four operations,
+all assigned RAG errors/headers, and every durable source error. The Full gate passed 540 unit + 154
+integration tests, adding 34 integration cases with no skips. One mechanical TypeScript correction
+made the parameterized validation-case label an explicit callback argument; behavior was unchanged.
 
 **Tests**: integration
 **Gate**: full

@@ -246,18 +246,18 @@ the production Linux image.
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| ING-01 | Submit verified transcript | T18, T20 | In Progress |
+| ING-01 | Submit verified transcript | T18, T20 | Complete |
 | ING-02 | Submit verified transcript | T10, T13, T18 | In Progress |
 | ING-03 | Submit verified transcript | T10-T11, T17 | In Progress |
-| ING-04 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
-| ING-05 | Submit verified transcript | T10-T11, T18, T20 | In Progress |
-| ING-06 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
+| ING-04 | Submit verified transcript | T2, T13, T18, T20 | Complete |
+| ING-05 | Submit verified transcript | T10-T11, T18, T20 | Complete |
+| ING-06 | Submit verified transcript | T2, T13, T18, T20 | Complete |
 | ING-07 | Submit verified transcript | T13, T17-T18, T21-T22 | In Progress |
 | ING-08 | Submit verified transcript | T7, T9, T17-T18, T21-T22 | In Progress |
 | VER-01 | Idempotent atomic versions | T2, T13, T18 | In Progress |
 | VER-02 | Idempotent atomic versions | T13, T18 | In Progress |
 | VER-03 | Idempotent atomic versions | T13, T18 | In Progress |
-| VER-04 | Idempotent atomic versions | T13, T18, T20 | In Progress |
+| VER-04 | Idempotent atomic versions | T13, T18, T20 | Complete |
 | VER-05 | Idempotent atomic versions | T15, T17 | In Progress |
 | VER-06 | Idempotent atomic versions | T8, T15-T17 | In Progress |
 | VER-07 | Idempotent atomic versions | T15, T17 | In Progress |
@@ -272,20 +272,20 @@ the production Linux image.
 | EMB-02 | Deterministic chunks/embeddings | T5, T14, T24 | In Progress |
 | EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
-| SEARCH-01 | Hybrid retrieval | T16, T20 | In Progress |
+| SEARCH-01 | Hybrid retrieval | T16, T20 | Complete |
 | SEARCH-02 | Hybrid retrieval | T15-T16 | In Progress |
 | SEARCH-03 | Hybrid retrieval | T15-T16 | In Progress |
-| SEARCH-04 | Hybrid retrieval | T16, T20 | In Progress |
+| SEARCH-04 | Hybrid retrieval | T16, T20 | Complete |
 | SEARCH-05 | Hybrid retrieval | T15-T16 | In Progress |
-| SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | In Progress |
+| SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | Complete |
 | SEARCH-07 | Hybrid retrieval | T4, T12, T14-T16, T18, T21 | In Progress |
 | SEARCH-08 | Hybrid retrieval | T7, T9, T16-T17 | In Progress |
-| LIFE-01 | Delete/operate safely | T15, T18, T20 | In Progress |
-| LIFE-02 | Delete/operate safely | T15, T18, T20 | In Progress |
+| LIFE-01 | Delete/operate safely | T15, T18, T20 | Complete |
+| LIFE-02 | Delete/operate safely | T15, T18, T20 | Complete |
 | LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | In Progress |
 | LIFE-04 | Delete/operate safely | T15, T18 | In Progress |
 | LIFE-05 | Delete/operate safely | Specify | Proposed |
-| LIFE-06 | Delete/operate safely | T13, T18, T20 | In Progress |
+| LIFE-06 | Delete/operate safely | T13, T18, T20 | Complete |
 | CAP-01 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
 | OPS-01 | Production/evaluation | T3, T27 | In Progress |
@@ -298,7 +298,7 @@ the production Linux image.
 | OPS-08 | Production/evaluation | Specify | Proposed |
 | OPS-09 | Production/evaluation | Specify | Proposed |
 | OPS-10 | Production/evaluation | T1, T5, T24, T25, T27 | In Progress |
-| EDGE-01 | Authentication order | Specify | Proposed |
+| EDGE-01 | Authentication order | T20-T21 | In Progress |
 | EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |
 | EDGE-03 | Pre-publication crash | T13, T17 | In Progress |
 | EDGE-04 | Post-publication crash | T13, T17 | In Progress |
