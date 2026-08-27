@@ -2,6 +2,13 @@ import fastifySwagger from '@fastify/swagger'
 import type { FastifyInstance, FastifySchema } from 'fastify'
 
 import { PUBLIC_JOB_FAILURE_MESSAGES } from '../domain/job.js'
+import { PUBLIC_RAG_ERROR_MESSAGES } from '../domain/rag.js'
+import {
+  ragDocumentDeleteRouteSchema,
+  ragIngestionStatusRouteSchema,
+  ragIngestionSubmissionRouteSchema,
+  ragSearchRouteSchema,
+} from './rag-routes.js'
 
 const PUBLIC_ERROR_CODES = [
   'INVALID_YOUTUBE_URL',
@@ -33,6 +40,7 @@ const PUBLIC_ERROR_CODES = [
   'JOB_EXPIRED',
   'JOB_INTERRUPTED',
   'JOB_STORAGE_UNAVAILABLE',
+  ...Object.keys(PUBLIC_RAG_ERROR_MESSAGES),
 ] as const
 
 const inScopePaths = new Set([
@@ -45,6 +53,10 @@ const inScopePaths = new Set([
   '/v1/jobs/:jobId/pdf',
   '/v1/transcripts',
   '/v1/transcripts/pdf',
+  '/v1/rag/ingestions',
+  '/v1/rag/ingestions/:ingestionId',
+  '/v1/rag/search',
+  '/v1/rag/documents/:documentId',
 ])
 const registeredOperations = new WeakMap<FastifyInstance, Set<string>>()
 
@@ -247,6 +259,131 @@ const jobIdParametersSchema = {
   properties: { jobId: { type: 'string', format: 'uuid' } },
 } as const
 
+function namedSchema($id: string, schema: object) {
+  return { $id, ...schema }
+}
+
+const ragIngestionRequestSchema = namedSchema(
+  'RagIngestionRequest',
+  ragIngestionSubmissionRouteSchema.body,
+)
+const ragIngestionSubmissionSchema = namedSchema(
+  'RagIngestionSubmission',
+  ragIngestionSubmissionRouteSchema.response[202],
+)
+const ragIngestionSchema = namedSchema('RagIngestion', ragIngestionStatusRouteSchema.response[200])
+const ragSearchRequestSchema = namedSchema('RagSearchRequest', ragSearchRouteSchema.body)
+const ragSearchResponseSchema = namedSchema('RagSearchResponse', ragSearchRouteSchema.response[200])
+
+const ragIngestionIdParametersSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ingestionId'],
+  properties: { ingestionId: { type: 'string', format: 'uuid' } },
+} as const
+
+const ragDocumentIdParametersSchema = ragDocumentDeleteRouteSchema.params
+
+const ragErrorResponses = {
+  400: { $ref: 'Error#', description: 'Invalid strict RAG request or identifier' },
+  401: { $ref: 'Error#', description: 'Missing or invalid Bearer credential' },
+  404: { $ref: 'Error#', description: 'RAG ingestion, document, or source job was not found' },
+  410: { $ref: 'Error#', description: 'RAG ingestion or source job has expired' },
+  500: { $ref: 'Error#', description: 'Unexpected internal failure' },
+  503: { $ref: 'Error#', description: 'Authentication, source, model, or RAG storage unavailable' },
+  507: { $ref: 'Error#', description: 'Shared RAG storage reserve is exhausted' },
+} as const
+
+function transformRagRouteSchema(url: string): FastifySchema | undefined {
+  if (url === '/v1/rag/ingestions') {
+    return {
+      operationId: 'createRagIngestion',
+      security: protectedSecurity,
+      consumes: ['application/json'],
+      body: { $ref: 'RagIngestionRequest#' },
+      response: {
+        202: {
+          $ref: 'RagIngestionSubmission#',
+          description: 'Verified transcript accepted for local RAG ingestion',
+          headers: {
+            Location: { type: 'string' },
+            'Retry-After': { type: 'integer', enum: [2] },
+          },
+        },
+        400: ragErrorResponses[400],
+        401: ragErrorResponses[401],
+        404: ragErrorResponses[404],
+        409: {
+          $ref: 'Error#',
+          description: 'Source is incomplete/failed or document update is in progress',
+          headers: { 'Retry-After': { type: 'integer', enum: [2] } },
+        },
+        410: ragErrorResponses[410],
+        429: {
+          $ref: 'Error#',
+          description: 'RAG ingestion queue is full',
+          headers: { 'Retry-After': { type: 'integer', enum: [30] } },
+        },
+        500: ragErrorResponses[500],
+        503: ragErrorResponses[503],
+        507: ragErrorResponses[507],
+      },
+    }
+  }
+  if (url === '/v1/rag/ingestions/:ingestionId') {
+    return {
+      operationId: 'getRagIngestion',
+      security: protectedSecurity,
+      params: ragIngestionIdParametersSchema,
+      response: {
+        200: { $ref: 'RagIngestion#', description: 'Retained RAG ingestion status' },
+        400: ragErrorResponses[400],
+        401: ragErrorResponses[401],
+        404: ragErrorResponses[404],
+        410: ragErrorResponses[410],
+        500: ragErrorResponses[500],
+        503: ragErrorResponses[503],
+      },
+    }
+  }
+  if (url === '/v1/rag/search') {
+    return {
+      operationId: 'searchRag',
+      security: protectedSecurity,
+      consumes: ['application/json'],
+      body: { $ref: 'RagSearchRequest#' },
+      response: {
+        200: { $ref: 'RagSearchResponse#', description: 'Grounded RAG passages and provenance' },
+        400: ragErrorResponses[400],
+        401: ragErrorResponses[401],
+        429: {
+          $ref: 'Error#',
+          description: 'RAG search capacity is full',
+          headers: { 'Retry-After': { type: 'integer', enum: [5] } },
+        },
+        500: ragErrorResponses[500],
+        503: ragErrorResponses[503],
+      },
+    }
+  }
+  if (url === '/v1/rag/documents/:documentId') {
+    return {
+      operationId: 'deleteRagDocument',
+      security: protectedSecurity,
+      params: ragDocumentIdParametersSchema,
+      response: {
+        204: { description: 'RAG document removed from future searches' },
+        400: ragErrorResponses[400],
+        401: ragErrorResponses[401],
+        404: ragErrorResponses[404],
+        500: ragErrorResponses[500],
+        503: ragErrorResponses[503],
+      },
+    }
+  }
+  return undefined
+}
+
 function transformJobRouteSchema(url: string): FastifySchema | undefined {
   if (url === '/v1/jobs') {
     return {
@@ -383,7 +520,9 @@ export function registerOpenApi(app: FastifyInstance): void {
     if (!inScopePaths.has(route.url)) return
     const methods = Array.isArray(route.method) ? route.method : [route.method]
     for (const method of methods) {
-      if (method === 'GET' || method === 'POST') operations.add(`${method} ${route.url}`)
+      if (method === 'GET' || method === 'POST' || method === 'DELETE') {
+        operations.add(`${method} ${route.url}`)
+      }
     }
   })
 
@@ -392,7 +531,7 @@ export function registerOpenApi(app: FastifyInstance): void {
       openapi: '3.1.0',
       info: {
         title: 'YouTube Transcript API',
-        version: '1.1.0',
+        version: '1.2.0',
       },
       components: {
         securitySchemes: {
@@ -404,9 +543,17 @@ export function registerOpenApi(app: FastifyInstance): void {
       },
     },
     transform: ({ schema, url }) => ({
-      schema: transformJobRouteSchema(url) ?? schema,
+      schema: transformJobRouteSchema(url) ?? transformRagRouteSchema(url) ?? schema,
       url,
     }),
+    transformObject: (document) => {
+      if (!('openapiObject' in document)) return document.swaggerObject
+      const { openapiObject } = document
+      const deletion =
+        openapiObject.paths?.['/v1/rag/documents/{documentId}']?.delete?.responses?.['204']
+      if (deletion && 'content' in deletion) delete deletion.content
+      return openapiObject
+    },
     refResolver: {
       buildLocalReference: (schema, _baseUri, _fragment, index) =>
         typeof schema.$id === 'string' ? schema.$id : `schema-${index}`,
@@ -424,6 +571,11 @@ export function registerOpenApi(app: FastifyInstance): void {
     jobFailureSchema,
     jobSubmissionSchema,
     transcriptJobSchema,
+    ragIngestionRequestSchema,
+    ragIngestionSubmissionSchema,
+    ragIngestionSchema,
+    ragSearchRequestSchema,
+    ragSearchResponseSchema,
   ]) {
     app.addSchema(schema)
   }

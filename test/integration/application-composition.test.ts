@@ -4,10 +4,7 @@ import { dirname, join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  type ApplicationRagEncoder,
-  createApplication,
-} from '../../src/app.js'
+import { type ApplicationRagEncoder, createApplication } from '../../src/app.js'
 import { ExecutionController } from '../../src/application/execution-controller.js'
 import { AppError } from '../../src/domain/errors.js'
 import { RagError } from '../../src/domain/rag.js'
@@ -54,7 +51,9 @@ function createRagEncoder(): ApplicationRagEncoder {
     embedQuery: vi.fn().mockImplementation(async () => vector.slice()),
     embedPassages: vi
       .fn()
-      .mockImplementation(async (passages: readonly string[]) => passages.map(() => vector.slice())),
+      .mockImplementation(async (passages: readonly string[]) =>
+        passages.map(() => vector.slice()),
+      ),
   }
 }
 

@@ -312,10 +312,7 @@ export class RuntimeMetrics {
   }
 
   observeRagSearchDuration(outcome: string, seconds: number): void {
-    this.#ragSearchDuration.observe(
-      { outcome: allowed(outcome, RAG_SEARCH_OUTCOMES) },
-      seconds,
-    )
+    this.#ragSearchDuration.observe({ outcome: allowed(outcome, RAG_SEARCH_OUTCOMES) }, seconds)
   }
 
   observeRagSearchResultCount(count: number): void {

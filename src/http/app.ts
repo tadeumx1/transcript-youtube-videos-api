@@ -34,11 +34,6 @@ import {
   registerJobRoutes,
 } from './job-routes.js'
 import {
-  type RagRouteCoordinator,
-  RagRouteValidationError,
-  registerRagRoutes,
-} from './rag-routes.js'
-import {
   healthRouteSchema,
   metricsRouteSchema,
   readinessRouteSchema,
@@ -46,6 +41,11 @@ import {
   transcriptPdfRouteSchema,
   transcriptRouteSchema,
 } from './openapi.js'
+import {
+  type RagRouteCoordinator,
+  RagRouteValidationError,
+  registerRagRoutes,
+} from './rag-routes.js'
 
 interface TranscriptRequestBody {
   url: string

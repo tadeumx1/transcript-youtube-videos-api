@@ -294,7 +294,7 @@ the production Linux image.
 | OPS-04 | Production/evaluation | T18, T21-T22, T27 | In Progress |
 | OPS-05 | Production/evaluation | T19 | Complete |
 | OPS-06 | Production/evaluation | T2, T12, T16, T19-T21, T27 | In Progress |
-| OPS-07 | Production/evaluation | Specify | Proposed |
+| OPS-07 | Production/evaluation | T23 | Complete |
 | OPS-08 | Production/evaluation | Specify | Proposed |
 | OPS-09 | Production/evaluation | Specify | Proposed |
 | OPS-10 | Production/evaluation | T1, T5, T24, T25, T27 | In Progress |

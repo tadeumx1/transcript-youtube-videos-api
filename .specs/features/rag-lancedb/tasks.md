@@ -781,10 +781,17 @@ Bearer security, headers, statuses, fixed errors, and additive 1.2.0 snapshot.
 
 **Done when**:
 
-- [ ] The document has exactly 13 runtime operations including DELETE and retains every existing contract.
-- [ ] All RAG schemas are strict, Bearer-protected, response/header/error complete, parser-valid, and versioned 1.2.0.
-- [ ] Snapshot/parity/security tests reject route drift, secrets, example credentials, internal paths, vectors, and query echoes.
-- [ ] Full and Phase 3 Build gates pass without reducing the pre-task test count.
+- [x] The document has exactly 13 runtime operations including DELETE and retains every existing contract.
+- [x] All RAG schemas are strict, Bearer-protected, response/header/error complete, parser-valid, and versioned 1.2.0.
+- [x] Snapshot/parity/security tests reject route drift, secrets, example credentials, internal paths, vectors, and query echoes.
+- [x] Full and Phase 3 Build gates pass without reducing the pre-task test count.
+
+**Evidence**: the generated OpenAPI 3.1 document is version 1.2.0, parser-valid, and has exact parity
+with 13 registered operations including DELETE. Eleven OpenAPI cases assert strict named RAG schemas,
+Bearer security, every assigned status/header/error, content-free 204, stable snapshot, and secret/
+path/vector absence. `npm run check` passed lint, typecheck, 712 tests, and build with no skips.
+Mechanical corrections only: lexical DELETE ordering, generated snapshot refresh, and Biome formatting
+of Phase 3 files; no behavior or assertion outcome changed.
 
 **Tests**: integration
 **Gate**: build

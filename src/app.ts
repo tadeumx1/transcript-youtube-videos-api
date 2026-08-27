@@ -1,6 +1,6 @@
+import { AsyncReadWriteLock } from './application/async-read-write-lock.js'
 import { DurableJobCoordinator } from './application/durable-job-coordinator.js'
 import { DurableJobWorker } from './application/durable-job-worker.js'
-import { AsyncReadWriteLock } from './application/async-read-write-lock.js'
 import { ExecutionController } from './application/execution-controller.js'
 import { HybridTranscriptService } from './application/hybrid-transcript-service.js'
 import { DeterministicRagChunker } from './application/rag-chunker.js'

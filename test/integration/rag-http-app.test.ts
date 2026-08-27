@@ -1,10 +1,9 @@
 import { Writable } from 'node:stream'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-import type { NormalizedTranscriptRequest } from '../../src/domain/transcript-request.js'
-import type { Transcript } from '../../src/domain/transcript.js'
 import { RagError } from '../../src/domain/rag.js'
+import type { Transcript } from '../../src/domain/transcript.js'
+import type { NormalizedTranscriptRequest } from '../../src/domain/transcript-request.js'
 import {
   buildApp,
   type DurableApplicationCoordinator,

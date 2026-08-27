@@ -14,6 +14,7 @@ const AUTHORIZATION_HEADER = { authorization: `Bearer ${API_ACCESS_KEY}` }
 const VIDEO_URL = 'https://youtu.be/dQw4w9WgXcQ'
 
 interface SchemaNode {
+  additionalProperties?: boolean
   anyOf?: SchemaNode[]
   enum?: string[]
   format?: string
@@ -94,8 +95,22 @@ describe('OpenAPI contract', () => {
       getTranscript: vi.fn(),
       getPdf: vi.fn(),
     }
+    const ragCoordinator = {
+      isReady: true,
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockResolvedValue(undefined),
+      submit: vi.fn(),
+      get: vi.fn(),
+      search: vi.fn(),
+      delete: vi.fn(),
+    }
     return buildApp(
-      { transcriptService: { getTranscript }, pdfRenderer: { render }, jobCoordinator },
+      {
+        transcriptService: { getTranscript },
+        pdfRenderer: { render },
+        jobCoordinator,
+        ragCoordinator,
+      },
       { apiAccessKey: API_ACCESS_KEY },
     )
   }
@@ -111,7 +126,7 @@ describe('OpenAPI contract', () => {
     const { document } = await readDocument()
 
     expect(document.openapi).toBe('3.1.0')
-    expect(document.info.version).toBe('1.1.0')
+    expect(document.info.version).toBe('1.2.0')
     expect(document.servers).toBeUndefined()
   })
 
@@ -133,13 +148,17 @@ describe('OpenAPI contract', () => {
 
     expect(documentedOperations).toEqual(getRegisteredOpenApiOperations(app))
     expect(documentedOperations).toEqual([
+      'DELETE /v1/rag/documents/{documentId}',
       'GET /health',
       'GET /metrics',
       'GET /ready',
       'GET /v1/jobs/{jobId}',
       'GET /v1/jobs/{jobId}/pdf',
       'GET /v1/jobs/{jobId}/transcript',
+      'GET /v1/rag/ingestions/{ingestionId}',
       'POST /v1/jobs',
+      'POST /v1/rag/ingestions',
+      'POST /v1/rag/search',
       'POST /v1/transcripts',
       'POST /v1/transcripts/pdf',
     ])
@@ -166,6 +185,10 @@ describe('OpenAPI contract', () => {
       document.paths['/v1/jobs/{jobId}']?.get,
       document.paths['/v1/jobs/{jobId}/transcript']?.get,
       document.paths['/v1/jobs/{jobId}/pdf']?.get,
+      document.paths['/v1/rag/ingestions']?.post,
+      document.paths['/v1/rag/ingestions/{ingestionId}']?.get,
+      document.paths['/v1/rag/search']?.post,
+      document.paths['/v1/rag/documents/{documentId}']?.delete,
     ]) {
       expect(mustExist(operation).security).toEqual([{ bearerAuth: [] }])
     }
@@ -221,6 +244,15 @@ describe('OpenAPI contract', () => {
         'JOB_EXPIRED',
         'JOB_INTERRUPTED',
         'JOB_STORAGE_UNAVAILABLE',
+        'RAG_INGESTION_NOT_FOUND',
+        'RAG_INGESTION_EXPIRED',
+        'RAG_DOCUMENT_NOT_FOUND',
+        'RAG_DOCUMENT_UPDATE_IN_PROGRESS',
+        'RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED',
+        'RAG_SEARCH_CAPACITY_EXCEEDED',
+        'RAG_STORAGE_CAPACITY_EXCEEDED',
+        'RAG_MODEL_UNAVAILABLE',
+        'RAG_STORAGE_UNAVAILABLE',
       ]),
     )
 
@@ -348,6 +380,101 @@ describe('OpenAPI contract', () => {
     ).toEqual({ type: 'string', format: 'binary' })
   })
 
+  it('documents strict RAG bodies, parameters, headers, statuses, and empty deletion', async () => {
+    const { document } = await readDocument()
+    const submit = mustExist(document.paths['/v1/rag/ingestions']?.post)
+    const status = mustExist(document.paths['/v1/rag/ingestions/{ingestionId}']?.get)
+    const search = mustExist(document.paths['/v1/rag/search']?.post)
+    const deletion = mustExist(document.paths['/v1/rag/documents/{documentId}']?.delete)
+
+    expect(mustExist(mustExist(submit.requestBody).content['application/json']).schema).toEqual({
+      $ref: '#/components/schemas/RagIngestionRequest',
+    })
+    expect(Object.keys(submit.responses).toSorted()).toEqual([
+      '202',
+      '400',
+      '401',
+      '404',
+      '409',
+      '410',
+      '429',
+      '500',
+      '503',
+      '507',
+    ])
+    expect(mustExist(submit.responses['202']).headers).toEqual({
+      Location: { schema: { type: 'string' } },
+      'Retry-After': { schema: { type: 'integer', enum: [2] } },
+    })
+    expect(mustExist(submit.responses['409']).headers).toEqual({
+      'Retry-After': { schema: { type: 'integer', enum: [2] } },
+    })
+    expect(mustExist(submit.responses['429']).headers).toEqual({
+      'Retry-After': { schema: { type: 'integer', enum: [30] } },
+    })
+
+    expect(status.parameters).toEqual([
+      {
+        in: 'path',
+        name: 'ingestionId',
+        required: true,
+        schema: { type: 'string', format: 'uuid' },
+      },
+    ])
+    expect(Object.keys(status.responses).toSorted()).toEqual([
+      '200',
+      '400',
+      '401',
+      '404',
+      '410',
+      '500',
+      '503',
+    ])
+
+    expect(mustExist(mustExist(search.requestBody).content['application/json']).schema).toEqual({
+      $ref: '#/components/schemas/RagSearchRequest',
+    })
+    expect(Object.keys(search.responses).toSorted()).toEqual([
+      '200',
+      '400',
+      '401',
+      '429',
+      '500',
+      '503',
+    ])
+    expect(mustExist(search.responses['429']).headers).toEqual({
+      'Retry-After': { schema: { type: 'integer', enum: [5] } },
+    })
+
+    expect(deletion.parameters).toEqual([
+      {
+        in: 'path',
+        name: 'documentId',
+        required: true,
+        schema: { type: 'string', pattern: '^[0-9a-f]{64}$' },
+      },
+    ])
+    expect(Object.keys(deletion.responses).toSorted()).toEqual([
+      '204',
+      '400',
+      '401',
+      '404',
+      '500',
+      '503',
+    ])
+    expect(deletion.responses['204']?.content).toBeUndefined()
+
+    for (const schemaName of [
+      'RagIngestionRequest',
+      'RagIngestionSubmission',
+      'RagIngestion',
+      'RagSearchRequest',
+      'RagSearchResponse',
+    ]) {
+      expect(mustExist(document.components.schemas[schemaName]).additionalProperties).toBe(false)
+    }
+  })
+
   it('keeps a stable snapshot of public component schemas', async () => {
     const { document } = await readDocument()
 
@@ -366,6 +493,9 @@ describe('OpenAPI contract', () => {
     expect(serialized).not.toContain('Motor turbo')
     expect(serialized).not.toContain('provider response')
     expect(serialized).not.toContain('production.up.railway.app')
+    expect(serialized).not.toContain('sk-secret-value')
+    expect(serialized).not.toContain('/data/lancedb')
+    expect(serialized).not.toContain('"vector"')
   })
 
   it('serves OpenAPI during saturation without acquiring a slot or calling dependencies', async () => {

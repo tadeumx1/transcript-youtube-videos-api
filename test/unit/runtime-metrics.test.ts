@@ -241,6 +241,8 @@ describe('RuntimeMetrics', () => {
       'youtube_transcript_rag_maintenance_total{operation="unknown",outcome="unknown"} 1',
     )
     expect(output).not.toContain(malicious)
-    expect(output).not.toMatch(/sk-secret-value|private\.example|\/data\/lancedb|transcript-content/)
+    expect(output).not.toMatch(
+      /sk-secret-value|private\.example|\/data\/lancedb|transcript-content/,
+    )
   })
 })

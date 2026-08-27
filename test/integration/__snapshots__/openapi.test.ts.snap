@@ -39,6 +39,15 @@ exports[`OpenAPI contract > keeps a stable snapshot of public component schemas 
               "JOB_EXPIRED",
               "JOB_INTERRUPTED",
               "JOB_STORAGE_UNAVAILABLE",
+              "RAG_INGESTION_NOT_FOUND",
+              "RAG_INGESTION_EXPIRED",
+              "RAG_DOCUMENT_NOT_FOUND",
+              "RAG_DOCUMENT_UPDATE_IN_PROGRESS",
+              "RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED",
+              "RAG_SEARCH_CAPACITY_EXCEEDED",
+              "RAG_STORAGE_CAPACITY_EXCEEDED",
+              "RAG_MODEL_UNAVAILABLE",
+              "RAG_STORAGE_UNAVAILABLE",
             ],
             "type": "string",
           },
@@ -183,6 +192,455 @@ exports[`OpenAPI contract > keeps a stable snapshot of public component schemas 
       "updatedAt",
       "expiresAt",
       "links",
+    ],
+    "type": "object",
+  },
+  "RagIngestion": {
+    "additionalProperties": false,
+    "properties": {
+      "completedAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "createdAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+      "documentId": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string",
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "failure": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "enum": [
+                  "RAG_SOURCE_TOO_LARGE",
+                  "RAG_SOURCE_UNAVAILABLE",
+                  "RAG_EMBEDDING_FAILED",
+                  "RAG_STORAGE_UNAVAILABLE",
+                ],
+                "type": "string",
+              },
+              "message": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "code",
+              "message",
+            ],
+            "type": "object",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "ingestionId": {
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+        "type": "string",
+      },
+      "links": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "type": "string",
+          },
+          "status": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "status",
+          "document",
+        ],
+        "type": "object",
+      },
+      "startedAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "status": {
+        "enum": [
+          "queued",
+          "processing",
+          "completed",
+          "failed",
+        ],
+        "type": "string",
+      },
+      "updatedAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+    },
+    "required": [
+      "ingestionId",
+      "documentId",
+      "status",
+      "createdAt",
+      "updatedAt",
+      "startedAt",
+      "completedAt",
+      "expiresAt",
+      "failure",
+      "links",
+    ],
+    "type": "object",
+  },
+  "RagIngestionRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "jobId": {
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+        "type": "string",
+      },
+    },
+    "required": [
+      "jobId",
+    ],
+    "type": "object",
+  },
+  "RagIngestionSubmission": {
+    "additionalProperties": false,
+    "properties": {
+      "createdAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+      "disposition": {
+        "enum": [
+          "miss",
+          "joined",
+          "hit",
+        ],
+        "type": "string",
+      },
+      "documentId": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string",
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string",
+          },
+          {
+            "type": "null",
+          },
+        ],
+      },
+      "ingestionId": {
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+        "type": "string",
+      },
+      "links": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "type": "string",
+          },
+          "status": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "status",
+          "document",
+        ],
+        "type": "object",
+      },
+      "status": {
+        "enum": [
+          "queued",
+          "processing",
+          "completed",
+          "failed",
+        ],
+        "type": "string",
+      },
+      "updatedAt": {
+        "format": "date-time",
+        "type": "string",
+      },
+    },
+    "required": [
+      "ingestionId",
+      "documentId",
+      "status",
+      "disposition",
+      "createdAt",
+      "updatedAt",
+      "expiresAt",
+      "links",
+    ],
+    "type": "object",
+  },
+  "RagSearchRequest": {
+    "additionalProperties": false,
+    "properties": {
+      "documentIds": {
+        "items": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string",
+        },
+        "maxItems": 50,
+        "type": "array",
+        "uniqueItems": true,
+      },
+      "query": {
+        "maxLength": 1000,
+        "minLength": 1,
+        "type": "string",
+      },
+      "topK": {
+        "maximum": 20,
+        "minimum": 1,
+        "type": "integer",
+      },
+    },
+    "required": [
+      "query",
+    ],
+    "type": "object",
+  },
+  "RagSearchResponse": {
+    "additionalProperties": false,
+    "properties": {
+      "results": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "chunkId": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string",
+            },
+            "documentId": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string",
+            },
+            "ranges": {
+              "additionalProperties": false,
+              "properties": {
+                "core": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "end": {
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "start": {
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                  },
+                  "required": [
+                    "start",
+                    "end",
+                  ],
+                  "type": "object",
+                },
+                "segments": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "end": {
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "start": {
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                  },
+                  "required": [
+                    "start",
+                    "end",
+                  ],
+                  "type": "object",
+                },
+                "timestamps": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "endSeconds": {
+                      "anyOf": [
+                        {
+                          "minimum": 0,
+                          "type": "number",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "startSeconds": {
+                      "anyOf": [
+                        {
+                          "minimum": 0,
+                          "type": "number",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "startSeconds",
+                    "endSeconds",
+                  ],
+                  "type": "object",
+                },
+              },
+              "required": [
+                "core",
+                "segments",
+                "timestamps",
+              ],
+              "type": "object",
+            },
+            "rank": {
+              "maximum": 20,
+              "minimum": 1,
+              "type": "integer",
+            },
+            "score": {
+              "type": "number",
+            },
+            "source": {
+              "additionalProperties": false,
+              "properties": {
+                "artifactExpiresAt": {
+                  "format": "date-time",
+                  "type": "string",
+                },
+                "artifactId": {
+                  "type": "string",
+                },
+                "cacheKey": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string",
+                },
+                "chunkPolicyVersion": {
+                  "minimum": 1,
+                  "type": "integer",
+                },
+                "embeddingFingerprint": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string",
+                },
+                "extractedAt": {
+                  "format": "date-time",
+                  "type": "string",
+                },
+                "isGenerated": {
+                  "type": "boolean",
+                },
+                "language": {
+                  "type": "string",
+                },
+                "sourceJobId": {
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                  "type": "string",
+                },
+                "sourceUrl": {
+                  "format": "uri",
+                  "type": "string",
+                },
+                "timestampPrecision": {
+                  "enum": [
+                    "caption",
+                    "chunk",
+                  ],
+                  "type": "string",
+                },
+                "transcriptSha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string",
+                },
+                "transcriptSource": {
+                  "enum": [
+                    "youtube_captions",
+                    "muse_transcription",
+                  ],
+                  "type": "string",
+                },
+                "videoId": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "videoId",
+                "sourceUrl",
+                "transcriptSource",
+                "language",
+                "isGenerated",
+                "timestampPrecision",
+                "extractedAt",
+                "sourceJobId",
+                "artifactId",
+                "cacheKey",
+                "artifactExpiresAt",
+                "transcriptSha256",
+                "chunkPolicyVersion",
+                "embeddingFingerprint",
+              ],
+              "type": "object",
+            },
+            "text": {
+              "type": "string",
+            },
+            "versionId": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string",
+            },
+          },
+          "required": [
+            "rank",
+            "score",
+            "chunkId",
+            "documentId",
+            "versionId",
+            "text",
+            "ranges",
+            "source",
+          ],
+          "type": "object",
+        },
+        "maxItems": 20,
+        "type": "array",
+      },
+    },
+    "required": [
+      "results",
     ],
     "type": "object",
   },
