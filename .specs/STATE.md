@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Execute / Batch 2, T16 complete; T17 next
-- **Completed**: T1-T15 committed through `366d998`; T16 deterministic hybrid retrieval passed nine focused tests, 27 Offline RAG tests, and the 639-test full gate
+- **Phase / Task**: Execute / Batch 2, T17 complete; T18 next
+- **Completed**: T1-T16 committed through `2096d40`; T17 recoverable ingestion worker passed eight focused tests, 28 Offline RAG tests, and the 647-test full gate
 - **In-progress** (file:line): none
-- **Next step**: implement T17 recoverable FIFO ingestion, then continue T18 sequentially
+- **Next step**: implement T18 durable RAG coordinator and complete Batch 2
 - **Blockers**: none for local Batch 2 execution; Railway apply/deploy remain separately approval-gated after a fresh exact plan
-- **Uncommitted files**: none expected after the atomic T16 commit
+- **Uncommitted files**: none expected after the atomic T17 commit
 - **Branch**: `main`

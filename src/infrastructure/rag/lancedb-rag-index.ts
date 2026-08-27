@@ -145,7 +145,10 @@ export interface IndexedDocumentState {
   generation: number
   chunkCount: number
   documentDigest: string
+  lanceVersion: number
 }
+
+export type IndexedDocumentTarget = Omit<IndexedDocumentState, 'lanceVersion'>
 
 export interface RagDeleteReceipt {
   existed: boolean
@@ -451,7 +454,7 @@ function validateChunkRow(row: RagChunkRow): void {
   assertNormalizedVector(row.vector)
 }
 
-function validatePublicationRows(rows: readonly RagChunkRow[]): IndexedDocumentState {
+function validatePublicationRows(rows: readonly RagChunkRow[]): IndexedDocumentTarget {
   if (rows.length === 0 || rows.length > MAX_DOCUMENT_CHUNKS) {
     throw new Error('invalid publication size')
   }
@@ -490,13 +493,13 @@ function validatePublicationRows(rows: readonly RagChunkRow[]): IndexedDocumentS
   }
 }
 
-function parseIntegrityRows(rows: readonly IntegrityRow[]): IndexedDocumentState | undefined {
+function parseIntegrityRows(rows: readonly IntegrityRow[]): IndexedDocumentTarget | undefined {
   if (rows.length === 0) return undefined
   if (rows.length > MAX_DOCUMENT_CHUNKS) throw new Error('invalid stored document')
   const first = rows[0]
   if (!first) return undefined
   assertChunkId(first.chunk_id)
-  const state: IndexedDocumentState = {
+  const state: IndexedDocumentTarget = {
     documentId: assertDocumentId(first.document_id),
     versionId: assertVersionId(first.version_id),
     publishedIngestionId: assertRagIngestionId(first.published_ingestion_id),
@@ -533,7 +536,10 @@ function parseIntegrityRows(rows: readonly IntegrityRow[]): IndexedDocumentState
   return state
 }
 
-function statesEqual(left: IndexedDocumentState | undefined, right: IndexedDocumentState): boolean {
+function statesEqual(
+  left: IndexedDocumentState | undefined,
+  right: IndexedDocumentTarget,
+): boolean {
   return (
     left !== undefined &&
     left.documentId === right.documentId &&
@@ -548,6 +554,10 @@ function statesEqual(left: IndexedDocumentState | undefined, right: IndexedDocum
 export function documentPredicate(documentId: string): string {
   const validated = assertDocumentId(documentId)
   return `document_id = '${validated}'`
+}
+
+export function validateRagChunkRows(rows: readonly RagChunkRow[]): IndexedDocumentTarget {
+  return validatePublicationRows(rows)
 }
 
 function filterPredicate(filter: RagSearchFilter): string | undefined {
@@ -657,7 +667,7 @@ export class LanceDbRagIndex {
   }
 
   async replaceDocument(rows: readonly RagChunkRow[]): Promise<RagPublicationReceipt> {
-    let target: IndexedDocumentState
+    let target: IndexedDocumentTarget
     try {
       target = validatePublicationRows(rows)
     } catch {
@@ -833,7 +843,8 @@ export class LanceDbRagIndex {
       .select([...INSPECTION_COLUMNS])
       .limit(MAX_DOCUMENT_CHUNKS + 1)
       .toArray({ timeoutMs: MERGE_TIMEOUT_MS })) as IntegrityRow[]
-    return parseIntegrityRows(values)
+    const state = parseIntegrityRows(values)
+    return state ? { ...state, lanceVersion: await table.version() } : undefined
   }
 
   async #assertAllStoredDocuments(table: Table): Promise<void> {

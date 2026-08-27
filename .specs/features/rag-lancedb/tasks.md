@@ -591,11 +591,11 @@ batches, validates all rows, epoch-fences one atomic publication, recovers crash
 
 **Done when**:
 
-- [ ] No worker path reaches transcript providers, PDF, LLM, registry, or network; snapshot is the only source.
-- [ ] All chunks/vectors validate before the write lock; document epoch is rechecked immediately before one merge.
-- [ ] Every pre/post-commit crash row, deletion fence, smaller replacement, embedding/disk failure, batch abort, shutdown/restart, and prior-version preservation case passes.
-- [ ] Reconciliation accepts only exact committed digest/version/count and degrades on impossible mixed state.
-- [ ] Full and Offline RAG gates pass without reducing the pre-task test count.
+- [x] No worker path reaches transcript providers, PDF, LLM, registry, or network; snapshot is the only source.
+- [x] All chunks/vectors validate before the write lock; document epoch is rechecked immediately before one merge.
+- [x] Every pre/post-commit crash row, deletion fence, smaller replacement, embedding/disk failure, batch abort, shutdown/restart, and prior-version preservation case passes.
+- [x] Reconciliation accepts only exact committed digest/version/count and degrades on impossible mixed state.
+- [x] Full and Offline RAG gates pass without reducing the pre-task test count.
 
 **Tests**: unit + integration
 **Gate**: offline rag
