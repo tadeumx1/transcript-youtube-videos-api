@@ -4,6 +4,7 @@ import { AsyncReadWriteLock } from '../../src/application/async-read-write-lock.
 import { RagSearchController } from '../../src/application/rag-search-controller.js'
 import { RagSearchService } from '../../src/application/rag-search-service.js'
 import { RagError } from '../../src/domain/rag.js'
+import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
 import type {
   RagCandidate,
   RagSearchFilter,
@@ -61,11 +62,8 @@ function candidate(chunkDigit: string, overrides: Partial<RagCandidate> = {}): R
   }
 }
 
-function controller(maximum = 4) {
-  return new RagSearchController(maximum, 5, {
-    setActiveRagSearches: vi.fn(),
-    recordRagSearchAdmissionRejection: vi.fn(),
-  })
+function controller(maximum = 4, metrics = new RuntimeMetrics()) {
+  return new RagSearchController(maximum, 5, metrics)
 }
 
 function dependencies(
@@ -83,9 +81,12 @@ function dependencies(
       limit: number,
     ) => Promise<RagCandidate[]>
     lock?: AsyncReadWriteLock
+    metrics?: RuntimeMetrics
+    monotonicNow?: () => number
   } = {},
 ) {
-  const admission = overrides.controller ?? controller()
+  const metrics = overrides.metrics ?? new RuntimeMetrics()
+  const admission = overrides.controller ?? controller(4, metrics)
   const encoder = {
     embedQuery: vi.fn(overrides.embedQuery ?? (async () => vector())),
   }
@@ -105,7 +106,15 @@ function dependencies(
     index,
     scheduler,
     lock,
-    service: new RagSearchService({ admission, encoder, index, scheduler, publicationLock: lock }),
+    service: new RagSearchService({
+      admission,
+      encoder,
+      index,
+      scheduler,
+      publicationLock: lock,
+      metrics,
+      ...(overrides.monotonicNow ? { monotonicNow: overrides.monotonicNow } : {}),
+    }),
   }
 }
 
@@ -292,5 +301,74 @@ describe('RAG hybrid search service', () => {
     expect(JSON.stringify(failure)).not.toContain('/data/lancedb')
     expect(JSON.stringify(failure)).not.toContain('transcript text')
     expect(value.lock.activeReaderCount).toBe(0)
+  })
+
+  it('records each real success, failure, abort, and capacity outcome once in a private scrape', async () => {
+    const metrics = new RuntimeMetrics()
+    let monotonic = 0
+    const monotonicNow = () => {
+      const current = monotonic
+      monotonic += 1_000
+      return current
+    }
+    const capacityAdmission = controller(1, metrics)
+    const occupied = capacityAdmission.tryAcquire()
+    const capacity = dependencies({
+      controller: capacityAdmission,
+      metrics,
+      monotonicNow,
+    })
+    await expect(capacity.service.search({ query: 'capacity query' })).rejects.toMatchObject({
+      code: 'RAG_SEARCH_CAPACITY_EXCEEDED',
+    })
+    occupied?.release()
+
+    const privateFailure = '/data/private/index?token=provider-secret'
+    const failed = dependencies({
+      metrics,
+      monotonicNow,
+      vectorCandidates: async () => {
+        throw new Error(privateFailure)
+      },
+    })
+    await expect(failed.service.search({ query: 'private failure query' })).rejects.toEqual(
+      new RagError('RAG_STORAGE_UNAVAILABLE'),
+    )
+
+    const caller = new AbortController()
+    const aborted = dependencies({
+      metrics,
+      monotonicNow,
+      embedQuery: async (_query, signal) =>
+        new Promise<Float32Array>((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(signal.reason), { once: true })
+        }),
+    })
+    const abortingSearch = aborted.service.search({ query: 'abort query' }, caller.signal)
+    caller.abort()
+    await expect(abortingSearch).rejects.toMatchObject({ name: 'AbortError' })
+
+    const successful = dependencies({
+      metrics,
+      monotonicNow,
+      vectorCandidates: async () => [candidate('1')],
+    })
+    await expect(
+      successful.service.search({ query: 'success query', topK: 1 }),
+    ).resolves.toMatchObject({ results: [{ rank: 1 }] })
+
+    const rendered = await metrics.render()
+    for (const outcome of ['success', 'failure', 'capacity', 'aborted']) {
+      expect(rendered).toContain(`youtube_transcript_rag_searches_total{outcome="${outcome}"} 1`)
+      expect(rendered).toContain(
+        `youtube_transcript_rag_search_duration_seconds_count{outcome="${outcome}"} 1`,
+      )
+    }
+    expect(rendered).toContain('youtube_transcript_rag_search_result_count_count 1')
+    expect(rendered).toContain('youtube_transcript_rag_search_result_count_sum 1')
+    expect(rendered).toContain('youtube_transcript_rag_active_searches 0')
+    expect(rendered).not.toMatch(
+      /capacity query|private failure query|abort query|success query|provider-secret|\/data\/private/,
+    )
   })
 })

@@ -47,7 +47,8 @@ type RagCoordinatorRepository = Pick<
   | 'probe'
   | 'sweep'
   | 'queuedCount'
->
+> &
+  Partial<Pick<FileRagRepository, 'count' | 'activeDocumentStats'>>
 type RagTranscriptSource = Pick<DurableJobCoordinator, 'withVerifiedCompletedTranscript'>
 type RagCoordinatorWorker = Pick<
   RagIngestionWorker,
@@ -62,6 +63,14 @@ type RagCoordinatorScheduler = Pick<RagEncoderScheduler, 'stop'>
 type RagCoordinatorSearch = Pick<RagSearchService, 'search'>
 type RagCoordinatorAdmission = Pick<RagSearchController, 'markReady' | 'markUnavailable'>
 type RagCoordinatorPublicationLock = Pick<AsyncReadWriteLock, 'withRead' | 'withWrite'>
+
+export interface RagIngestionCoordinatorMetrics {
+  recordRagSubmission(disposition: string): void
+  setRagIngestions(status: string, count: number): void
+  setRagActiveDocuments(count: number): void
+  setRagActiveChunks(count: number): void
+  setRagComponentHealthy(component: string, healthy: boolean): void
+}
 
 export interface RagIngestionCoordinatorOptions {
   repository: RagCoordinatorRepository
@@ -79,6 +88,7 @@ export interface RagIngestionCoordinatorOptions {
   terminalTtlSeconds: number
   sweepIntervalMs: number
   retryIntervalMs: number
+  metrics?: RagIngestionCoordinatorMetrics
   onWorkerHealthChanged?: (healthy: boolean) => void
   now?: () => Date
   createId?: () => string
@@ -161,6 +171,7 @@ export class RagIngestionCoordinator {
   readonly #retryIntervalMs: number
   readonly #now: () => Date
   readonly #createId: () => string
+  readonly #metrics: RagIngestionCoordinatorMetrics | undefined
   readonly #onWorkerHealthChanged: ((healthy: boolean) => void) | undefined
   #submissionTail = Promise.resolve()
   #initialization: Promise<void> | undefined
@@ -214,6 +225,7 @@ export class RagIngestionCoordinator {
     )
     this.#now = options.now ?? (() => new Date())
     this.#createId = options.createId ?? randomUUID
+    this.#metrics = options.metrics
     this.#onWorkerHealthChanged = options.onWorkerHealthChanged
     this.#worker.setFatalHandler(() => this.#handleWorkerFatal())
     this.#searchAdmission.markUnavailable()
@@ -244,7 +256,7 @@ export class RagIngestionCoordinator {
     this.#sweepTimer = undefined
     await this.#submissionTail
     await this.#worker.stop()
-    this.#onWorkerHealthChanged?.(false)
+    this.#setWorkerHealthy(false)
     this.#scheduler.stop()
     await this.#publicationLock.withWrite(undefined, async () => undefined)
     await this.#index.close()
@@ -252,9 +264,9 @@ export class RagIngestionCoordinator {
   }
 
   async submit(jobId: string): Promise<RagIngestionSubmission> {
-    this.#assertReady()
     try {
-      return await this.#withSubmission(() => {
+      this.#assertReady()
+      const submission = await this.#withSubmission(() => {
         this.#assertReady()
         return this.#durableSource.withVerifiedCompletedTranscript(jobId, async (source) => {
           this.#assertReady()
@@ -291,12 +303,16 @@ export class RagIngestionCoordinator {
               observed.epoch.generation,
             )
             await this.#repository.createQueued(queued, source)
+            this.#refreshGauges()
             this.#worker.notify()
             return toRagIngestionSubmission(queued, 'miss')
           })
         })
       })
+      this.#metrics?.recordRagSubmission(submission.disposition)
+      return submission
     } catch (error) {
+      this.#metrics?.recordRagSubmission('rejected')
       this.#handleOperationalFailure(error)
       throw error
     }
@@ -354,6 +370,7 @@ export class RagIngestionCoordinator {
           )
         }),
       )
+      this.#refreshGauges()
     } catch (error) {
       this.#handleOperationalFailure(error)
       throw error
@@ -380,30 +397,42 @@ export class RagIngestionCoordinator {
   }
 
   async #runInitialization(): Promise<void> {
-    const recovery = await this.#repository.initialize()
-    await this.#index.initialize()
-    await this.#encoder.initialize()
-    const [repositoryProbe, indexHealthy] = await Promise.all([
-      this.#repository.probe(0),
-      this.#index.probe(),
-    ])
-    if (!repositoryProbe.healthy || !indexHealthy) {
-      throw fixedStorageError()
+    let stage: 'repository' | 'index' | 'model' | 'worker' = 'repository'
+    try {
+      const recovery = await this.#repository.initialize()
+      const repositoryProbe = await this.#repository.probe(0)
+      if (!repositoryProbe.healthy) throw fixedStorageError()
+      this.#metrics?.setRagComponentHealthy('repository', true)
+
+      stage = 'index'
+      await this.#index.initialize()
+      if (!(await this.#index.probe())) throw fixedStorageError()
+      this.#metrics?.setRagComponentHealthy('index', true)
+
+      stage = 'model'
+      await this.#encoder.initialize()
+      this.#metrics?.setRagComponentHealthy('model', true)
+
+      stage = 'worker'
+      await this.#reconcileDeletes(recovery)
+      await this.#worker.recover(recovery.processing)
+      if (!this.#workerStarted) {
+        this.#worker.start()
+        this.#workerStarted = true
+      }
+      this.#refreshGauges()
+      if (!this.#sweepTimer) {
+        this.#sweepTimer = setInterval(() => void this.#runSweep(), this.#sweepIntervalMs)
+      }
+      if (this.#retryTimer) clearTimeout(this.#retryTimer)
+      this.#retryTimer = undefined
+      this.#setWorkerHealthy(true)
+      this.#ready = true
+      this.#searchAdmission.markReady()
+    } catch (error) {
+      this.#metrics?.setRagComponentHealthy(stage, false)
+      throw error
     }
-    await this.#reconcileDeletes(recovery)
-    await this.#worker.recover(recovery.processing)
-    if (!this.#workerStarted) {
-      this.#worker.start()
-      this.#workerStarted = true
-    }
-    if (!this.#sweepTimer) {
-      this.#sweepTimer = setInterval(() => void this.#runSweep(), this.#sweepIntervalMs)
-    }
-    if (this.#retryTimer) clearTimeout(this.#retryTimer)
-    this.#retryTimer = undefined
-    this.#onWorkerHealthChanged?.(true)
-    this.#ready = true
-    this.#searchAdmission.markReady()
   }
 
   async #reconcileDeletes(recovery: RagRecoverySnapshot): Promise<void> {
@@ -426,7 +455,9 @@ export class RagIngestionCoordinator {
     if (!this.#ready || this.#stopped) return
     try {
       await this.#repository.sweep(this.#now())
+      this.#refreshGauges()
     } catch {
+      this.#metrics?.setRagComponentHealthy('repository', false)
       this.#degrade()
     }
   }
@@ -442,6 +473,12 @@ export class RagIngestionCoordinator {
       error instanceof RagError &&
       (error.code === 'RAG_STORAGE_UNAVAILABLE' || error.code === 'RAG_MODEL_UNAVAILABLE')
     ) {
+      if (error.code === 'RAG_MODEL_UNAVAILABLE') {
+        this.#metrics?.setRagComponentHealthy('model', false)
+      } else {
+        this.#metrics?.setRagComponentHealthy('repository', false)
+        this.#metrics?.setRagComponentHealthy('index', false)
+      }
       this.#degrade()
     }
   }
@@ -449,7 +486,7 @@ export class RagIngestionCoordinator {
   #degrade(): void {
     this.#ready = false
     this.#searchAdmission.markUnavailable()
-    this.#onWorkerHealthChanged?.(false)
+    this.#setWorkerHealthy(false)
     this.#scheduleRetry()
   }
 
@@ -463,6 +500,20 @@ export class RagIngestionCoordinator {
 
   #assertReady(): void {
     if (!this.#ready || this.#stopped) throw fixedStorageError()
+  }
+
+  #setWorkerHealthy(healthy: boolean): void {
+    this.#onWorkerHealthChanged?.(healthy)
+    this.#metrics?.setRagComponentHealthy('worker', healthy)
+  }
+
+  #refreshGauges(): void {
+    if (!this.#metrics || !this.#repository.count || !this.#repository.activeDocumentStats) return
+    this.#metrics.setRagIngestions('queued', this.#repository.count('queued'))
+    this.#metrics.setRagIngestions('processing', this.#repository.count('processing'))
+    const active = this.#repository.activeDocumentStats()
+    this.#metrics.setRagActiveDocuments(active.documents)
+    this.#metrics.setRagActiveChunks(active.chunks)
   }
 
   async #observe(documentId: string): Promise<ObservedDocument> {

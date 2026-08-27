@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { access, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -120,6 +121,27 @@ async function waitForCompleted(app: ReturnType<typeof createApplication>, jobId
       expect(body?.status).toBe('completed')
     },
     { timeout: 3_000 },
+  )
+  return body
+}
+
+async function waitForRagStatus(
+  app: ReturnType<typeof createApplication>,
+  ingestionId: string,
+  status: 'completed' | 'failed',
+) {
+  let body: Record<string, unknown> | undefined
+  await vi.waitFor(
+    async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/rag/ingestions/${ingestionId}`,
+        headers: authorization,
+      })
+      body = response.json()
+      expect(body?.status).toBe(status)
+    },
+    { timeout: 5_000 },
   )
   return body
 }
@@ -382,6 +404,140 @@ describe('production durable application composition', () => {
     expect(rendered).toContain('youtube_transcript_jobs_current{status="queued"} 0')
     expect(rendered).toContain('youtube_transcript_jobs_current{status="processing"} 0')
     expect(rendered).not.toMatch(/jobId|videoId|cacheKey|dQw4w9WgXcQ/)
+    await app.close()
+  })
+
+  it('connects fixed-label RAG telemetry to real ingestion, search, failure, and delete paths', async () => {
+    const dataRoot = await temporaryRoot()
+    const fixture = createOverrides()
+    const metrics = new RuntimeMetrics()
+    const firstEmbedding = deferred<Float32Array[]>()
+    const privateFailure = '/data/private/model.bin?token=provider-secret'
+    const vector = new Float32Array(384)
+    vector[0] = 1
+    vi.mocked(fixture.overrides.ragEncoder.embedPassages)
+      .mockReturnValueOnce(firstEmbedding.promise)
+      .mockRejectedValueOnce(new Error(privateFailure))
+    const app = createApplication(config(dataRoot), { runtimeMetrics: metrics }, fixture.overrides)
+    await app.ready()
+
+    const firstJob = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs',
+      headers: authorization,
+      payload: { url: firstUrl },
+    })
+    const firstJobId = firstJob.json().jobId as string
+    await waitForCompleted(app, firstJobId)
+
+    const miss = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/ingestions',
+      headers: authorization,
+      payload: { jobId: firstJobId },
+    })
+    expect(miss.json()).toMatchObject({ status: 'queued', disposition: 'miss' })
+    await vi.waitFor(() =>
+      expect(fixture.overrides.ragEncoder.embedPassages).toHaveBeenCalledOnce(),
+    )
+    const joined = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/ingestions',
+      headers: authorization,
+      payload: { jobId: firstJobId },
+    })
+    expect(joined.json()).toMatchObject({
+      ingestionId: miss.json().ingestionId,
+      status: 'processing',
+      disposition: 'joined',
+    })
+    firstEmbedding.resolve([vector])
+    const completed = await waitForRagStatus(app, miss.json().ingestionId as string, 'completed')
+
+    const hit = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/ingestions',
+      headers: authorization,
+      payload: { jobId: firstJobId },
+    })
+    expect(hit.json()).toMatchObject({ status: 'completed', disposition: 'hit' })
+
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/ingestions',
+      headers: authorization,
+      payload: { jobId: randomUUID() },
+    })
+    expect(rejected.statusCode).toBe(404)
+
+    const secondJob = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs',
+      headers: authorization,
+      payload: { url: secondUrl },
+    })
+    const secondJobId = secondJob.json().jobId as string
+    await waitForCompleted(app, secondJobId)
+    const failedSubmission = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/ingestions',
+      headers: authorization,
+      payload: { jobId: secondJobId },
+    })
+    expect(failedSubmission.json()).toMatchObject({ status: 'queued', disposition: 'miss' })
+    await waitForRagStatus(app, failedSubmission.json().ingestionId as string, 'failed')
+
+    const search = await app.inject({
+      method: 'POST',
+      url: '/v1/rag/search',
+      headers: authorization,
+      payload: { query: 'Transcript', topK: 5 },
+    })
+    expect(search.statusCode).toBe(200)
+    expect(search.json().results).toHaveLength(1)
+
+    let rendered = (await app.inject({ method: 'GET', url: '/metrics', headers: authorization }))
+      .body
+    expect(rendered).toContain('youtube_transcript_rag_submissions_total{disposition="miss"} 2')
+    expect(rendered).toContain('youtube_transcript_rag_submissions_total{disposition="joined"} 1')
+    expect(rendered).toContain('youtube_transcript_rag_submissions_total{disposition="hit"} 1')
+    expect(rendered).toContain('youtube_transcript_rag_submissions_total{disposition="rejected"} 1')
+    expect(rendered).toContain('youtube_transcript_rag_ingestions_current{status="queued"} 0')
+    expect(rendered).toContain('youtube_transcript_rag_ingestions_current{status="processing"} 0')
+    expect(rendered).toContain(
+      'youtube_transcript_rag_ingestion_duration_seconds_count{outcome="completed"} 1',
+    )
+    expect(rendered).toContain(
+      'youtube_transcript_rag_ingestion_duration_seconds_count{outcome="failed"} 1',
+    )
+    expect(rendered).toContain('youtube_transcript_rag_failures_total{reason="embedding"} 1')
+    expect(rendered).toContain('youtube_transcript_rag_active_documents 1')
+    expect(rendered).toContain('youtube_transcript_rag_active_chunks 1')
+    for (const component of ['repository', 'index', 'model', 'worker']) {
+      expect(rendered).toContain(
+        `youtube_transcript_rag_component_healthy{component="${component}"} 1`,
+      )
+    }
+    expect(rendered).toContain('youtube_transcript_rag_searches_total{outcome="success"} 1')
+    expect(rendered).toContain(
+      'youtube_transcript_rag_search_duration_seconds_count{outcome="success"} 1',
+    )
+    expect(rendered).toContain('youtube_transcript_rag_search_result_count_count 1')
+    expect(rendered).toContain('youtube_transcript_rag_search_result_count_sum 1')
+    expect(rendered).toContain('youtube_transcript_rag_active_searches 0')
+    expect(rendered).not.toMatch(/jobId|videoId|cacheKey|dQw4w9WgXcQ|abcdefghijk/)
+    expect(rendered).not.toContain(privateFailure)
+
+    const deletion = await app.inject({
+      method: 'DELETE',
+      url: `/v1/rag/documents/${completed?.documentId as string}`,
+      headers: authorization,
+    })
+    expect(deletion.statusCode).toBe(204)
+    rendered = (await app.inject({ method: 'GET', url: '/metrics', headers: authorization })).body
+    expect(rendered).toContain('youtube_transcript_rag_active_documents 0')
+    expect(rendered).toContain('youtube_transcript_rag_active_chunks 0')
+
     await app.close()
   })
 

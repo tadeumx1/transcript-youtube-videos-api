@@ -1060,11 +1060,25 @@ paths so every approved metric family reflects production operations rather than
 
 **Done when**:
 
-- [ ] Real miss/join/hit/reject, queued/processing/terminal, duration/failure, active document/chunk, and repository/index/model/worker health paths update exact fixed-label metrics.
-- [ ] Real search success/failure/abort/capacity paths update count, duration, result-count, and active gauges exactly once, including every `finally`/abort path.
-- [ ] Composed tests drive operations through the application and scrape `/metrics`; they do not call `RuntimeMetrics` mutation methods directly and assert exact deltas.
-- [ ] Failure tests prove no query/text/vector/URL/ID/path/credential/provider data becomes a label or metric value.
-- [ ] Quick, Full, Offline RAG, and Build gates pass without test-count regression.
+- [x] Real miss/join/hit/reject, queued/processing/terminal, duration/failure, active document/chunk, and repository/index/model/worker health paths update exact fixed-label metrics.
+- [x] Real search success/failure/abort/capacity paths update count, duration, result-count, and active gauges exactly once, including every `finally`/abort path.
+- [x] Composed tests drive operations through the application and scrape `/metrics`; they do not call `RuntimeMetrics` mutation methods directly and assert exact deltas.
+- [x] Failure tests prove no query/text/vector/URL/ID/path/credential/provider data becomes a label or metric value.
+- [x] Quick, Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Evidence**: a composed Fastify lifecycle drove two real transcript jobs through RAG miss,
+processing join, completed hit, rejected source lookup, terminal embedding failure, successful hybrid
+search, and document deletion before authenticated `/metrics` scrapes. Exact deltas were 2 miss,
+1 joined, 1 hit, 1 rejected, one completed and one failed terminal duration, one fixed `embedding`
+failure, zero queued/processing gauges, four healthy fixed components, one active document/chunk
+before delete and zero after it, plus one successful search/result observation. A separate operational
+search-service/controller scrape proved success/failure/abort/capacity counters and duration counts
+at exactly one each, result count exactly one, and active searches back at zero without direct metric
+mutation. Both scrapes reject query/text/vector/URL/ID/path/credential/provider material. Focused
+coordinator/worker/search/composition suites passed 42 tests; Quick passed 555 unit tests;
+`npm run check` passed 731 tests (729 pre-task), lint, strict types, and build; Offline RAG passed
+30 tests with unchanged 12-document/48-qrel quality thresholds; `npm audit --omit=dev` found zero
+vulnerabilities.
 
 **Tests**: unit + integration
 **Gate**: build

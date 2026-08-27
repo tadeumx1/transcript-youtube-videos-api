@@ -337,7 +337,22 @@ export class FileRagRepository {
   }
 
   get queuedCount(): number {
-    return [...this.#records.values()].filter((record) => record.status === 'queued').length
+    return this.count('queued')
+  }
+
+  count(status: 'queued' | 'processing'): number {
+    return [...this.#records.values()].filter((record) => record.status === status).length
+  }
+
+  activeDocumentStats(): { documents: number; chunks: number } {
+    let documents = 0
+    let chunks = 0
+    for (const epoch of this.#epochs.values()) {
+      if (epoch.state !== 'active') continue
+      documents += 1
+      chunks += epoch.expectedChunkCount
+    }
+    return { documents, chunks }
   }
 
   oldestQueued(): RagIngestionRecord | undefined {

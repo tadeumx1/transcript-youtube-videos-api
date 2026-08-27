@@ -33,6 +33,8 @@ const MAX_EMBEDDING_BATCH_SIZE = 8
 
 export interface RagWorkerRepository {
   oldestQueued(): RagIngestionRecord | undefined
+  count?(status: 'queued' | 'processing'): number
+  activeDocumentStats?(): { documents: number; chunks: number }
   get(ingestionId: string): Promise<RagIngestionRecord | RagIngestionTombstone | undefined>
   transition(
     ingestionId: string,
@@ -43,6 +45,14 @@ export interface RagWorkerRepository {
   activeOwner(documentId: string): RagIngestionRecord | undefined
   inspectEpoch(documentId: string): Promise<RagDocumentEpoch>
   writeEpoch(expectedGeneration: number, next: RagDocumentEpoch): Promise<void>
+}
+
+export interface RagIngestionWorkerMetrics {
+  setRagIngestions(status: string, count: number): void
+  observeRagIngestionDuration(outcome: string, seconds: number): void
+  recordRagFailure(reason: string): void
+  setRagActiveDocuments(count: number): void
+  setRagActiveChunks(count: number): void
 }
 
 type RagWorkerChunker = Pick<DeterministicRagChunker, 'chunk'>
@@ -65,7 +75,9 @@ export interface RagIngestionWorkerOptions {
   documentMutex: RagDocumentMutexLike
   embeddingBatchSize: number
   terminalTtlSeconds: number
+  metrics?: RagIngestionWorkerMetrics
   now?: () => Date
+  monotonicNow?: () => number
   onFatal?: (error: RagError) => void
 }
 
@@ -278,6 +290,19 @@ function terminalFailure(
   return createPublicRagFailure('RAG_STORAGE_UNAVAILABLE')
 }
 
+function fixedFailureReason(code: PublicRagFailure['code']): string {
+  switch (code) {
+    case 'RAG_SOURCE_TOO_LARGE':
+      return 'source_too_large'
+    case 'RAG_SOURCE_UNAVAILABLE':
+      return 'source_unavailable'
+    case 'RAG_EMBEDDING_FAILED':
+      return 'embedding'
+    default:
+      return 'storage'
+  }
+}
+
 export class RagDocumentMutex implements RagDocumentMutexLike {
   readonly #tails = new Map<string, Promise<void>>()
 
@@ -308,7 +333,9 @@ export class RagIngestionWorker {
   readonly #documentMutex: RagDocumentMutexLike
   readonly #embeddingBatchSize: number
   readonly #terminalTtlSeconds: number
+  readonly #metrics: RagIngestionWorkerMetrics | undefined
   readonly #now: () => Date
+  readonly #monotonicNow: () => number
   #onFatal: ((error: RagError) => void) | undefined
   #stopController: AbortController | undefined
   #loopPromise: Promise<void> | undefined
@@ -334,7 +361,9 @@ export class RagIngestionWorker {
       604_800,
       'RAG terminal TTL must be a positive bounded integer',
     )
+    this.#metrics = options.metrics
     this.#now = options.now ?? (() => new Date())
+    this.#monotonicNow = options.monotonicNow ?? (() => performance.now())
     this.#onFatal = options.onFatal
   }
 
@@ -414,6 +443,7 @@ export class RagIngestionWorker {
   }
 
   async #runCandidate(candidate: RagIngestionRecord, signal: AbortSignal): Promise<boolean> {
+    const startedAt = this.#monotonicNow()
     let claimed: RagIngestionRecord | undefined
     let stage: 'source' | 'embedding' | 'storage' = 'storage'
     let publicationAttempted = false
@@ -430,6 +460,7 @@ export class RagIngestionWorker {
         type: 'start',
         at: this.#now().toISOString(),
       })
+      this.#refreshGauges()
       signal.throwIfAborted()
       const reference = claimed.snapshot
       if (!reference) throw new ImpossibleRagStateError()
@@ -482,6 +513,8 @@ export class RagIngestionWorker {
             active.revision,
             completeTransition(at, this.#terminalTtlSeconds, published, publication),
           )
+          this.#observeTerminal('completed', startedAt)
+          this.#refreshGauges()
         }),
       )
       return true
@@ -495,15 +528,20 @@ export class RagIngestionWorker {
           type: 'retry',
           at: this.#now().toISOString(),
         })
+        this.#refreshGauges()
         return true
       }
       const at = this.#now()
+      const failure = terminalFailure(error, stage)
       await this.#repository.transition(claimed.ingestionId, claimed.revision, {
         type: 'fail',
         at: at.toISOString(),
         expiresAt: addSeconds(at, this.#terminalTtlSeconds),
-        failure: terminalFailure(error, stage),
+        failure,
       })
+      this.#metrics?.recordRagFailure(fixedFailureReason(failure.code))
+      this.#observeTerminal('failed', startedAt)
+      this.#refreshGauges()
       if (stage === 'storage' && !(error instanceof StaleRagWorkerError)) {
         throw fixedStorageError()
       }
@@ -512,6 +550,7 @@ export class RagIngestionWorker {
   }
 
   async #reconcile(record: RagIngestionRecord): Promise<void> {
+    const startedAt = this.#monotonicNow()
     if (!sameOwner(this.#repository.activeOwner(record.documentId), record)) return
     const epoch = await this.#repository.inspectEpoch(record.documentId)
     const state = await this.#index.inspectDocument(record.documentId)
@@ -534,16 +573,22 @@ export class RagIngestionWorker {
           changedRows: 0,
         }),
       )
+      this.#observeTerminal('completed', startedAt)
+      this.#refreshGauges()
       return
     }
     if (epoch.generation > record.targetGeneration || epoch.state === 'delete_pending') {
       const at = this.#now()
+      const failure = createPublicRagFailure('RAG_STORAGE_UNAVAILABLE')
       await this.#repository.transition(record.ingestionId, record.revision, {
         type: 'fail',
         at: at.toISOString(),
         expiresAt: addSeconds(at, this.#terminalTtlSeconds),
-        failure: createPublicRagFailure('RAG_STORAGE_UNAVAILABLE'),
+        failure,
       })
+      this.#metrics?.recordRagFailure(fixedFailureReason(failure.code))
+      this.#observeTerminal('failed', startedAt)
+      this.#refreshGauges()
       return
     }
     if (epoch.generation === record.targetGeneration && epochMatchesState(epoch, state)) {
@@ -551,9 +596,26 @@ export class RagIngestionWorker {
         type: 'retry',
         at: this.#now().toISOString(),
       })
+      this.#refreshGauges()
       return
     }
     throw fixedStorageError()
+  }
+
+  #observeTerminal(outcome: 'completed' | 'failed', startedAt: number): void {
+    this.#metrics?.observeRagIngestionDuration(
+      outcome,
+      Math.max(0, this.#monotonicNow() - startedAt) / 1_000,
+    )
+  }
+
+  #refreshGauges(): void {
+    if (!this.#metrics || !this.#repository.count || !this.#repository.activeDocumentStats) return
+    this.#metrics.setRagIngestions('queued', this.#repository.count('queued'))
+    this.#metrics.setRagIngestions('processing', this.#repository.count('processing'))
+    const active = this.#repository.activeDocumentStats()
+    this.#metrics.setRagActiveDocuments(active.documents)
+    this.#metrics.setRagActiveChunks(active.chunks)
   }
 
   #waitForNotification(signal: AbortSignal): Promise<void> {

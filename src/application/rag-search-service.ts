@@ -38,6 +38,14 @@ export interface RagSearchServiceOptions {
   index: SearchIndex
   scheduler: SearchScheduler
   publicationLock: PublicationLock
+  metrics?: RagSearchMetrics
+  monotonicNow?: () => number
+}
+
+export interface RagSearchMetrics {
+  recordRagSearch(outcome: string): void
+  observeRagSearchDuration(outcome: string, seconds: number): void
+  observeRagSearchResultCount(count: number): void
 }
 
 interface RankedCandidate {
@@ -257,6 +265,8 @@ export class RagSearchService {
   readonly #index: SearchIndex
   readonly #scheduler: SearchScheduler
   readonly #publicationLock: PublicationLock
+  readonly #metrics: RagSearchMetrics | undefined
+  readonly #monotonicNow: () => number
 
   constructor(options: RagSearchServiceOptions) {
     this.#admission = options.admission
@@ -264,58 +274,79 @@ export class RagSearchService {
     this.#index = options.index
     this.#scheduler = options.scheduler
     this.#publicationLock = options.publicationLock
+    this.#metrics = options.metrics
+    this.#monotonicNow = options.monotonicNow ?? (() => performance.now())
   }
 
   async search(value: unknown, callerSignal?: AbortSignal): Promise<RagSearchResponse> {
     const request = normalizeRagSearchRequest(value)
-    const permit = this.#admission.tryAcquire(callerSignal)
-    if (!permit) {
-      callerSignal?.throwIfAborted()
-      if (!this.#admission.isReady) throw new RagError('RAG_STORAGE_UNAVAILABLE')
-      throw this.#admission.capacityError()
-    }
-
+    const startedAt = this.#monotonicNow()
+    let outcome: 'success' | 'failure' | 'capacity' | 'aborted' = 'failure'
+    let admissionRecorded = false
+    let permit: ReturnType<SearchAdmission['tryAcquire']> | null = null
     try {
-      const vector = await this.#scheduler.runSearch(permit.signal, async () => {
+      permit = this.#admission.tryAcquire(callerSignal)
+      if (!permit) {
+        admissionRecorded = true
+        if (callerSignal?.aborted) {
+          outcome = 'aborted'
+          callerSignal.throwIfAborted()
+        }
+        if (!this.#admission.isReady) throw new RagError('RAG_STORAGE_UNAVAILABLE')
+        outcome = 'capacity'
+        throw this.#admission.capacityError()
+      }
+      const acquired = permit
+      const vector = await this.#scheduler.runSearch(acquired.signal, async () => {
         try {
-          return await this.#encoder.embedQuery(request.query, permit.signal)
+          return await this.#encoder.embedQuery(request.query, acquired.signal)
         } catch (error) {
-          if (permit.signal.aborted || isAbort(error)) throw error
+          if (acquired.signal.aborted || isAbort(error)) throw error
           if (error instanceof RagError) throw error
           throw new RagError('RAG_MODEL_UNAVAILABLE')
         }
       })
-      if (permit.signal.aborted) throwAbort(permit.signal)
+      if (acquired.signal.aborted) throwAbort(acquired.signal)
       const filter: RagSearchFilter = request.documentIds
         ? { documentIds: request.documentIds }
         : {}
-      return await this.#publicationLock.withRead(permit.signal, async () => {
+      const response = await this.#publicationLock.withRead(acquired.signal, async () => {
         try {
           const vectorCandidates = await this.#index.vectorCandidates(
             vector,
             filter,
             CANDIDATE_LIMIT,
           )
-          if (permit.signal.aborted) throwAbort(permit.signal)
+          if (acquired.signal.aborted) throwAbort(acquired.signal)
           const textCandidates = await this.#index.textCandidates(
             request.query,
             filter,
             CANDIDATE_LIMIT,
           )
-          if (permit.signal.aborted) throwAbort(permit.signal)
+          if (acquired.signal.aborted) throwAbort(acquired.signal)
           const fused = fuseCandidates(vectorCandidates, textCandidates).slice(0, request.topK)
           return {
             results: fused.map((candidate, index) => publicResult(candidate, index + 1)),
           }
         } catch (error) {
-          if (permit.signal.aborted || isAbort(error)) throw error
+          if (acquired.signal.aborted || isAbort(error)) throw error
           if (error instanceof RagError) throw error
           throw new RagError('RAG_STORAGE_UNAVAILABLE')
         }
       })
+      outcome = 'success'
+      this.#metrics?.observeRagSearchResultCount(response.results.length)
+      return response
     } catch (error) {
-      if (permit.signal.aborted) throwAbort(permit.signal)
-      if (isAbort(error)) throw error
+      if (admissionRecorded && outcome === 'aborted') throw error
+      if (permit?.signal.aborted) {
+        outcome = 'aborted'
+        throwAbort(permit.signal)
+      }
+      if (isAbort(error)) {
+        outcome = 'aborted'
+        throw error
+      }
       if (error instanceof RagError) throw error
       if (error instanceof RagEncoderSchedulerError) {
         throw new RagError('RAG_MODEL_UNAVAILABLE')
@@ -325,7 +356,12 @@ export class RagSearchService {
       }
       throw new RagError('RAG_STORAGE_UNAVAILABLE')
     } finally {
-      permit.release()
+      permit?.release()
+      if (!admissionRecorded) this.#metrics?.recordRagSearch(outcome)
+      this.#metrics?.observeRagSearchDuration(
+        outcome,
+        Math.max(0, this.#monotonicNow() - startedAt) / 1_000,
+      )
     }
   }
 }

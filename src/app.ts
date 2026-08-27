@@ -175,6 +175,7 @@ export function createApplication(
     index: ragIndex,
     scheduler: ragScheduler,
     publicationLock: ragPublicationLock,
+    metrics,
   })
   const ragWorker = new RagIngestionWorker({
     repository: ragRepository,
@@ -186,6 +187,7 @@ export function createApplication(
     documentMutex: ragDocumentMutex,
     embeddingBatchSize: config.ragEmbeddingBatchSize ?? 8,
     terminalTtlSeconds: ragTerminalTtlSeconds,
+    metrics,
   })
   const ragCoordinator = new RagIngestionCoordinator({
     repository: ragRepository,
@@ -203,6 +205,7 @@ export function createApplication(
     terminalTtlSeconds: ragTerminalTtlSeconds,
     sweepIntervalMs: config.ragSweepIntervalMs ?? 60_000,
     retryIntervalMs: 1_000,
+    metrics,
     onWorkerHealthChanged: (healthy) => metrics.setRagComponentHealthy('worker', healthy),
   })
 
