@@ -247,47 +247,47 @@ the production Linux image.
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
 | ING-01 | Submit verified transcript | T18, T20 | Complete |
-| ING-02 | Submit verified transcript | T10, T13, T18 | In Progress |
-| ING-03 | Submit verified transcript | T10-T11, T17 | In Progress |
+| ING-02 | Submit verified transcript | T10, T13, T18 | Complete |
+| ING-03 | Submit verified transcript | T10-T11, T17 | Complete |
 | ING-04 | Submit verified transcript | T2, T13, T18, T20 | Complete |
 | ING-05 | Submit verified transcript | T10-T11, T18, T20 | Complete |
 | ING-06 | Submit verified transcript | T2, T13, T18, T20 | Complete |
 | ING-07 | Submit verified transcript | T13, T17-T18, T21-T22 | Complete |
 | ING-08 | Submit verified transcript | T7, T9, T17-T18, T21-T22 | Complete |
-| VER-01 | Idempotent atomic versions | T2, T13, T18 | In Progress |
-| VER-02 | Idempotent atomic versions | T13, T18 | In Progress |
-| VER-03 | Idempotent atomic versions | T13, T18 | In Progress |
+| VER-01 | Idempotent atomic versions | T2, T13, T18 | Complete |
+| VER-02 | Idempotent atomic versions | T13, T18 | Complete |
+| VER-03 | Idempotent atomic versions | T13, T18 | Complete |
 | VER-04 | Idempotent atomic versions | T13, T18, T20 | Complete |
-| VER-05 | Idempotent atomic versions | T15, T17 | In Progress |
-| VER-06 | Idempotent atomic versions | T8, T15-T17 | In Progress |
-| VER-07 | Idempotent atomic versions | T15, T17 | In Progress |
-| VER-08 | Idempotent atomic versions | T13, T17-T18 | In Progress |
-| CHUNK-01 | Deterministic chunks/embeddings | T6, T17 | In Progress |
-| CHUNK-02 | Deterministic chunks/embeddings | T6, T17 | In Progress |
-| CHUNK-03 | Deterministic chunks/embeddings | T6, T14, T17 | In Progress |
-| CHUNK-04 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
-| CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
-| CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | In Progress |
+| VER-05 | Idempotent atomic versions | T15, T17 | Complete |
+| VER-06 | Idempotent atomic versions | T8, T15-T17 | Complete |
+| VER-07 | Idempotent atomic versions | T15, T17 | Complete |
+| VER-08 | Idempotent atomic versions | T13, T17-T18 | Complete |
+| CHUNK-01 | Deterministic chunks/embeddings | T6, T17 | Complete |
+| CHUNK-02 | Deterministic chunks/embeddings | T6, T17 | Complete |
+| CHUNK-03 | Deterministic chunks/embeddings | T6, T14, T17 | Complete |
+| CHUNK-04 | Deterministic chunks/embeddings | T2, T6, T15 | Complete |
+| CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | Complete |
+| CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | Complete |
 | EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | Complete |
 | EMB-02 | Deterministic chunks/embeddings | T5, T14, T24 | Complete |
-| EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
-| EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
+| EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | Complete |
+| EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | Complete |
 | SEARCH-01 | Hybrid retrieval | T16, T20 | Complete |
 | SEARCH-02 | Hybrid retrieval | T15-T16, T25 | Complete |
 | SEARCH-03 | Hybrid retrieval | T15-T16, T25 | Complete |
 | SEARCH-04 | Hybrid retrieval | T16, T20 | Complete |
-| SEARCH-05 | Hybrid retrieval | T15-T16 | In Progress |
+| SEARCH-05 | Hybrid retrieval | T15-T16 | Complete |
 | SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | Complete |
-| SEARCH-07 | Hybrid retrieval | T4, T12, T14-T16, T18, T21 | In Progress |
-| SEARCH-08 | Hybrid retrieval | T7, T9, T16-T17 | In Progress |
+| SEARCH-07 | Hybrid retrieval | T4, T12, T14-T16, T18, T21 | Complete |
+| SEARCH-08 | Hybrid retrieval | T7, T9, T16-T17 | Complete |
 | LIFE-01 | Delete/operate safely | T15, T18, T20 | Complete |
 | LIFE-02 | Delete/operate safely | T15, T18, T20 | Complete |
-| LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | In Progress |
-| LIFE-04 | Delete/operate safely | T15, T18 | In Progress |
+| LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | Complete |
+| LIFE-04 | Delete/operate safely | T15, T18 | Complete |
 | LIFE-05 | Delete/operate safely | T27 | Complete |
 | LIFE-06 | Delete/operate safely | T13, T18, T20 | Complete |
 | CAP-01 | Delete/operate safely | T3, T13, T18, T26 | Complete |
-| CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
+| CAP-02 | Delete/operate safely | T3, T13, T18, T26 | Complete |
 | OPS-01 | Production/evaluation | T3, T27 | Complete |
 | OPS-02 | Production/evaluation | T24, T26 | Complete |
 | OPS-03 | Production/evaluation | T18, T21-T22, T27 | Complete |
@@ -299,12 +299,12 @@ the production Linux image.
 | OPS-09 | Production/evaluation | T25 | Complete |
 | OPS-10 | Production/evaluation | T1, T5, T24-T25, T28, T27 | Complete |
 | EDGE-01 | Authentication order | T20-T21 | Complete |
-| EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |
-| EDGE-03 | Pre-publication crash | T13, T17 | In Progress |
-| EDGE-04 | Post-publication crash | T13, T17 | In Progress |
-| EDGE-05 | Smaller replacement | T15, T17 | In Progress |
-| EDGE-06 | Empty/whitespace source | T6, T17 | In Progress |
-| EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | In Progress |
-| EDGE-08 | Maintenance visibility | T8, T15, T17 | In Progress |
-| EDGE-09 | Post-admission capacity | T13, T17-T18 | In Progress |
-| EDGE-10 | Coarse/missing timestamps | T6, T15-T17 | In Progress |
+| EDGE-02 | Source-expiry race | T10-T11, T18 | Complete |
+| EDGE-03 | Pre-publication crash | T13, T17 | Complete |
+| EDGE-04 | Post-publication crash | T13, T17 | Complete |
+| EDGE-05 | Smaller replacement | T15, T17 | Complete |
+| EDGE-06 | Empty/whitespace source | T6, T17 | Complete |
+| EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | Complete |
+| EDGE-08 | Maintenance visibility | T8, T15, T17 | Complete |
+| EDGE-09 | Post-admission capacity | T13, T17-T18 | Complete |
+| EDGE-10 | Coarse/missing timestamps | T6, T15-T17 | Complete |

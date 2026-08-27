@@ -12,7 +12,7 @@ discrimination sensor, traceability, and atomic commits.
 ---
 
 **Design**: `.specs/features/rag-lancedb/design.md`
-**Status**: In Progress; T1-T28 complete; validation round 1 failed 48/52 ACs; T29-T34 approved fix loop pending
+**Status**: Verified on 2026-08-27 (T1-T40 complete; independent final PASS)
 
 ---
 
@@ -1320,8 +1320,10 @@ the exact `docker run --network none` command. `test/unit/container-contract.tes
 independently proves the same observable workflow contract. The focused suite passed 14/14 and the
 Build gate passed 738/738 with zero skipped tests. Provider credentials are not forwarded with
 Docker `-e` flags, while the packaged smoke also rejects every relevant credential at runtime.
-Actual GitHub execution remains evidence-zero under T34 until the owner resolves the account billing
-lock; no remote container PASS is claimed by this task.
+Exact-HEAD push run 33099114338 completed successfully after the account lock was resolved. Source
+checks job 98611767557 passed Full 738/738, Offline RAG 31/31, and audit 0; Container build job
+98612087123 built the one unpublished production image and passed the packaged smoke under
+`docker run --rm --network none`.
 
 **Tests**: unit + container integration
 **Gate**: build
