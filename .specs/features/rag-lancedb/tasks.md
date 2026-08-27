@@ -81,7 +81,7 @@ T24 -> T25 -> T26 -> T28 -> T27
 ### Phase 5: Validation round 1 fixes
 
 ```
-T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> independent re-verification
+T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> independent re-verification
 ```
 
 ### Sequential batch packing
@@ -91,7 +91,7 @@ T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> independent re-verificat
 | 1 | Phase 1 | T1-T9 | One sub-agent, sequential tasks, atomic commits, phase Build gate |
 | 2 | Phase 2 | T10-T18 | One fresh sub-agent after Batch 1, sequential tasks, atomic commits, Full + Offline RAG + Build gates |
 | 3 | Phases 3-4 | T19-T28 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
-| Fix 1 | Phase 5 | T29-T36 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
+| Fix 1 | Phase 5 | T29-T37 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
 
 After Batch 3, a fresh independent Verifier must validate every requirement against evidence and may
 not author fixes. The main agent owns any verifier findings, Railway approval/apply/deploy, UAT,
@@ -1322,6 +1322,43 @@ lock; no remote container PASS is claimed by this task.
 **Gate**: build
 **Commit**: `fix(ci): isolate production image smoke`
 
+### T37: Remove the superseded build-only smoke stage
+
+**What**: Remove the now-unused `rag-smoke` Docker stage after runtime-isolated CI smoke ownership
+moved to T36, while continuing to package the smoke script in the production image.
+**Where**: `Dockerfile`
+**Depends on**: T36
+**Reuses**: the runtime-base image and T36's production-image smoke command.
+**Requirement**: OPS-10, EMB-01, EMB-02
+
+**Tools**:
+
+- MCP: Railway deployment evidence after the local gate
+- Skill: `tlc-spec-driven`, `use-railway`
+- Local: `apply_patch`, Vitest, Dockerfile contract
+
+**Done when**:
+
+- [x] The Dockerfile contains no unused `rag-smoke` stage or build-time smoke invocation.
+- [x] The production image still packages `rag-container-smoke.mjs`, retains the non-root entrypoint,
+  model assets, `/data` setup, and final runtime stage.
+- [x] Focused container contracts, the Build gate, and an exact Railway image deployment pass
+  without test-count regression.
+
+**Evidence**: the focused RED failed only because the old `rag-smoke` stage remained. After removal,
+`test/unit/container-contract.test.ts:145`-`155` proves the script remains packaged, the unsupported
+directive and superseded stage are absent, and the final runtime/data root remain. Existing
+assertions at `test/unit/container-contract.test.ts:112`-`143` retain the production entrypoint,
+privilege drop, pinned model, and Linux x64 runtime. The focused contracts passed 14/14 and the Build
+gate passed 738/738 with zero skipped tests. Railway deployment
+`0ca0774e-8fe6-4534-9ecb-7a2f4967d403` built the exact final task tree, mounted `/data`, passed its
+healthcheck, and reached terminal `SUCCESS` with image digest
+`sha256:de8e36042b8e3b5141ccf46ab9ce300d4a8836c04223f436da2d85a75a5ad5b8`.
+
+**Tests**: unit + container integration
+**Gate**: container + build
+**Commit**: `refactor(container): remove unused smoke stage`
+
 ---
 
 ## Requirement-to-Task Traceability
@@ -1331,11 +1368,11 @@ lock; no remote container PASS is claimed by this task.
 | ING-01-08 | T10, T11, T13, T17, T18, T20-T22 |
 | VER-01-08 | T2, T8, T13, T15-T18 |
 | CHUNK-01-06 | T2-T3, T6, T17 |
-| EMB-01-04 | T1, T3-T7, T14, T17, T24, T35-T36 |
+| EMB-01-04 | T1, T3-T7, T14, T17, T24, T35-T37 |
 | SEARCH-01-08 | T2-T4, T7, T9, T14-T16, T20, T25 |
 | LIFE-01-06 | T8, T13, T15, T18, T20, T27, T29, T31-T32 |
 | CAP-01-02 | T3, T13, T18, T26 |
-| OPS-01-10 | T1-T5, T12, T14, T16, T18-T36 |
+| OPS-01-10 | T1-T5, T12, T14, T16, T18-T37 |
 | EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21, T29, T31 |
 
 ## Phase Execution Map
@@ -1369,6 +1406,7 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | T34 | One hermetic CI workflow correction | Static, clean-checkout, and remote run evidence | ✅ Granular |
 | T35 | One Railway-compatible container smoke correction | Static, Build, and Railway image evidence | ✅ Granular |
 | T36 | One runtime-isolated CI smoke correction | Static workflow and Build evidence | ✅ Granular |
+| T37 | One superseded Docker stage removal | Static, Build, and Railway image evidence | ✅ Granular |
 
 No task owns more than one production source/config/document deliverable. Test files, snapshots,
 lockfiles, and generated evidence are atomic companions required to verify that deliverable.
@@ -1388,7 +1426,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T28 | T26 | same immediately prior arrow | ✅ Match |
 | T27 | T28 | same immediately prior arrow | ✅ Match |
 | T29 | T27 | prior phase completion | ✅ Match |
-| T30-T36 | immediately prior task T29-T35 | same immediately prior arrow | ✅ Match |
+| T30-T37 | immediately prior task T29-T36 | same immediately prior arrow | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -1403,7 +1441,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T25 | Real retrieval evaluation | integration | integration | ✅ OK |
 | T29-T31, T33 | Lifecycle/application/index correction | unit + integration | matching per task | ✅ OK |
 | T32 | Cross-store lifecycle boundary | integration | integration | ✅ OK |
-| T34-T36 | CI/container workflow | unit + integration | matching static/clean/remote evidence | ✅ OK |
+| T34-T37 | CI/container workflow | unit + integration | matching static/clean/remote evidence | ✅ OK |
 
 There are no deferred tests and no `Tests: none` tasks. Every task must add its required tests before
 its commit, run the named gate, compare the pre/post test count, and record evidence in this file.

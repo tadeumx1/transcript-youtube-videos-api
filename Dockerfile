@@ -58,16 +58,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/server.js"]
 
-FROM runtime-base AS rag-smoke
-
-USER node
-RUN env -u API_ACCESS_KEY \
-      -u OPENCODE_API_KEY \
-      -u ANTHROPIC_AUTH_TOKEN \
-      -u ANTHROPIC_API_KEY \
-      -u OPENAI_API_KEY \
-      -u HF_TOKEN \
-      -u HUGGING_FACE_HUB_TOKEN \
-      node scripts/rag-container-smoke.mjs
-
 FROM runtime-base AS runtime
