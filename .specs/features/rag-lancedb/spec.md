@@ -273,8 +273,8 @@ the production Linux image.
 | EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
 | SEARCH-01 | Hybrid retrieval | T16, T20 | Complete |
-| SEARCH-02 | Hybrid retrieval | T15-T16 | In Progress |
-| SEARCH-03 | Hybrid retrieval | T15-T16 | In Progress |
+| SEARCH-02 | Hybrid retrieval | T15-T16, T25 | Complete |
+| SEARCH-03 | Hybrid retrieval | T15-T16, T25 | Complete |
 | SEARCH-04 | Hybrid retrieval | T16, T20 | Complete |
 | SEARCH-05 | Hybrid retrieval | T15-T16 | In Progress |
 | SEARCH-06 | Hybrid retrieval | T3, T9, T16, T20 | Complete |
@@ -295,8 +295,8 @@ the production Linux image.
 | OPS-05 | Production/evaluation | T19 | Complete |
 | OPS-06 | Production/evaluation | T2, T12, T16, T19-T21, T27 | In Progress |
 | OPS-07 | Production/evaluation | T23 | Complete |
-| OPS-08 | Production/evaluation | Specify | Proposed |
-| OPS-09 | Production/evaluation | Specify | Proposed |
+| OPS-08 | Production/evaluation | T25 | Complete |
+| OPS-09 | Production/evaluation | T25 | Complete |
 | OPS-10 | Production/evaluation | T1, T5, T24, T25, T27 | In Progress |
 | EDGE-01 | Authentication order | T20-T21 | Complete |
 | EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |

@@ -854,11 +854,24 @@ offline evaluator for vector-only, FTS-only, hybrid metrics, subgroups, distract
 
 **Done when**:
 
-- [ ] Fixture contains 12 fictional documents and exactly 48 qrels across every approved subgroup with document plus range relevance.
-- [ ] Hybrid meets every global/subgroup threshold and has zero wrong model/year top-1 disambiguations.
-- [ ] Three clean executions return identical IDs/ranks; vector/FTS diagnostics and p50/p95/RSS/index size are recorded without weakening gates.
-- [ ] Evaluation fails on network/credentials, skipped cases, insufficient fixture size, metric regression, or non-finite scores.
-- [ ] Offline RAG, Full, and Build gates pass without reducing the pre-task test count.
+- [x] Fixture contains 12 fictional documents and exactly 48 qrels across every approved subgroup with document plus range relevance.
+- [x] Hybrid meets every global/subgroup threshold and has zero wrong model/year top-1 disambiguations.
+- [x] Three clean executions return identical IDs/ranks; vector/FTS diagnostics and p50/p95/RSS/index size are recorded without weakening gates.
+- [x] Evaluation fails on network/credentials, skipped cases, insufficient fixture size, metric regression, or non-finite scores.
+- [x] Offline RAG, Full, and Build gates pass without reducing the pre-task test count.
+
+**Evidence**: the authored `automotive-pt-BR-fictional-v1` fixture has exactly 12 documents and 48
+document-plus-code-point-range qrels in the approved 12 exact, 12 semantic, 8 disambiguation,
+8 accent/typo, 4 numeric, and 4 distractor distribution. Three fresh real LanceDB executions with
+the verified local E5 model returned identical IDs/ranks and zero network calls or credentials.
+Hybrid achieved Recall@3 `0.9375`, Recall@5 `0.9791667`, MRR@10 `0.8833333`, and nDCG@10
+`0.9074851`; all eight disambiguation top-1 results were correct and every subgroup threshold passed.
+Vector-only Recall@5 was `0.9375`; FTS-only Recall@5 was `0.75`. The final gate recorded p50/p95
+`22.01/31.34 ms`, peak RSS `804,102,144` bytes, and fresh index sizes `195,159/195,161/195,149`
+bytes. Offline RAG passed 30 tests; `npm run check` passed 718 tests (716 pre-task), lint, typecheck,
+and build with no skips. Mechanical corrections only: Biome formatting/import order, explicit
+undefined checks, and ES2023-compatible grouping replaced unsupported `Map.groupBy`; outcomes were
+unchanged.
 
 **Tests**: integration
 **Gate**: offline rag
