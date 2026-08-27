@@ -241,7 +241,7 @@ temporary directory, verifies the checked-in manifest, and atomically publishes 
 **Gate**: build
 **Commit**: `build(rag): fetch pinned model reproducibly`
 
-### T6: Implement deterministic Unicode chunking
+### T6: Implement deterministic Unicode chunking ✅
 
 **What**: Build exact code-point core coverage, bounded tokenizer-aware prior overlap, stable chunk
 identity/checksum, segment/timestamp provenance, and source/chunk size enforcement.
@@ -258,11 +258,13 @@ identity/checksum, segment/timestamp provenance, and source/chunk size enforceme
 
 **Done when**:
 
-- [ ] Core spans reconstruct the exact source and never split surrogate pairs or lose/reorder non-empty characters.
-- [ ] Actual pinned-tokenizer inputs including prefix/special tokens stay at 320 tokens and overlap at 48; truncation is disabled.
-- [ ] 319/320/321, 511/512/513, multilingual, emoji, combining mark, whitespace-only, oversized segment/source/chunk, missing/coarse timestamp, and determinism cases pass.
-- [ ] Fixed source-too-large/unavailable failures activate no partial output.
-- [ ] Quick and offline RAG gates pass without reducing the pre-task test count.
+- [x] Core spans reconstruct the exact source and never split surrogate pairs or lose/reorder non-empty characters.
+- [x] Actual pinned-tokenizer inputs including prefix/special tokens stay at 320 tokens and overlap at 48; truncation is disabled.
+- [x] 319/320/321, 511/512/513, multilingual, emoji, combining mark, whitespace-only, oversized segment/source/chunk, missing/coarse timestamp, and determinism cases pass.
+- [x] Fixed source-too-large/unavailable failures activate no partial output.
+- [x] Quick and offline RAG gates pass without reducing the pre-task test count.
+
+**Evidence**: `npm run test:rag:offline` passed 13 real-tokenizer cases and `npm run test:unit` passed 445 tests (432 pre-task). Assertions cover exact code-point reconstruction/provenance, stable IDs, six token boundaries, maximal 48-token overlap, segment preference, Unicode splitting, whitespace, timestamp precision, both limits, fixed failures, and repeat determinism.
 
 **Tests**: unit
 **Gate**: offline rag

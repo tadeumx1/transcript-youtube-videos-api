@@ -262,9 +262,9 @@ the production Linux image.
 | VER-06 | Idempotent atomic versions | Specify | Proposed |
 | VER-07 | Idempotent atomic versions | Specify | Proposed |
 | VER-08 | Idempotent atomic versions | Specify | Proposed |
-| CHUNK-01 | Deterministic chunks/embeddings | Specify | Proposed |
-| CHUNK-02 | Deterministic chunks/embeddings | Specify | Proposed |
-| CHUNK-03 | Deterministic chunks/embeddings | Specify | Proposed |
+| CHUNK-01 | Deterministic chunks/embeddings | T6, T17 | In Progress |
+| CHUNK-02 | Deterministic chunks/embeddings | T6, T17 | In Progress |
+| CHUNK-03 | Deterministic chunks/embeddings | T6, T14, T17 | In Progress |
 | CHUNK-04 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
 | CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
 | CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | In Progress |
@@ -303,8 +303,8 @@ the production Linux image.
 | EDGE-03 | Pre-publication crash | Specify | Proposed |
 | EDGE-04 | Post-publication crash | Specify | Proposed |
 | EDGE-05 | Smaller replacement | Specify | Proposed |
-| EDGE-06 | Empty/whitespace source | Specify | Proposed |
+| EDGE-06 | Empty/whitespace source | T6, T17 | In Progress |
 | EDGE-07 | Fingerprint mismatch | T4, T12, T14-T15 | In Progress |
 | EDGE-08 | Maintenance visibility | Specify | Proposed |
 | EDGE-09 | Post-admission capacity | Specify | Proposed |
-| EDGE-10 | Coarse/missing timestamps | Specify | Proposed |
+| EDGE-10 | Coarse/missing timestamps | T6, T15-T17 | In Progress |
