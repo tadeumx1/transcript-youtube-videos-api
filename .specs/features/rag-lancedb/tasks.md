@@ -81,7 +81,7 @@ T24 -> T25 -> T26 -> T28 -> T27
 ### Phase 5: Validation round 1 fixes
 
 ```
-T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> T38 -> T39 -> independent re-verification
+T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> T38 -> T39 -> T40 -> independent re-verification
 ```
 
 ### Sequential batch packing
@@ -91,7 +91,7 @@ T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> T36 -> T37 -> T38 -> T39 -> ind
 | 1 | Phase 1 | T1-T9 | One sub-agent, sequential tasks, atomic commits, phase Build gate |
 | 2 | Phase 2 | T10-T18 | One fresh sub-agent after Batch 1, sequential tasks, atomic commits, Full + Offline RAG + Build gates |
 | 3 | Phases 3-4 | T19-T28 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
-| Fix 1 | Phase 5 | T29-T39 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
+| Fix 1 | Phase 5 | T29-T40 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
 
 After Batch 3, a fresh independent Verifier must validate every requirement against evidence and may
 not author fixes. The main agent owns any verifier findings, Railway approval/apply/deploy, UAT,
@@ -1431,20 +1431,62 @@ strict types, build, and all 738 tests with zero skipped tests.
 **Gate**: build
 **Commit**: `docs(rag): document runtime container smoke`
 
+### T40: Make post-fatal HTTP recovery timing deterministic
+
+**What**: Replace wall-clock luck in the worker-fatal HTTP integration with a scoped fake clock and
+an explicit fatal-observed barrier while preserving exact restart assertions.
+**Where**: `test/integration/rag-http-app.test.ts`
+**Depends on**: T39
+**Reuses**: the real coordinator/worker integration fixture, configured 100 ms local retry, and
+Vitest fake timers.
+**Requirement**: OPS-04, ING-07, ING-08
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, Vitest
+
+**Done when**:
+
+- [x] The integration observes the actual worker fatal while the retry clock remains frozen and
+  completes every degraded HTTP assertion before any recovery attempt.
+- [x] Recovery permission followed by exactly one 100 ms advance produces exactly two repository
+  initializations and two worker-loop starts; shutdown followed by further time produces no restart.
+- [x] The exact case, file, integration suite, three default-parallel Build gates, Offline RAG,
+  dependency audit, and strict task validator pass without skips or test-count regression.
+
+**Evidence**: the independent verifier reproduced the pre-task default-parallel failure twice at
+737/738: the real 100 ms retry elapsed during degraded HTTP probes, so repository initialization was
+called three rather than two times. `test/integration/rag-http-app.test.ts:120`-`123` now exposes an
+explicit fatal-observed promise; lines 197 and 218-227 retain exact worker-start and health signals.
+The case scopes fake time to retry `setTimeout`, proves readiness remains closed with initialization
+and start each exactly once at lines 368-430, then permits recovery and advances exactly 100 ms.
+Lines 432-442 require exactly two initializations/two worker starts and prove another 1000 ms after
+shutdown starts neither again. No production file or retry policy changed, and no assertion was
+weakened. The exact case passed 10/10 repetitions, its file passed 16/16, and the integration suite
+passed 175/175. Three consecutive default-parallel Build gates each passed all 738 tests, lint,
+strict types, and build; Offline RAG passed 31/31 with unchanged 12-document/48-qrel thresholds,
+`npm audit --omit=dev` found zero vulnerabilities, and the strict task validator returned 0/0.
+
+**Tests**: integration
+**Gate**: build
+**Commit**: `test(rag): make fatal recovery timing deterministic`
+
 ---
 
 ## Requirement-to-Task Traceability
 
 | Requirement group | Owning task(s) |
 | ----------------- | -------------- |
-| ING-01-08 | T10, T11, T13, T17, T18, T20-T22 |
+| ING-01-08 | T10, T11, T13, T17, T18, T20-T22, T40 |
 | VER-01-08 | T2, T8, T13, T15-T18 |
 | CHUNK-01-06 | T2-T3, T6, T17 |
 | EMB-01-04 | T1, T3-T7, T14, T17, T24, T35-T37, T39 |
 | SEARCH-01-08 | T2-T4, T7, T9, T14-T16, T20, T25 |
 | LIFE-01-06 | T8, T13, T15, T18, T20, T27, T29, T31-T32 |
 | CAP-01-02 | T3, T13, T18, T26 |
-| OPS-01-10 | T1-T5, T12, T14, T16, T18-T39 |
+| OPS-01-10 | T1-T5, T12, T14, T16, T18-T40 |
 | EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21, T29, T31 |
 
 ## Phase Execution Map
@@ -1481,6 +1523,7 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | T37 | One superseded Docker stage removal | Static, Build, and Railway image evidence | ✅ Granular |
 | T38 | One Railway Volume placement correction | Contract, Build, and drift-free plan evidence | ✅ Granular |
 | T39 | One container quality documentation correction | Documentation contract + Build evidence | ✅ Granular |
+| T40 | One post-fatal integration timing correction | Existing exact integration assertions + repeated Build evidence | ✅ Granular |
 
 No task owns more than one production source/config/document deliverable. Test files, snapshots,
 lockfiles, and generated evidence are atomic companions required to verify that deliverable.
@@ -1500,7 +1543,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T28 | T26 | same immediately prior arrow | ✅ Match |
 | T27 | T28 | same immediately prior arrow | ✅ Match |
 | T29 | T27 | prior phase completion | ✅ Match |
-| T30-T39 | immediately prior task T29-T38 | same immediately prior arrow | ✅ Match |
+| T30-T40 | immediately prior task T29-T39 | same immediately prior arrow | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -1516,6 +1559,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T29-T31, T33 | Lifecycle/application/index correction | unit + integration | matching per task | ✅ OK |
 | T32 | Cross-store lifecycle boundary | integration | integration | ✅ OK |
 | T34-T37 | CI/container workflow | unit + integration | matching static/clean/remote evidence | ✅ OK |
+| T40 | Coordinator/worker HTTP recovery timing | integration | integration | ✅ OK |
 
 There are no deferred tests and no `Tests: none` tasks. Every task must add its required tests before
 its commit, run the named gate, compare the pre/post test count, and record evidence in this file.

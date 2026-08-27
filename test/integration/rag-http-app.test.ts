@@ -117,6 +117,10 @@ function dependencies(
 
 function fatalRuntimeCoordinator(metrics: RuntimeMetrics) {
   let failWorkerLoop = false
+  let markFatalObserved!: () => void
+  const fatalObserved = new Promise<void>((resolve) => {
+    markFatalObserved = resolve
+  })
   const initialize = vi.fn(async () => ({
     queued: [],
     processing: [],
@@ -190,6 +194,7 @@ function fatalRuntimeCoordinator(metrics: RuntimeMetrics) {
     embeddingBatchSize: 8,
     terminalTtlSeconds: 86_400,
   })
+  const workerStart = vi.spyOn(worker, 'start')
   const coordinator = new RagIngestionCoordinator({
     repository,
     durableSource: {
@@ -210,11 +215,16 @@ function fatalRuntimeCoordinator(metrics: RuntimeMetrics) {
     terminalTtlSeconds: 86_400,
     sweepIntervalMs: 3_600_000,
     retryIntervalMs: 100,
-    onWorkerHealthChanged: (healthy) => metrics.setRagComponentHealthy('worker', healthy),
+    onWorkerHealthChanged: (healthy) => {
+      metrics.setRagComponentHealthy('worker', healthy)
+      if (!healthy) markFatalObserved()
+    },
   })
   return {
     coordinator,
+    fatalObserved,
     initialize,
+    workerStart,
     triggerFatal() {
       failWorkerLoop = true
       worker.notify()
@@ -355,69 +365,85 @@ describe('Fastify RAG lifecycle integration', () => {
     })
     await app.ready()
     expect(runtime.coordinator.isReady).toBe(true)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    let closed = false
+    try {
+      runtime.triggerFatal()
+      await runtime.fatalObserved
+      expect(runtime.coordinator.isReady).toBe(false)
 
-    runtime.triggerFatal()
-    await vi.waitFor(() => expect(runtime.coordinator.isReady).toBe(false))
+      const [health, ready, transcriptResponse, jobResponse] = await Promise.all([
+        app.inject({ method: 'GET', url: '/health' }),
+        app.inject({ method: 'GET', url: '/ready' }),
+        app.inject({
+          method: 'POST',
+          url: '/v1/transcripts',
+          headers: AUTHORIZATION,
+          payload: { url: videoUrl },
+        }),
+        app.inject({
+          method: 'POST',
+          url: '/v1/jobs',
+          headers: AUTHORIZATION,
+          payload: { url: videoUrl },
+        }),
+      ])
+      const ragResponses = await Promise.all([
+        app.inject({
+          method: 'POST',
+          url: '/v1/rag/ingestions',
+          headers: AUTHORIZATION,
+          payload: { jobId },
+        }),
+        app.inject({
+          method: 'GET',
+          url: `/v1/rag/ingestions/${ingestionId}`,
+          headers: AUTHORIZATION,
+        }),
+        app.inject({
+          method: 'POST',
+          url: '/v1/rag/search',
+          headers: AUTHORIZATION,
+          payload: { query: 'motor' },
+        }),
+        app.inject({
+          method: 'DELETE',
+          url: `/v1/rag/documents/${documentId}`,
+          headers: AUTHORIZATION,
+        }),
+      ])
 
-    const [health, ready, transcriptResponse, jobResponse] = await Promise.all([
-      app.inject({ method: 'GET', url: '/health' }),
-      app.inject({ method: 'GET', url: '/ready' }),
-      app.inject({
-        method: 'POST',
-        url: '/v1/transcripts',
-        headers: AUTHORIZATION,
-        payload: { url: videoUrl },
-      }),
-      app.inject({
-        method: 'POST',
-        url: '/v1/jobs',
-        headers: AUTHORIZATION,
-        payload: { url: videoUrl },
-      }),
-    ])
-    const ragResponses = await Promise.all([
-      app.inject({
-        method: 'POST',
-        url: '/v1/rag/ingestions',
-        headers: AUTHORIZATION,
-        payload: { jobId },
-      }),
-      app.inject({
-        method: 'GET',
-        url: `/v1/rag/ingestions/${ingestionId}`,
-        headers: AUTHORIZATION,
-      }),
-      app.inject({
-        method: 'POST',
-        url: '/v1/rag/search',
-        headers: AUTHORIZATION,
-        payload: { query: 'motor' },
-      }),
-      app.inject({
-        method: 'DELETE',
-        url: `/v1/rag/documents/${documentId}`,
-        headers: AUTHORIZATION,
-      }),
-    ])
+      expect(health.statusCode).toBe(200)
+      expect(health.json()).toEqual({ status: 'ok' })
+      expect(ready.statusCode).toBe(503)
+      expect(ready.json()).toEqual({ status: 'not_ready' })
+      expect(transcriptResponse.statusCode).toBe(200)
+      expect(transcriptResponse.json()).toEqual(transcript)
+      expect(jobResponse.statusCode).toBe(202)
+      for (const response of ragResponses) {
+        expect(response.statusCode).toBe(503)
+        expect(response.json()).toEqual({
+          error: { code: 'RAG_STORAGE_UNAVAILABLE', message: 'RAG storage is unavailable' },
+        })
+      }
+      expect(runtime.initialize).toHaveBeenCalledTimes(1)
+      expect(runtime.workerStart).toHaveBeenCalledTimes(1)
 
-    expect(health.statusCode).toBe(200)
-    expect(health.json()).toEqual({ status: 'ok' })
-    expect(ready.statusCode).toBe(503)
-    expect(ready.json()).toEqual({ status: 'not_ready' })
-    expect(transcriptResponse.statusCode).toBe(200)
-    expect(transcriptResponse.json()).toEqual(transcript)
-    expect(jobResponse.statusCode).toBe(202)
-    for (const response of ragResponses) {
-      expect(response.statusCode).toBe(503)
-      expect(response.json()).toEqual({
-        error: { code: 'RAG_STORAGE_UNAVAILABLE', message: 'RAG storage is unavailable' },
-      })
+      runtime.permitRecovery()
+      await vi.advanceTimersByTimeAsync(100)
+      expect(runtime.coordinator.isReady).toBe(true)
+      expect(runtime.initialize).toHaveBeenCalledTimes(2)
+      expect(runtime.workerStart).toHaveBeenCalledTimes(2)
+
+      await app.close()
+      closed = true
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(runtime.initialize).toHaveBeenCalledTimes(2)
+      expect(runtime.workerStart).toHaveBeenCalledTimes(2)
+    } finally {
+      if (!closed) await app.close()
+      vi.useRealTimers()
     }
-
-    runtime.permitRecovery()
-    await vi.waitFor(() => expect(runtime.coordinator.isReady).toBe(true))
-    expect(runtime.initialize).toHaveBeenCalledTimes(2)
-    await app.close()
   })
 
   it('reports ready only when transcript execution, durable jobs, and RAG are ready', async () => {
