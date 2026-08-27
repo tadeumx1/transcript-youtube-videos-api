@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Execute / Batch 2 and Phase 2 complete; T19 next
-- **Completed**: T1-T17 committed through `0917984`; T18 durable RAG coordinator passed eleven focused tests, 28 Offline RAG tests, 538 unit tests, 120 integration tests, and the Build gate
+- **Phase / Task**: Validate / independent Verifier next
+- **Completed**: T1-T28 committed through `9bb0f71`; local gates pass 724 tests, 30 offline RAG tests, TypeScript build, and zero production audit vulnerabilities; the private GitHub repository is connected and the first registered CI run is pending
 - **In-progress** (file:line): none
-- **Next step**: begin Batch 3 with T19 fixed-label RAG telemetry
-- **Blockers**: none for local Batch 2 execution; Railway apply/deploy remain separately approval-gated after a fresh exact plan
-- **Uncommitted files**: none expected after the atomic T18 commit
+- **Next step**: validate real `rag-smoke` and production image builds in GitHub Actions, then dispatch a fresh read-only independent Verifier against every requirement and task
+- **Blockers**: none for verification; Railway apply/deploy remain separately approval-gated after a fresh exact plan
+- **Uncommitted files**: only this handoff refresh before its atomic documentation commit
 - **Branch**: `main`

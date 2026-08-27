@@ -12,7 +12,7 @@ discrimination sensor, traceability, and atomic commits.
 ---
 
 **Design**: `.specs/features/rag-lancedb/design.md`
-**Status**: In Progress; tasks, tools, three sequential batches, and independent Verifier approved on 2026-08-26
+**Status**: In Progress; T1-T28 complete and committed; independent Verifier pending
 
 ---
 
