@@ -653,10 +653,15 @@ allowlisted labels while rejecting arbitrary label/content values.
 
 **Done when**:
 
-- [ ] Submission/state/duration/failure, active counts, component health, search/duration/results/capacity, and maintenance families match Design.
-- [ ] Every label is closed, low-cardinality, and excludes query/content/URL/ID/language/path/model input/credentials/external messages.
-- [ ] Success/failure/abort/capacity render tests and malicious-string absence tests pass without changing existing metrics.
-- [ ] Quick gate passes without reducing the pre-task test count.
+- [x] Submission/state/duration/failure, active counts, component health, search/duration/results/capacity, and maintenance families match Design.
+- [x] Every label is closed, low-cardinality, and excludes query/content/URL/ID/language/path/model input/credentials/external messages.
+- [x] Success/failure/abort/capacity render tests and malicious-string absence tests pass without changing existing metrics.
+- [x] Quick gate passes without reducing the pre-task test count.
+
+**Evidence**: two focused tests assert the exact 23-family registry, all 12 new RAG families,
+success/failure/aborted/capacity outcomes, gauges, durations, bounded result counts, maintenance, and
+malicious-label collapse to `unknown` with content absence. The Quick gate passed 540 unit tests,
+up from 538, with no skips.
 
 **Tests**: unit
 **Gate**: quick

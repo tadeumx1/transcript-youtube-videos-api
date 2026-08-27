@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
 
 describe('RuntimeMetrics', () => {
-  it('owns exactly the eleven production metric families', async () => {
+  it('owns exactly the transcript and fixed-label RAG production metric families', async () => {
     const output = await new RuntimeMetrics().render()
     const metricNames = [...output.matchAll(/^# HELP ([^ ]+)/gm)].map((match) => match[1])
 
@@ -19,6 +19,18 @@ describe('RuntimeMetrics', () => {
       'youtube_transcript_cache_requests_total',
       'youtube_transcript_job_recoveries_total',
       'youtube_transcript_storage_healthy',
+      'youtube_transcript_rag_submissions_total',
+      'youtube_transcript_rag_ingestions_current',
+      'youtube_transcript_rag_ingestion_duration_seconds',
+      'youtube_transcript_rag_failures_total',
+      'youtube_transcript_rag_active_documents',
+      'youtube_transcript_rag_active_chunks',
+      'youtube_transcript_rag_component_healthy',
+      'youtube_transcript_rag_searches_total',
+      'youtube_transcript_rag_search_duration_seconds',
+      'youtube_transcript_rag_search_result_count',
+      'youtube_transcript_rag_active_searches',
+      'youtube_transcript_rag_maintenance_total',
     ])
   })
 
@@ -155,5 +167,80 @@ describe('RuntimeMetrics', () => {
     )
     expect(await second.render()).toContain('youtube_transcript_active_jobs 0')
     expect(await second.render()).not.toContain('source="muse_transcription"')
+  })
+
+  it('renders every RAG operation family with fixed labels and exact values', async () => {
+    const metrics = new RuntimeMetrics()
+
+    metrics.recordRagSubmission('hit')
+    metrics.setRagIngestions('queued', 3)
+    metrics.setRagIngestions('processing', 1)
+    metrics.observeRagIngestionDuration('completed', 8.5)
+    metrics.recordRagFailure('embedding')
+    metrics.setRagActiveDocuments(12)
+    metrics.setRagActiveChunks(48)
+    metrics.setRagComponentHealthy('index', true)
+    metrics.recordRagSearch('success')
+    metrics.recordRagSearch('failure')
+    metrics.recordRagSearch('aborted')
+    metrics.observeRagSearchDuration('success', 0.25)
+    metrics.observeRagSearchResultCount(5)
+    metrics.setActiveRagSearches(4)
+    metrics.recordRagSearchAdmissionRejection('capacity')
+    metrics.recordRagMaintenance('optimize', 'success')
+
+    const output = await metrics.render()
+    expect(output).toContain('youtube_transcript_rag_submissions_total{disposition="hit"} 1')
+    expect(output).toContain('youtube_transcript_rag_ingestions_current{status="queued"} 3')
+    expect(output).toContain('youtube_transcript_rag_ingestions_current{status="processing"} 1')
+    expect(output).toContain(
+      'youtube_transcript_rag_ingestion_duration_seconds_sum{outcome="completed"} 8.5',
+    )
+    expect(output).toContain('youtube_transcript_rag_failures_total{reason="embedding"} 1')
+    expect(output).toContain('youtube_transcript_rag_active_documents 12')
+    expect(output).toContain('youtube_transcript_rag_active_chunks 48')
+    expect(output).toContain('youtube_transcript_rag_component_healthy{component="index"} 1')
+    expect(output).toContain('youtube_transcript_rag_searches_total{outcome="success"} 1')
+    expect(output).toContain('youtube_transcript_rag_searches_total{outcome="failure"} 1')
+    expect(output).toContain('youtube_transcript_rag_searches_total{outcome="aborted"} 1')
+    expect(output).toContain('youtube_transcript_rag_searches_total{outcome="capacity"} 1')
+    expect(output).toContain(
+      'youtube_transcript_rag_search_duration_seconds_sum{outcome="success"} 0.25',
+    )
+    expect(output).toContain('youtube_transcript_rag_search_result_count_sum 5')
+    expect(output).toContain('youtube_transcript_rag_active_searches 4')
+    expect(output).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="optimize",outcome="success"} 1',
+    )
+  })
+
+  it('maps malicious RAG labels to unknown without rendering their content', async () => {
+    const metrics = new RuntimeMetrics()
+    const malicious = 'sk-secret-value https://private.example /data/lancedb transcript-content'
+
+    metrics.recordRagSubmission(malicious)
+    metrics.setRagIngestions(malicious, 2)
+    metrics.observeRagIngestionDuration(malicious, 1)
+    metrics.recordRagFailure(malicious)
+    metrics.setRagComponentHealthy(malicious, false)
+    metrics.recordRagSearch(malicious)
+    metrics.observeRagSearchDuration(malicious, 2)
+    metrics.recordRagSearchAdmissionRejection(malicious)
+    metrics.recordRagMaintenance(malicious, malicious)
+
+    const output = await metrics.render()
+    expect(output).toContain('youtube_transcript_rag_submissions_total{disposition="unknown"} 1')
+    expect(output).toContain('youtube_transcript_rag_ingestions_current{status="unknown"} 2')
+    expect(output).toContain(
+      'youtube_transcript_rag_ingestion_duration_seconds_count{outcome="unknown"} 1',
+    )
+    expect(output).toContain('youtube_transcript_rag_failures_total{reason="unknown"} 1')
+    expect(output).toContain('youtube_transcript_rag_component_healthy{component="unknown"} 0')
+    expect(output).toContain('youtube_transcript_rag_searches_total{outcome="unknown"} 2')
+    expect(output).toContain(
+      'youtube_transcript_rag_maintenance_total{operation="unknown",outcome="unknown"} 1',
+    )
+    expect(output).not.toContain(malicious)
+    expect(output).not.toMatch(/sk-secret-value|private\.example|\/data\/lancedb|transcript-content/)
   })
 })

@@ -19,6 +19,25 @@ const DURABLE_JOB_STATUSES = new Set(['queued', 'processing'])
 const DURABLE_JOB_OUTCOMES = new Set(['completed', 'failed', 'interrupted'])
 const CACHE_OUTCOMES = new Set(['hit', 'miss', 'expired', 'corrupt', 'write_failed'])
 const RECOVERY_OUTCOMES = new Set(['completed', 'pdf_resumed', 'interrupted', 'duplicate'])
+const RAG_SUBMISSION_DISPOSITIONS = new Set(['miss', 'joined', 'hit', 'rejected'])
+const RAG_INGESTION_STATUSES = new Set(['queued', 'processing'])
+const RAG_INGESTION_OUTCOMES = new Set(['completed', 'failed', 'interrupted'])
+const RAG_FAILURE_REASONS = new Set([
+  'source_too_large',
+  'source_unavailable',
+  'embedding',
+  'storage',
+  'capacity',
+])
+const RAG_COMPONENTS = new Set(['repository', 'index', 'model', 'worker'])
+const RAG_SEARCH_OUTCOMES = new Set(['success', 'failure', 'capacity', 'aborted'])
+const RAG_SEARCH_ADMISSION_OUTCOMES = new Map([
+  ['capacity', 'capacity'],
+  ['aborted', 'aborted'],
+  ['readiness', 'failure'],
+])
+const RAG_MAINTENANCE_OPERATIONS = new Set(['reconcile', 'sweep', 'optimize', 'delete'])
+const RAG_MAINTENANCE_OUTCOMES = new Set(['success', 'failure', 'skipped'])
 
 function allowed(value: string, values: ReadonlySet<string>): string {
   return values.has(value) ? value : 'unknown'
@@ -37,6 +56,18 @@ export class RuntimeMetrics {
   readonly #cacheRequests: Counter<'outcome'>
   readonly #jobRecoveries: Counter<'outcome'>
   readonly #storageHealthy: Gauge
+  readonly #ragSubmissions: Counter<'disposition'>
+  readonly #ragIngestions: Gauge<'status'>
+  readonly #ragIngestionDuration: Histogram<'outcome'>
+  readonly #ragFailures: Counter<'reason'>
+  readonly #ragActiveDocuments: Gauge
+  readonly #ragActiveChunks: Gauge
+  readonly #ragComponentHealthy: Gauge<'component'>
+  readonly #ragSearches: Counter<'outcome'>
+  readonly #ragSearchDuration: Histogram<'outcome'>
+  readonly #ragSearchResultCount: Histogram
+  readonly #activeRagSearches: Gauge
+  readonly #ragMaintenance: Counter<'operation' | 'outcome'>
 
   constructor() {
     this.#activeJobs = new Gauge({
@@ -103,10 +134,87 @@ export class RuntimeMetrics {
       help: 'Whether durable transcript storage is healthy.',
       registers: [this.#registry],
     })
+    this.#ragSubmissions = new Counter({
+      name: 'youtube_transcript_rag_submissions_total',
+      help: 'Number of RAG ingestion submissions by fixed disposition.',
+      labelNames: ['disposition'],
+      registers: [this.#registry],
+    })
+    this.#ragIngestions = new Gauge({
+      name: 'youtube_transcript_rag_ingestions_current',
+      help: 'Current RAG ingestions by active state.',
+      labelNames: ['status'],
+      registers: [this.#registry],
+    })
+    this.#ragIngestionDuration = new Histogram({
+      name: 'youtube_transcript_rag_ingestion_duration_seconds',
+      help: 'RAG ingestion terminal duration in seconds.',
+      labelNames: ['outcome'],
+      registers: [this.#registry],
+    })
+    this.#ragFailures = new Counter({
+      name: 'youtube_transcript_rag_failures_total',
+      help: 'Number of RAG ingestion failures by fixed reason.',
+      labelNames: ['reason'],
+      registers: [this.#registry],
+    })
+    this.#ragActiveDocuments = new Gauge({
+      name: 'youtube_transcript_rag_active_documents',
+      help: 'Number of active RAG documents.',
+      registers: [this.#registry],
+    })
+    this.#ragActiveChunks = new Gauge({
+      name: 'youtube_transcript_rag_active_chunks',
+      help: 'Number of active RAG chunks.',
+      registers: [this.#registry],
+    })
+    this.#ragComponentHealthy = new Gauge({
+      name: 'youtube_transcript_rag_component_healthy',
+      help: 'Whether each fixed RAG component is healthy.',
+      labelNames: ['component'],
+      registers: [this.#registry],
+    })
+    this.#ragSearches = new Counter({
+      name: 'youtube_transcript_rag_searches_total',
+      help: 'Number of RAG searches by fixed outcome.',
+      labelNames: ['outcome'],
+      registers: [this.#registry],
+    })
+    this.#ragSearchDuration = new Histogram({
+      name: 'youtube_transcript_rag_search_duration_seconds',
+      help: 'RAG search duration in seconds.',
+      labelNames: ['outcome'],
+      registers: [this.#registry],
+    })
+    this.#ragSearchResultCount = new Histogram({
+      name: 'youtube_transcript_rag_search_result_count',
+      help: 'Bounded number of results returned by a RAG search.',
+      buckets: [0, 1, 2, 3, 5, 10, 20],
+      registers: [this.#registry],
+    })
+    this.#activeRagSearches = new Gauge({
+      name: 'youtube_transcript_rag_active_searches',
+      help: 'Number of RAG searches currently holding capacity.',
+      registers: [this.#registry],
+    })
+    this.#ragMaintenance = new Counter({
+      name: 'youtube_transcript_rag_maintenance_total',
+      help: 'Number of RAG maintenance operations by fixed operation and outcome.',
+      labelNames: ['operation', 'outcome'],
+      registers: [this.#registry],
+    })
     this.#activeJobs.set(0)
     this.#durableJobs.set({ status: 'queued' }, 0)
     this.#durableJobs.set({ status: 'processing' }, 0)
     this.#storageHealthy.set(0)
+    this.#ragIngestions.set({ status: 'queued' }, 0)
+    this.#ragIngestions.set({ status: 'processing' }, 0)
+    this.#ragActiveDocuments.set(0)
+    this.#ragActiveChunks.set(0)
+    for (const component of RAG_COMPONENTS) {
+      this.#ragComponentHealthy.set({ component }, 0)
+    }
+    this.#activeRagSearches.set(0)
   }
 
   get contentType(): string {
@@ -163,6 +271,70 @@ export class RuntimeMetrics {
 
   setStorageHealthy(healthy: boolean): void {
     this.#storageHealthy.set(healthy ? 1 : 0)
+  }
+
+  recordRagSubmission(disposition: string): void {
+    this.#ragSubmissions.inc({ disposition: allowed(disposition, RAG_SUBMISSION_DISPOSITIONS) })
+  }
+
+  setRagIngestions(status: string, count: number): void {
+    this.#ragIngestions.set({ status: allowed(status, RAG_INGESTION_STATUSES) }, count)
+  }
+
+  observeRagIngestionDuration(outcome: string, seconds: number): void {
+    this.#ragIngestionDuration.observe(
+      { outcome: allowed(outcome, RAG_INGESTION_OUTCOMES) },
+      seconds,
+    )
+  }
+
+  recordRagFailure(reason: string): void {
+    this.#ragFailures.inc({ reason: allowed(reason, RAG_FAILURE_REASONS) })
+  }
+
+  setRagActiveDocuments(count: number): void {
+    this.#ragActiveDocuments.set(count)
+  }
+
+  setRagActiveChunks(count: number): void {
+    this.#ragActiveChunks.set(count)
+  }
+
+  setRagComponentHealthy(component: string, healthy: boolean): void {
+    this.#ragComponentHealthy.set(
+      { component: allowed(component, RAG_COMPONENTS) },
+      healthy ? 1 : 0,
+    )
+  }
+
+  recordRagSearch(outcome: string): void {
+    this.#ragSearches.inc({ outcome: allowed(outcome, RAG_SEARCH_OUTCOMES) })
+  }
+
+  observeRagSearchDuration(outcome: string, seconds: number): void {
+    this.#ragSearchDuration.observe(
+      { outcome: allowed(outcome, RAG_SEARCH_OUTCOMES) },
+      seconds,
+    )
+  }
+
+  observeRagSearchResultCount(count: number): void {
+    this.#ragSearchResultCount.observe(count)
+  }
+
+  setActiveRagSearches(count: number): void {
+    this.#activeRagSearches.set(count)
+  }
+
+  recordRagSearchAdmissionRejection(reason: string): void {
+    this.recordRagSearch(RAG_SEARCH_ADMISSION_OUTCOMES.get(reason) ?? 'unknown')
+  }
+
+  recordRagMaintenance(operation: string, outcome: string): void {
+    this.#ragMaintenance.inc({
+      operation: allowed(operation, RAG_MAINTENANCE_OPERATIONS),
+      outcome: allowed(outcome, RAG_MAINTENANCE_OUTCOMES),
+    })
   }
 
   render(): Promise<string> {
