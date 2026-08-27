@@ -1,18 +1,17 @@
-# Diagnóstico de bloqueio do YouTube em datacenter
+# Diagnosing YouTube datacenter blocking
 
-Este runbook separa uma falha da plataforma de uma recusa do YouTube ou outro provedor. Ele não
-faz uma transcrição de diagnóstico, não imprime conteúdo do vídeo e não altera configuração. Use
-somente os placeholders mostrados e mantenha os limites de tempo e saída.
+This runbook separates a platform failure from a refusal by YouTube or another provider. It does
+not create a diagnostic transcription, print video content, or change configuration. Use only the
+shown placeholders and preserve the time and output limits.
 
-Evidência read-only na criação deste runbook, em 26 de agosto de 2026: o deployment ativo do
-serviço estava `SUCCESS/RUNNING`, com uma réplica e health check em `/health`. Esse registro não
-substitui a verificação atual abaixo.
+Read-only evidence when this runbook was created on August 26, 2026: the active service deployment
+was `SUCCESS/RUNNING`, with one replica and a health check at `/health`. That record does not replace
+the current checks below.
 
-## 1. Plataforma, liveness, readiness e autenticação
+## 1. Platform, liveness, readiness, and authentication
 
-Confirme primeiro o contexto, o deployment e as três fronteiras HTTP. Não avance se liveness ou
-readiness falhar. Os comandos retornam apenas estado, status HTTP e metadados operacionais
-limitados.
+Confirm context, deployment, and all three HTTP boundaries first. Do not continue if liveness or
+readiness fails. These commands return only state, HTTP status, and limited operational metadata.
 
 ```bash
 timeout 20s railway status --json | head -c 32768
@@ -22,103 +21,102 @@ curl --max-time 10 --silent --show-error --output /dev/null --write-out '%{http_
 curl --max-time 10 --silent --show-error --output /dev/null --write-out '%{http_code}\n' -X POST -H 'authorization: Bearer <API_ACCESS_KEY>' -H 'content-type: application/json' --data '{"url":"https://www.youtube.com/watch?v=<VIDEO_ID>"}' https://<API_HOST>/v1/transcripts
 ```
 
-Interpretação:
+Interpretation:
 
-- `/health` diferente de 200 ou deployment fora de `SUCCESS/RUNNING`: problema de plataforma ou
-  processo, ainda não uma evidência de bloqueio do YouTube.
-- `/ready` em 503 com `not_ready`: processo em encerramento; aguarde um deployment saudável.
-- `UNAUTHORIZED`: credencial ausente ou incorreta no cliente.
-- `API_AUTH_NOT_CONFIGURED`: credencial ausente no serviço.
-- HTTP 429 com `TRANSCRIPT_CAPACITY_EXCEEDED`: capacidade cheia. Respeite `Retry-After`.
+- `/health` other than 200, or a deployment outside `SUCCESS/RUNNING`: a platform or process
+  problem, not yet evidence of YouTube blocking.
+- `/ready` at 503 with `not_ready`: the process is shutting down; wait for a healthy deployment.
+- `UNAUTHORIZED`: the client credential is missing or incorrect.
+- `API_AUTH_NOT_CONFIGURED`: the service credential is missing.
+- HTTP 429 with `TRANSCRIPT_CAPACITY_EXCEEDED`: capacity is full. Honor `Retry-After`.
 
-O POST descarta o body para não imprimir transcrição. Consulte apenas códigos sanitizados nos
-logs nas etapas seguintes.
+The POST discards its body to avoid printing a transcription. Inspect only sanitized codes in the
+logs during the following steps.
 
-## 2. Recuperação de legendas
+## 2. Caption retrieval
 
-Filtre uma janela curta por códigos. O logger da aplicação registra código e status, não URL,
-idioma, ID de vídeo, texto ou resposta do provedor.
+Filter a short time window by code. The application logger records code and status, not a URL,
+language, video ID, text, or provider response.
 
 ```bash
 timeout 20s railway logs --service <SERVICE> --since 15m --lines 100 --filter 'CAPTIONS_UNAVAILABLE OR VIDEO_NOT_AVAILABLE OR YOUTUBE_UPSTREAM_ERROR' --json | head -c 32768
 ```
 
-Interpretação:
+Interpretation:
 
-- `VIDEO_NOT_AVAILABLE`: o vídeo não está publicamente disponível para a aplicação.
-- `CAPTIONS_UNAVAILABLE`: nenhuma legenda utilizável foi encontrada; o fallback de áudio pode ser
-  iniciado.
-- `YOUTUBE_UPSTREAM_ERROR`: a consulta de legendas falhou de forma inesperada. A aplicação não
-  entra no fallback nesse caso.
+- `VIDEO_NOT_AVAILABLE`: the video is not publicly available to the application.
+- `CAPTIONS_UNAVAILABLE`: no usable captions were found; the audio fallback can start.
+- `YOUTUBE_UPSTREAM_ERROR`: caption lookup failed unexpectedly. The application does not enter the
+  fallback in this case.
 
-Se o deployment e `/health` estão saudáveis, esses códigos mantêm a falha do YouTube separada da
-saúde do Railway.
+When the deployment and `/health` are healthy, these codes keep a YouTube failure separate from
+Railway health.
 
-## 3. Download de áudio com yt-dlp
+## 3. Audio download with yt-dlp
 
-Faça apenas uma simulação silenciosa para o mesmo vídeo público. O comando imprime somente o exit
-code e descarta stdout/stderr, sem salvar áudio, cookies, página ou resposta do YouTube.
+Run only a silent simulation for the same public video. The command prints only the exit code and
+discards stdout and stderr without saving audio, cookies, a page, or a YouTube response.
 
 ```bash
 timeout 30s railway ssh --service <SERVICE> -- "timeout 20s sh -c 'yt-dlp --simulate --no-playlist --quiet --no-warnings \"https://www.youtube.com/watch?v=<VIDEO_ID>\" >/dev/null 2>/dev/null; printf \"yt_dlp_exit=%s\\n\" \"\$?\"'" | head -c 4096
 timeout 20s railway logs --service <SERVICE> --since 15m --lines 100 --filter 'AUDIO_TOOL_UNAVAILABLE OR AUDIO_EXTRACTION_FAILED OR AUDIO_PROCESS_TIMEOUT' --json | head -c 32768
 ```
 
-Interpretação:
+Interpretation:
 
-- `AUDIO_TOOL_UNAVAILABLE`: o executável não iniciou; verifique a imagem, não o YouTube.
-- `AUDIO_EXTRACTION_FAILED`: o processo iniciou, mas o download ou processamento falhou.
-- `AUDIO_PROCESS_TIMEOUT`: yt-dlp ou FFmpeg excedeu o limite configurado.
-- `AUDIO_PROCESS_ABORTED`: shutdown ou cancelamento encerrou o processo.
+- `AUDIO_TOOL_UNAVAILABLE`: the executable did not start; inspect the image, not YouTube.
+- `AUDIO_EXTRACTION_FAILED`: the process started, but download or processing failed.
+- `AUDIO_PROCESS_TIMEOUT`: yt-dlp or FFmpeg exceeded its configured limit.
+- `AUDIO_PROCESS_ABORTED`: shutdown or cancellation stopped the process.
 
-Um exit code não zero com Railway saudável indica falha do acesso público a partir do egress ou
-mudança do YouTube. Ele não autoriza tentar outra identidade ou origem de rede.
+A non-zero exit code with healthy Railway services indicates public access failure from the egress
+or a YouTube change. It does not authorize trying another identity or network origin.
 
-## 4. Conversão com FFmpeg
+## 4. Conversion with FFmpeg
 
-Confirme somente que o binário da imagem inicia. Não leia nem produza mídia durante o diagnóstico.
+Confirm only that the image binary starts. Do not read or produce media during diagnosis.
 
 ```bash
 timeout 20s railway ssh --service <SERVICE> -- "timeout 10s ffmpeg -version 2>/dev/null | head -n 1" | head -c 4096
 timeout 20s railway logs --service <SERVICE> --since 15m --lines 100 --filter 'AUDIO_TOOL_UNAVAILABLE OR AUDIO_EXTRACTION_FAILED OR AUDIO_PROCESS_TIMEOUT OR AUDIO_PROCESS_ABORTED' --json | head -c 32768
 ```
 
-Se yt-dlp conclui e FFmpeg não inicia, trate como imagem/ferramenta. Se ambos iniciam e aparece
-`AUDIO_EXTRACTION_FAILED`, preserve o erro sanitizado e investigue a versão fixada das ferramentas
-em um ambiente não produtivo.
+If yt-dlp completes and FFmpeg does not start, treat it as an image or tool problem. If both start
+and `AUDIO_EXTRACTION_FAILED` appears, preserve the sanitized error and investigate the pinned tool
+versions in a non-production environment.
 
-## 5. Transcrição com Muse
+## 5. Transcription with Muse
 
-Verifique somente a presença da configuração, nunca seu valor. Em seguida leia códigos limitados.
-Não envie áudio de teste e não imprima body do OpenCode Go.
+Check only whether configuration is present, never its value. Then inspect limited codes. Do not
+submit test audio or print an OpenCode Go response body.
 
 ```bash
 timeout 15s railway ssh --service <SERVICE> -- 'timeout 5s sh -c '\''if test -n "$OPENCODE_API_KEY"; then printf "muse_config=configured\n"; else printf "muse_config=missing\n"; fi'\''' | head -c 4096
 timeout 20s railway logs --service <SERVICE> --since 15m --lines 100 --filter 'MUSE_AUTHENTICATION_FAILED OR MUSE_QUOTA_EXCEEDED OR MUSE_TIMEOUT OR MUSE_UPSTREAM_UNAVAILABLE OR MUSE_INVALID_RESPONSE' --json | head -c 32768
 ```
 
-Interpretação:
+Interpretation:
 
-- `MUSE_AUTHENTICATION_FAILED`: credencial inválida ou sem autorização.
-- `MUSE_QUOTA_EXCEEDED`: franquia esgotada; respeite o `Retry-After` validado.
-- `MUSE_TIMEOUT`: requisição excedeu o limite configurado.
-- `MUSE_UPSTREAM_UNAVAILABLE`: rede ou serviço upstream indisponível.
-- `MUSE_INVALID_RESPONSE`: resposta não pôde ser validada.
+- `MUSE_AUTHENTICATION_FAILED`: the credential is invalid or unauthorized.
+- `MUSE_QUOTA_EXCEEDED`: quota is exhausted; honor the validated `Retry-After`.
+- `MUSE_TIMEOUT`: the request exceeded its configured limit.
+- `MUSE_UPSTREAM_UNAVAILABLE`: the network or upstream service is unavailable.
+- `MUSE_INVALID_RESPONSE`: the response could not be validated.
 
-Esses códigos são falhas do Muse/OpenCode Go, não evidência de bloqueio do YouTube.
+These codes are Muse/OpenCode Go failures, not evidence of YouTube blocking.
 
-## Política de suporte e encerramento
+## Support policy and closure
 
-A API suporta somente vídeos públicos acessíveis sem estado de conta. O uso de cookies, proxies residenciais, resolução de CAPTCHA, rotação de IP e contorno de restrições são explicitamente incompatíveis com este serviço e com este runbook.
+The API supports only public videos available without account state. Cookies, residential proxies, CAPTCHA solving, IP rotation, and restriction bypass are explicitly incompatible with this service and runbook.
 
-Durante um incidente:
+During an incident:
 
-- não reduza nem desative a autenticação Bearer;
-- não aumente nem remova os timeouts;
-- não aumente nem remova o limite de concorrência;
-- não registre transcript, áudio, Base64, tokens, cookies, bodies de provedor ou IDs/URLs reais;
-- não repita automaticamente chamadas ao Muse.
+- do not reduce or disable Bearer authentication;
+- do not increase or remove timeouts;
+- do not increase or remove the concurrency limit;
+- do not record transcriptions, audio, Base64, tokens, cookies, provider bodies, or real IDs/URLs;
+- do not retry Muse calls automatically.
 
-Encerre o diagnóstico com o primeiro estágio comprovadamente falho. Registre apenas horário,
-deployment, estágio, status HTTP, código sanitizado e exit code. Se a plataforma está saudável e
-o estágio do YouTube falha, preserve essa distinção no incidente em vez de enfraquecer controles.
+End diagnosis at the first stage proven to have failed. Record only the time, deployment, stage,
+HTTP status, sanitized code, and exit code. If the platform is healthy and the YouTube stage fails,
+preserve that distinction in the incident instead of weakening controls.

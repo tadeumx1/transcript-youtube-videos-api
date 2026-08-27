@@ -1,50 +1,48 @@
-# API híbrida de transcrição do YouTube
+# Hybrid YouTube Transcription API
 
-API em Node.js, Fastify e TypeScript que recebe a URL de um vídeo público do YouTube,
-prioriza suas legendas e, quando elas não estão disponíveis, transcreve o áudio com
-`muse-spark-1.2-contributor` pelo OpenCode Go. As duas origens produzem o mesmo JSON e um PDF
-pesquisável gerado localmente. O resultado pode ser obtido de forma síncrona ou por um job durável,
-e o bundle completo fica em cache por tempo limitado para alimentar um fluxo RAG.
-Jobs concluídos também podem ser materializados em uma base de conhecimento local com embeddings
-E5 e busca híbrida no LanceDB, sem provedor de embedding remoto.
+A Node.js, Fastify, and TypeScript API that receives a public YouTube video URL, prioritizes its
+captions, and transcribes the audio with `muse-spark-1.2-contributor` through OpenCode Go when
+captions are unavailable. Both sources produce the same JSON and a locally generated searchable
+PDF. Results are available synchronously or through a durable job, and complete bundles are cached
+for a limited time to support a RAG workflow. Completed jobs can also be materialized into a local
+knowledge base with E5 embeddings and hybrid LanceDB search, without a remote embedding provider.
 
-## Como funciona
+## How it works
 
-1. Valida a URL e a transforma no formato canônico do YouTube.
-2. Procura legendas na ordem solicitada, usando por padrão `pt-BR`, `pt` e `en`.
-3. Somente quando não há legenda utilizável, baixa o áudio com `yt-dlp`.
-4. O FFmpeg converte o áudio em MP3 mono, 16 kHz e 48 kbps, dividido em blocos de 10 minutos.
-5. Envia cada bloco sequencialmente ao Muse com `reasoning.effort: "minimal"`.
-6. Remove os arquivos temporários mesmo quando download, conversão ou transcrição falham.
-7. Gera um PDF pesquisável localmente, sem outra chamada de IA, e publica JSON e PDF juntos no
-   cache somente quando o bundle está completo.
-8. Atende as rotas síncronas imediatamente ou processa jobs em uma fila durável recuperável após
-   reinício.
+1. Validates the URL and converts it to the canonical YouTube format.
+2. Searches for captions in the requested order, defaulting to `pt-BR`, `pt`, and `en`.
+3. Downloads audio with `yt-dlp` only when no usable captions are available.
+4. FFmpeg converts the audio to mono MP3 at 16 kHz and 48 kbps, split into 10-minute chunks.
+5. Sends each chunk sequentially to Muse with `reasoning.effort: "minimal"`.
+6. Removes temporary files even when download, conversion, or transcription fails.
+7. Generates a searchable PDF locally without another AI call, then publishes JSON and PDF to the
+   cache only when the bundle is complete.
+8. Serves synchronous routes immediately or processes jobs through a durable queue that recovers
+   after restarts.
 
-O Muse não é acionado quando as legendas funcionam nem quando o provedor de legendas falha de
-forma inesperada.
+Muse is not called when captions work or when the caption provider fails unexpectedly.
 
-## OpenCode Go e política de dados
+## OpenCode Go and data policy
 
-O fallback usa a assinatura OpenCode Go e a chave do workspace em `OPENCODE_API_KEY`. O modelo
-Contributor exige que a opção **“Permitir modelos que usam dados de solicitações para
-treinamento”** esteja habilitada no workspace.
+The fallback uses an OpenCode Go subscription and the workspace key in `OPENCODE_API_KEY`. The
+Contributor model requires **“Allow models that use request data for training”** to be enabled in
+the workspace.
 
-Esse consentimento permite que solicitações, inclusive o áudio enviado, sejam usadas para melhorar
-o modelo. Use apenas vídeos públicos que você tem autorização para processar. Não envie gravações
-privadas, credenciais, dados pessoais sensíveis ou conteúdo confidencial.
+This consent allows requests, including uploaded audio, to be used to improve the model. Process
+only public videos that you are authorized to use. Do not submit private recordings, credentials,
+sensitive personal data, or confidential content.
 
-Consulte a [documentação oficial do OpenCode Go](https://dev.opencode.ai/docs/go/) para modelos,
-limites e endpoints atuais.
+See the [official OpenCode Go documentation](https://dev.opencode.ai/docs/go/) for current models,
+limits, and endpoints.
 
-## Requisitos locais
+## Local requirements
 
-- Node.js 22 ou superior
+- Node.js 22 or newer
 - `yt-dlp`
 - FFmpeg
-- Assinatura OpenCode Go e `OPENCODE_API_KEY` para vídeos sem legenda
+- An OpenCode Go subscription and `OPENCODE_API_KEY` for videos without captions
 
-O Dockerfile já instala os dois executáveis de mídia. Para desenvolvimento sem Docker, confirme:
+The Dockerfile installs both media executables. For development without Docker, verify them first:
 
 ```bash
 node --version
@@ -52,72 +50,71 @@ yt-dlp --version
 ffmpeg -version
 ```
 
-## Configuração
+## Configuration
 
 ```bash
 npm ci
 cp .env.example .env
 ```
 
-Preencha somente o arquivo `.env`, que já está ignorado pelo Git:
+Populate only the `.env` file, which is already ignored by Git:
 
 ```dotenv
-OPENCODE_API_KEY=sua-chave-do-opencode-go
-API_ACCESS_KEY=um-token-longo-e-aleatorio
+OPENCODE_API_KEY=your-opencode-go-key
+API_ACCESS_KEY=a-long-random-token
 ```
 
-Os scripts `dev` e `start` carregam o `.env` da raiz quando ele existe. Variáveis fornecidas pelo
-ambiente da hospedagem também são aceitas.
+The `dev` and `start` scripts load the root `.env` file when it exists. Variables supplied by the
+hosting environment are also accepted.
 
-| Variável | Obrigatória | Padrão | Uso |
+| Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `HOST` | não | `0.0.0.0` | Endereço em que o Fastify escuta. |
-| `PORT` | não | `3000` | Porta TCP, de 1 a 65535. |
-| `OPENCODE_API_KEY` | apenas no fallback | vazia | Chave do workspace OpenCode Go. |
-| `API_ACCESS_KEY` | sim para rotas protegidas | vazia | Token Bearer que protege transcrição, jobs, RAG e métricas. |
-| `YT_DLP_PATH` | não | `yt-dlp` | Caminho do executável `yt-dlp`. |
-| `FFMPEG_PATH` | não | `ffmpeg` | Caminho do executável FFmpeg. |
-| `MAX_CONCURRENT_TRANSCRIPTS` | não | `1` | Máximo global de transcrições simultâneas, de 1 a 32. |
-| `TRANSCRIPT_RETRY_AFTER_SECONDS` | não | `30` | Espera indicada quando a capacidade está cheia, de 1 a 3600 segundos. |
-| `YT_DLP_TIMEOUT_MS` | não | `300000` | Limite do download, de 1 a 3600000 milissegundos. |
-| `FFMPEG_TIMEOUT_MS` | não | `900000` | Limite da conversão, de 1 a 3600000 milissegundos. |
-| `PROCESS_TERMINATION_GRACE_MS` | não | `5000` | Espera entre `SIGTERM` e `SIGKILL`, de 1 a 60000 milissegundos. |
-| `MUSE_TIMEOUT_MS` | não | `300000` | Limite de uma requisição ao Muse, de 1 a 3600000 milissegundos. |
-| `DATA_ROOT` | não | `.data/transcripts` | caminho não vazio da persistência; no Railway a IaC define `/data/transcripts`. |
-| `MAX_QUEUED_JOBS` | não | `100` | Máximo de jobs ativos (`queued + processing`), de 1 a 10000. |
-| `ARTIFACT_TTL_SECONDS` | não | `604800` | Retenção de bundles completos, de 60 a 2678400 segundos. |
-| `FAILED_JOB_TTL_SECONDS` | não | `86400` | Retenção de jobs falhos, de 60 a 604800 segundos. |
-| `JOB_TOMBSTONE_TTL_SECONDS` | não | `86400` | Retenção da indicação de expiração, de 60 a 604800 segundos. |
-| `STORAGE_SWEEP_INTERVAL_MS` | não | `60000` | Intervalo da limpeza local, de 1000 a 3600000 milissegundos. |
-| `RAG_DATA_ROOT` | não | `.data/lancedb` | caminho não vazio da base RAG; no Railway a IaC define `/data/lancedb`. |
-| `RAG_MODEL_ROOT` | não | `.models` | caminho não vazio do modelo E5 local verificado; a imagem usa `/app/models`. |
-| `MAX_QUEUED_RAG_INGESTIONS` | não | `25` | Máximo de ingestões RAG em fila, de 1 a 1000. |
-| `MAX_CONCURRENT_RAG_SEARCHES` | não | `4` | Máximo de buscas RAG simultâneas, de 1 a 32. |
-| `RAG_SEARCH_RETRY_AFTER_SECONDS` | não | `5` | Espera de uma busca sem capacidade, de 1 a 3600 segundos. |
-| `FAILED_RAG_INGESTION_TTL_SECONDS` | não | `86400` | Retenção de ingestões concluídas ou falhas, de 60 a 604800 segundos. |
-| `RAG_INGESTION_TOMBSTONE_TTL_SECONDS` | não | `86400` | Retenção da indicação de ingestão expirada, de 60 a 604800 segundos. |
-| `RAG_SWEEP_INTERVAL_MS` | não | `60000` | Intervalo da limpeza de metadados RAG, de 1000 a 3600000 milissegundos. |
-| `RAG_MAX_SOURCE_CODE_POINTS` | não | `5000000` | Máximo de code points por fonte, de 10000 a 20000000. |
-| `RAG_MAX_CHUNKS_PER_DOCUMENT` | não | `5000` | Máximo de chunks por documento, de 1 a 20000. |
-| `RAG_EMBEDDING_BATCH_SIZE` | não | `8` | Lote local de embeddings, de 1 a 8. |
-| `RAG_MIN_FREE_BYTES` | não | `134217728` | Reserva no Volume antes de um miss, de 16777216 a 536870912 bytes. |
+| `HOST` | no | `0.0.0.0` | Address on which Fastify listens. |
+| `PORT` | no | `3000` | TCP port, from 1 to 65535. |
+| `OPENCODE_API_KEY` | fallback only | empty | OpenCode Go workspace key. |
+| `API_ACCESS_KEY` | yes for protected routes | empty | Bearer token protecting transcription, jobs, RAG, and metrics. |
+| `YT_DLP_PATH` | no | `yt-dlp` | Path to the `yt-dlp` executable. |
+| `FFMPEG_PATH` | no | `ffmpeg` | Path to the FFmpeg executable. |
+| `MAX_CONCURRENT_TRANSCRIPTS` | no | `1` | Global concurrent transcription limit, from 1 to 32. |
+| `TRANSCRIPT_RETRY_AFTER_SECONDS` | no | `30` | Retry delay reported when capacity is full, from 1 to 3600 seconds. |
+| `YT_DLP_TIMEOUT_MS` | no | `300000` | Download timeout, from 1 to 3600000 milliseconds. |
+| `FFMPEG_TIMEOUT_MS` | no | `900000` | Conversion timeout, from 1 to 3600000 milliseconds. |
+| `PROCESS_TERMINATION_GRACE_MS` | no | `5000` | Delay between `SIGTERM` and `SIGKILL`, from 1 to 60000 milliseconds. |
+| `MUSE_TIMEOUT_MS` | no | `300000` | Muse request timeout, from 1 to 3600000 milliseconds. |
+| `DATA_ROOT` | no | `.data/transcripts` | Non-empty persistence path; Railway IaC sets `/data/transcripts`. |
+| `MAX_QUEUED_JOBS` | no | `100` | Active job limit (`queued + processing`), from 1 to 10000. |
+| `ARTIFACT_TTL_SECONDS` | no | `604800` | Complete bundle retention, from 60 to 2678400 seconds. |
+| `FAILED_JOB_TTL_SECONDS` | no | `86400` | Failed job retention, from 60 to 604800 seconds. |
+| `JOB_TOMBSTONE_TTL_SECONDS` | no | `86400` | Expiration marker retention, from 60 to 604800 seconds. |
+| `STORAGE_SWEEP_INTERVAL_MS` | no | `60000` | Local cleanup interval, from 1000 to 3600000 milliseconds. |
+| `RAG_DATA_ROOT` | no | `.data/lancedb` | Non-empty RAG database path; Railway IaC sets `/data/lancedb`. |
+| `RAG_MODEL_ROOT` | no | `.models` | Non-empty verified local E5 model path; the image uses `/app/models`. |
+| `MAX_QUEUED_RAG_INGESTIONS` | no | `25` | Queued RAG ingestion limit, from 1 to 1000. |
+| `MAX_CONCURRENT_RAG_SEARCHES` | no | `4` | Concurrent RAG search limit, from 1 to 32. |
+| `RAG_SEARCH_RETRY_AFTER_SECONDS` | no | `5` | Retry delay for a search without capacity, from 1 to 3600 seconds. |
+| `FAILED_RAG_INGESTION_TTL_SECONDS` | no | `86400` | Completed or failed ingestion retention, from 60 to 604800 seconds. |
+| `RAG_INGESTION_TOMBSTONE_TTL_SECONDS` | no | `86400` | Expired ingestion marker retention, from 60 to 604800 seconds. |
+| `RAG_SWEEP_INTERVAL_MS` | no | `60000` | RAG metadata cleanup interval, from 1000 to 3600000 milliseconds. |
+| `RAG_MAX_SOURCE_CODE_POINTS` | no | `5000000` | Maximum code points per source, from 10000 to 20000000. |
+| `RAG_MAX_CHUNKS_PER_DOCUMENT` | no | `5000` | Maximum chunks per document, from 1 to 20000. |
+| `RAG_EMBEDDING_BATCH_SIZE` | no | `8` | Local embedding batch size, from 1 to 8. |
+| `RAG_MIN_FREE_BYTES` | no | `134217728` | Volume reserve before a miss, from 16777216 to 536870912 bytes. |
 
-`GET /health` e `GET /ready` continuam públicos. Se `API_ACCESS_KEY` estiver vazio, os endpoints de
-transcrição, jobs, RAG e métricas falham fechados com HTTP 503; eles nunca ficam públicos por
-acidente.
+`GET /health` and `GET /ready` remain public. If `API_ACCESS_KEY` is empty, transcription, job,
+RAG, and metrics endpoints fail closed with HTTP 503; they never become public accidentally.
 
-Nunca envie `OPENCODE_API_KEY` no body, em commits ou ao cliente da API. Envie `API_ACCESS_KEY`
-somente no header `Authorization` e trate-o como credencial de produção.
+Never send `OPENCODE_API_KEY` in a request body, commit, or API response. Send `API_ACCESS_KEY` only
+in the `Authorization` header and treat it as a production credential.
 
-## Executar
+## Running the API
 
-Em desenvolvimento:
+For development:
 
 ```bash
 npm run dev
 ```
 
-Build de produção:
+For a production build:
 
 ```bash
 npm run build
@@ -134,32 +131,32 @@ docker run --rm \
   youtube-transcript-api
 ```
 
-A imagem inclui FFmpeg, fixa o `yt-dlp` na versão `2026.8.19` e empacota os cinco artefatos
-verificados do modelo E5; a execução não baixa modelo. O entrypoint inicia como root apenas para
-criar e ajustar a propriedade da raiz `/data`; em seguida usa `gosu` e substitui o processo pelo
-Node como usuário sem privilégios. Como o YouTube muda com frequência, atualize a versão do
-`yt-dlp` quando necessário. A verificação descrita em [Qualidade](#qualidade) constrói a mesma
-imagem de produção e executa nela o encoder e o LanceDB sem credenciais nem rede.
+The image includes FFmpeg, pins `yt-dlp` to version `2026.8.19`, and packages the five verified E5
+model artifacts; runtime never downloads the model. The entrypoint starts as root only to create
+and set ownership on `/data`, then uses `gosu` to replace itself with the unprivileged Node process.
+Because YouTube changes frequently, update the pinned `yt-dlp` version when required. The checks in
+[Quality](#quality) build the same production image and run the encoder and LanceDB inside it
+without credentials or network access.
 
-## Rotas
+## Routes
 
-### Saúde
+### Health
 
 ```bash
 curl http://localhost:3000/health
 ```
 
-Resposta:
+Response:
 
 ```json
 {"status":"ok"}
 ```
 
-### Transcrição JSON
+### JSON transcription
 
 ```bash
 export API_BASE_URL=http://localhost:3000
-export VIDEO_URL=https://www.youtube.com/watch?v=SEU_ID_AQUI
+export VIDEO_URL=https://www.youtube.com/watch?v=YOUR_ID_HERE
 
 curl -X POST ${API_BASE_URL}/v1/transcripts \
   -H "authorization: Bearer $API_ACCESS_KEY" \
@@ -168,10 +165,10 @@ curl -X POST ${API_BASE_URL}/v1/transcripts \
   --output transcript.json
 ```
 
-Substitua `SEU_ID_AQUI` por um ID de 11 caracteres de um vídeo público autorizado. `languages` é
-opcional, ordenado e aceita de um a cinco códigos. Quando o áudio é transcrito, `source` vale
-`muse_transcription`, `isGenerated` vale `true` e `timestampPrecision` vale `chunk`. Cada timestamp
-representa o início aproximado de um bloco de até 10 minutos, não o tempo exato de cada palavra.
+Replace `YOUR_ID_HERE` with the 11-character ID of an authorized public video. `languages` is an
+optional ordered list of one to five codes. When audio is transcribed, `source` is
+`muse_transcription`, `isGenerated` is `true`, and `timestampPrecision` is `chunk`. Each timestamp
+is the approximate start of a chunk of up to 10 minutes, not the exact time of every word.
 
 ### PDF
 
@@ -183,23 +180,24 @@ curl -X POST ${API_BASE_URL}/v1/transcripts/pdf \
   --output transcript.pdf
 ```
 
-O PDF contém URL canônica, ID do vídeo, origem da transcrição, idioma, indicador de conteúdo
-gerado, precisão dos timestamps, data de extração e todo o texto em ordem cronológica. A renderização
-usa PDFKit localmente e não consome tokens do Muse.
+The PDF contains the canonical URL, video ID, transcription source, language, generated-content
+indicator, timestamp precision, extraction time, and the complete text in chronological order.
+PDFKit renders it locally without consuming Muse tokens.
 
-As duas rotas síncronas procuram primeiro um bundle verificado para o vídeo canônico e a ordem de
-idiomas solicitada. Um hit retorna os bytes retidos sem chamar YouTube, Muse, FFmpeg ou o renderer.
-Em um miss, a API produz a transcrição e o PDF uma vez e só então publica o bundle completo. Uma
-falha ao completar o cache não transforma uma transcrição JSON já produzida em erro; a rota PDF
-preserva o erro de renderização existente.
+Both synchronous routes first look for a verified bundle for the canonical video and requested
+language order. A hit returns retained bytes without calling YouTube, Muse, FFmpeg, or the renderer.
+On a miss, the API produces the transcription and PDF once, then publishes the complete bundle. A
+cache completion failure does not turn an already produced JSON transcription into an error; the
+PDF route preserves its existing rendering error.
 
-### Jobs duráveis
+### Durable jobs
 
-Use jobs para não manter uma conexão HTTP aberta durante vídeos longos. Mantenha `VIDEO_URL` com o
-placeholder `SEU_ID_AQUI` até escolher um vídeo público autorizado. Todos os comandos abaixo enviam
-o mesmo Bearer e gravam a resposta em arquivo, evitando conteúdo de transcrição no terminal.
+Use jobs to avoid holding an HTTP connection open for long videos. Keep `VIDEO_URL` set to the
+`YOUR_ID_HERE` placeholder until you choose an authorized public video. Every command below sends
+the same Bearer token and writes the response to a file, keeping transcription content out of the
+terminal.
 
-Envie o job:
+Submit a job:
 
 ```bash
 curl -X POST ${API_BASE_URL}/v1/jobs \
@@ -210,14 +208,14 @@ curl -X POST ${API_BASE_URL}/v1/jobs \
   --output job-submission.json
 ```
 
-O servidor responde 202 com `Location`, `Retry-After: 2`, um `jobId` e disposição `miss`, `joined` ou `hit`.
-Copie o identificador retornado sem registrá-lo em logs compartilhados:
+The server responds with 202, `Location`, `Retry-After: 2`, a `jobId`, and a `miss`, `joined`, or
+`hit` disposition. Copy the returned identifier without recording it in shared logs:
 
 ```bash
-export JOB_ID=substitua-pelo-job-id-retornado
+export JOB_ID=replace-with-returned-job-id
 ```
 
-Consulte o estado `queued`, `processing`, `completed` ou `failed`:
+Read the `queued`, `processing`, `completed`, or `failed` status:
 
 ```bash
 curl -X GET ${API_BASE_URL}/v1/jobs/${JOB_ID} \
@@ -225,7 +223,7 @@ curl -X GET ${API_BASE_URL}/v1/jobs/${JOB_ID} \
   --output job-status.json
 ```
 
-Depois de `completed`, baixe o JSON e o PDF retidos:
+After completion, download the retained JSON and PDF:
 
 ```bash
 curl -X GET ${API_BASE_URL}/v1/jobs/${JOB_ID}/transcript \
@@ -237,31 +235,31 @@ curl -X GET ${API_BASE_URL}/v1/jobs/${JOB_ID}/pdf \
   --output transcript.pdf
 ```
 
-Submissões concorrentes com a mesma identidade canônica têm um único dono: um novo trabalho é
-`miss`, seguidores ativos são `joined` e um bundle já verificado é `hit`. Somente um miss novo
-consome `MAX_QUEUED_JOBS`; o limite conta `queued + processing`. O worker escolhe jobs em ordem FIFO
-e espera a mesma capacidade global usada pelas rotas síncronas, sem rejeitar ou chamar provedores
-enquanto não houver um permit.
+Concurrent submissions with the same canonical identity have one owner: new work is a `miss`,
+active followers are `joined`, and an already verified bundle is a `hit`. Only a new miss consumes
+`MAX_QUEUED_JOBS`; the limit counts `queued + processing`. The worker selects jobs in FIFO order and
+waits for the same global capacity used by synchronous routes, without rejecting or calling
+providers until a permit is available.
 
-Os TTLs são fixos e não deslizantes: leituras não prorrogam nenhuma retenção. Bundles completos
-expiram após `ARTIFACT_TTL_SECONDS` contados da conclusão; jobs falhos usam
-`FAILED_JOB_TTL_SECONDS`; a indicação 410 permanece por `JOB_TOMBSTONE_TTL_SECONDS`. A limpeza roda
-no intervalo `STORAGE_SWEEP_INTERVAL_MS`.
+TTLs are fixed and non-sliding: reads never extend retention. Complete bundles expire
+`ARTIFACT_TTL_SECONDS` after completion; failed jobs use `FAILED_JOB_TTL_SECONDS`; the 410 marker
+remains for `JOB_TOMBSTONE_TTL_SECONDS`. Cleanup runs every `STORAGE_SWEEP_INTERVAL_MS`.
 
-Após um reinício, um bundle completo finaliza o job e uma transcrição parcial verificada retoma
-somente a geração local do PDF. Se o efeito externo for incerto e não houver transcrição verificada,
-o job termina como `JOB_INTERRUPTED`. Não há retry automático de YouTube ou Muse. Para tentar outra
-vez e aceitar novo consumo de quota, envie explicitamente um novo `POST /v1/jobs`.
+After a restart, a complete bundle completes its job, while a verified partial transcription
+resumes only local PDF generation. If an external effect is uncertain and no verified transcription
+exists, the job ends as `JOB_INTERRUPTED`. YouTube and Muse are never retried automatically. To try
+again and accept new quota usage, explicitly submit another `POST /v1/jobs`.
 
-### Base de conhecimento RAG local
+### Local RAG knowledge base
 
-A ingestão parte exclusivamente de um job durável `completed` cujo bundle ainda está verificado.
-Ela copia um snapshot local da transcrição, divide o texto e publica embeddings E5 no LanceDB. Esse
-fluxo não retranscreve o vídeo, não regenera o PDF e não chama YouTube, Muse/OpenCode, LLM, registro
-de modelo ou serviço de embedding pela rede; o embedding ocorre localmente com o modelo empacotado.
+Ingestion starts exclusively from a durable `completed` job whose bundle is still verified. It
+copies a local transcription snapshot, chunks the text, and publishes E5 embeddings to LanceDB.
+This flow does not transcribe the video again, regenerate the PDF, or call YouTube, Muse/OpenCode,
+an LLM, a model registry, or an embedding service over the network; embeddings run locally with the
+packaged model.
 
-Use somente os identificadores devolvidos pelas rotas anteriores e não os registre em logs
-compartilhados. Envie um job concluído para a fila RAG:
+Use only identifiers returned by earlier routes and do not record them in shared logs. Submit a
+completed job to the RAG queue:
 
 ```bash
 curl -X POST ${API_BASE_URL}/v1/rag/ingestions \
@@ -272,24 +270,24 @@ curl -X POST ${API_BASE_URL}/v1/rag/ingestions \
   --output rag-ingestion.json
 ```
 
-O servidor responde 202 com `Location`, `Retry-After: 2` e disposição `miss`, `joined` ou `hit`.
-Copie os placeholders da resposta para consultar o processamento sem imprimir o body:
+The server responds with 202, `Location`, `Retry-After: 2`, and a `miss`, `joined`, or `hit`
+disposition. Copy the response placeholders to inspect processing without printing the body:
 
 ```bash
-export RAG_INGESTION_ID=substitua-pelo-ingestion-id-retornado
-export RAG_DOCUMENT_ID=substitua-pelo-document-id-retornado
+export RAG_INGESTION_ID=replace-with-returned-ingestion-id
+export RAG_DOCUMENT_ID=replace-with-returned-document-id
 
 curl -X GET ${API_BASE_URL}/v1/rag/ingestions/${RAG_INGESTION_ID} \
   -H "authorization: Bearer $API_ACCESS_KEY" \
   --output rag-ingestion-status.json
 ```
 
-O estado é `queued`, `processing`, `completed` ou `failed`. Depois de `completed`, faça a busca
-híbrida. A consulta aceita de 1 a 1000 caracteres, com `topK` padrão 5, de 1 a 20, e filtro opcional
-de até 50 `documentIds` distintos:
+Status is `queued`, `processing`, `completed`, or `failed`. After completion, run a hybrid search.
+The query accepts 1 to 1000 characters, `topK` defaults to 5 and accepts 1 to 20, and the optional
+filter accepts up to 50 distinct `documentIds`:
 
 ```bash
-export RAG_QUERY=substitua-por-uma-consulta-autorizada
+export RAG_QUERY=replace-with-an-authorized-query
 
 curl -X POST ${API_BASE_URL}/v1/rag/search \
   -H "authorization: Bearer $API_ACCESS_KEY" \
@@ -298,7 +296,7 @@ curl -X POST ${API_BASE_URL}/v1/rag/search \
   --output rag-search-results.json
 ```
 
-Remova um documento quando ele não deve mais participar da recuperação:
+Delete a document when it should no longer participate in retrieval:
 
 ```bash
 curl -X DELETE ${API_BASE_URL}/v1/rag/documents/${RAG_DOCUMENT_ID} \
@@ -307,42 +305,42 @@ curl -X DELETE ${API_BASE_URL}/v1/rag/documents/${RAG_DOCUMENT_ID} \
   --write-out '%{http_code}\n'
 ```
 
-Uma remoção concluída responde 204 e produz remoção lógica imediata dos resultados de busca, sem
-alterar o job, a transcrição ou o PDF de origem. Isso não oferece apagamento físico seguro:
-fragmentos antigos do LanceDB e backups do Railway podem conservar blocos até que as políticas de
-compactação e retenção os eliminem. Portanto, a API não deve ser descrita como mecanismo de
-destruição criptográfica ou sanitização de mídia.
+A completed deletion responds with 204 and immediately removes the document logically from search results
+without changing the source job, transcription, or PDF. It does not provide secure physical erasure:
+old LanceDB fragments and Railway backups can retain chunks until compaction and retention
+policies remove them. The API must not be described as a cryptographic destruction or media
+sanitization mechanism.
 
-Ingestões concorrentes da mesma versão usam `miss`, `joined` e `hit`. Somente um miss novo conta no
-limite de 25 itens e exige pelo menos 128 MiB livres no Volume compartilhado; a falta de espaço
-retorna 507 `RAG_STORAGE_CAPACITY_EXCEEDED`, e a fila cheia retorna 429
-`RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED` com `Retry-After: 30`. As quatro buscas simultâneas usam
-`RAG_SEARCH_CAPACITY_EXCEEDED` com `Retry-After: 5`; atualização concorrente do mesmo documento usa
-409 `RAG_DOCUMENT_UPDATE_IN_PROGRESS` com `Retry-After: 2`. Hits, joins, status, busca e deleção
-permanecem disponíveis nas respectivas condições de capacidade.
+Concurrent ingestions of the same version use `miss`, `joined`, and `hit`. Only a new miss counts
+toward the 25-item limit and requires at least 128 MiB free on the shared Volume. Insufficient space
+returns 507 `RAG_STORAGE_CAPACITY_EXCEEDED`, and a full queue returns 429
+`RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED` with `Retry-After: 30`. Four concurrent searches use
+`RAG_SEARCH_CAPACITY_EXCEEDED` with `Retry-After: 5`; a concurrent update to the same document uses
+409 `RAG_DOCUMENT_UPDATE_IN_PROGRESS` with `Retry-After: 2`. Hits, joins, status reads, searches,
+and deletions remain available under their corresponding capacity conditions.
 
-O chunker limita cada entrada do modelo a 320 tokens, com no máximo 48 tokens de contexto anterior;
-não depende de truncamento do modelo. Os TTLs fixos e não deslizantes de 24 horas pertencem ao
-recurso de ingestão e ao seu tombstone. O documento publicado continua pesquisável depois que o
-artefato e o recurso de ingestão expiram, até uma substituição ou DELETE explícito.
+The chunker limits each model input to 320 tokens with at most 48 tokens of preceding context; it
+does not rely on model truncation. Fixed, non-sliding 24-hour TTLs belong to the ingestion resource
+and its tombstone. A published document remains searchable after the source artifact and ingestion
+resource expire, until explicit replacement or DELETE.
 
-`GET /health` é somente liveness. `GET /ready` retorna 200 apenas depois de armazenamento de
-transcrições, repositório RAG, schema e embedding fingerprint do LanceDB, modelo local aquecido,
-reconciliação e workers estarem prontos; durante inicialização, desligamento ou degradação retorna
-503 `{"status":"not_ready"}`. Operações RAG falham fechadas com códigos fixos, mas liveness e as
-rotas existentes de transcrição/jobs continuam com seus contratos próprios.
+`GET /health` is liveness only. `GET /ready` returns 200 only after transcription storage, the RAG
+repository, LanceDB schema and embedding fingerprint, local model warmup, reconciliation, and both
+workers are ready. During initialization, shutdown, or degradation it returns 503
+`{"status":"not_ready"}`. RAG operations fail closed with fixed codes, while liveness and existing
+transcription/job routes retain their own contracts.
 
-`GET /metrics` exige o mesmo Bearer. As famílias `youtube_transcript_rag_submissions_total`,
-`youtube_transcript_rag_ingestions_current`, `youtube_transcript_rag_component_healthy`,
-`youtube_transcript_rag_searches_total` e `youtube_transcript_rag_maintenance_total`, além dos
-histogramas e gauges associados, têm somente labels fixos. Métricas e logs
-não incluem consulta, texto, vetor, URL, ID, caminho ou credencial. Investigue saúde por componente (`repository`,
-`index`, `model`, `worker`) e capacidade pelos resultados agregados, nunca adicionando labels por
-documento ou conteúdo.
+`GET /metrics` requires the same Bearer token. The
+`youtube_transcript_rag_submissions_total`, `youtube_transcript_rag_ingestions_current`,
+`youtube_transcript_rag_component_healthy`, `youtube_transcript_rag_searches_total`, and
+`youtube_transcript_rag_maintenance_total` families, along with related histograms and gauges, use
+only fixed labels. Metrics and logs do not include queries, text, vectors, URLs, IDs, paths, or credentials.
+Investigate health by component (`repository`, `index`, `model`, `worker`) and capacity
+through aggregate outcomes; never add labels per document or content item.
 
-## Erros
+## Errors
 
-Erros têm o formato:
+Errors use this format:
 
 ```json
 {
@@ -353,109 +351,109 @@ Erros têm o formato:
 }
 ```
 
-| HTTP | Código | Significado |
+| HTTP | Code | Meaning |
 | --- | --- | --- |
-| 401 | `UNAUTHORIZED` | Bearer token ausente, malformado ou incorreto. |
-| 400 | `INVALID_REQUEST` | Body ausente, campo desconhecido ou idiomas inválidos. |
-| 400 | `INVALID_YOUTUBE_URL` | URL não suportada ou ID inválido. |
-| 404 | `VIDEO_NOT_AVAILABLE` | Vídeo privado, restrito ou indisponível. |
-| 404 | `JOB_NOT_FOUND` | Job desconhecido ou nunca retido. |
-| 404 | `RAG_INGESTION_NOT_FOUND` | Recurso de ingestão RAG desconhecido ou nunca retido. |
-| 404 | `RAG_DOCUMENT_NOT_FOUND` | Documento RAG desconhecido ou já removido. |
-| 409 | `JOB_NOT_COMPLETED` | Resultado solicitado enquanto o job ainda está na fila ou processando; use `Retry-After: 2`. |
-| 409 | `JOB_FAILED` | Resultado solicitado para um job que terminou com falha; consulte o estado. |
-| 409 | `RAG_DOCUMENT_UPDATE_IN_PROGRESS` | A mesma versão do documento está sendo atualizada; use `Retry-After: 2`. |
-| 410 | `JOB_EXPIRED` | Job expirado ainda representado por um tombstone retido. |
-| 410 | `RAG_INGESTION_EXPIRED` | Ingestão expirada ainda representada por um tombstone retido. |
-| 429 | `JOB_QUEUE_CAPACITY_EXCEEDED` | Novo miss excedeu a fila; `joined` e `hit` continuam aceitos. |
-| 429 | `RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED` | Novo miss RAG excedeu a fila; use `Retry-After: 30`. |
-| 429 | `RAG_SEARCH_CAPACITY_EXCEEDED` | Todas as vagas de busca estão ocupadas; use `Retry-After: 5`. |
-| 502 | `YOUTUBE_UPSTREAM_ERROR` | Falha inesperada ao consultar legendas. |
-| 503 | `AUDIO_FALLBACK_NOT_CONFIGURED` | O fallback precisa de `OPENCODE_API_KEY`. |
-| 503 | `AUDIO_TOOL_UNAVAILABLE` | `yt-dlp` ou FFmpeg não pôde iniciar. |
-| 503 | `JOB_STORAGE_UNAVAILABLE` | Volume, bundle ou metadado durável não está verificável. |
-| 503 | `RAG_MODEL_UNAVAILABLE` | Modelo local ausente, inválido ou não aquecido. |
-| 503 | `RAG_STORAGE_UNAVAILABLE` | Repositório ou índice local não está verificável. |
-| 507 | `RAG_STORAGE_CAPACITY_EXCEEDED` | O Volume não mantém a reserva mínima para aceitar um novo miss. |
-| 502 | `AUDIO_EXTRACTION_FAILED` | Falha no download ou processamento do áudio. |
-| 502 | `AUDIO_CHUNK_TOO_LARGE` | Um bloco ultrapassou o limite interno de 8 MiB. |
-| 502 | `MUSE_TRANSCRIPTION_FAILED` | O OpenCode Go ou o Muse não concluiu a transcrição. |
-| 500 | `PDF_GENERATION_FAILED` | Não foi possível renderizar o PDF. |
-| 503 | `API_AUTH_NOT_CONFIGURED` | `API_ACCESS_KEY` não foi configurada no servidor. |
+| 401 | `UNAUTHORIZED` | Missing, malformed, or incorrect Bearer token. |
+| 400 | `INVALID_REQUEST` | Missing body, unknown field, or invalid languages. |
+| 400 | `INVALID_YOUTUBE_URL` | Unsupported URL or invalid ID. |
+| 404 | `VIDEO_NOT_AVAILABLE` | Private, restricted, or unavailable video. |
+| 404 | `JOB_NOT_FOUND` | Unknown job or one that was never retained. |
+| 404 | `RAG_INGESTION_NOT_FOUND` | Unknown RAG ingestion resource or one that was never retained. |
+| 404 | `RAG_DOCUMENT_NOT_FOUND` | Unknown or already deleted RAG document. |
+| 409 | `JOB_NOT_COMPLETED` | Result requested while the job is queued or processing; use `Retry-After: 2`. |
+| 409 | `JOB_FAILED` | Result requested for a failed job; inspect its status. |
+| 409 | `RAG_DOCUMENT_UPDATE_IN_PROGRESS` | The same document version is being updated; use `Retry-After: 2`. |
+| 410 | `JOB_EXPIRED` | Expired job still represented by a retained tombstone. |
+| 410 | `RAG_INGESTION_EXPIRED` | Expired ingestion still represented by a retained tombstone. |
+| 429 | `JOB_QUEUE_CAPACITY_EXCEEDED` | New miss exceeded the queue; `joined` and `hit` remain accepted. |
+| 429 | `RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED` | New RAG miss exceeded the queue; use `Retry-After: 30`. |
+| 429 | `RAG_SEARCH_CAPACITY_EXCEEDED` | All search permits are occupied; use `Retry-After: 5`. |
+| 502 | `YOUTUBE_UPSTREAM_ERROR` | Unexpected caption lookup failure. |
+| 503 | `AUDIO_FALLBACK_NOT_CONFIGURED` | The fallback requires `OPENCODE_API_KEY`. |
+| 503 | `AUDIO_TOOL_UNAVAILABLE` | `yt-dlp` or FFmpeg could not start. |
+| 503 | `JOB_STORAGE_UNAVAILABLE` | The Volume, bundle, or durable metadata cannot be verified. |
+| 503 | `RAG_MODEL_UNAVAILABLE` | The local model is missing, invalid, or not warmed up. |
+| 503 | `RAG_STORAGE_UNAVAILABLE` | The local repository or index cannot be verified. |
+| 507 | `RAG_STORAGE_CAPACITY_EXCEEDED` | The Volume cannot retain the minimum reserve for a new miss. |
+| 502 | `AUDIO_EXTRACTION_FAILED` | Audio download or processing failed. |
+| 502 | `AUDIO_CHUNK_TOO_LARGE` | A chunk exceeded the internal 8 MiB limit. |
+| 502 | `MUSE_TRANSCRIPTION_FAILED` | OpenCode Go or Muse did not complete the transcription. |
+| 500 | `PDF_GENERATION_FAILED` | The PDF could not be rendered. |
+| 503 | `API_AUTH_NOT_CONFIGURED` | `API_ACCESS_KEY` is not configured on the server. |
 
-Não há retry automático. Uma falha interrompe a requisição ou o job para evitar consumo duplicado
-da franquia e amplificação de bloqueios do YouTube. O código `JOB_INTERRUPTED` é persistido no estado
-do job, não usado para refazer silenciosamente o trabalho externo.
+There are no automatic retries. A failure stops the request or job to prevent duplicate quota usage
+and amplification of YouTube blocking. `JOB_INTERRUPTED` is persisted in job status and is never
+used to repeat external work silently.
 
 ## Railway
 
-O arquivo `.railway/railway.ts` mantém o projeto e o serviço no Infrastructure as Code atual do
-Railway. Ele configura `/health` como health check e permite até 300 segundos para a imagem ficar
-saudável. A topologia usa uma única réplica e um único Volume de 1024 MB (1 GB), compartilhado,
-montado em `/data`: `DATA_ROOT=/data/transcripts` guarda jobs/artefatos e
-`RAG_DATA_ROOT=/data/lancedb` guarda metadados e índices locais. O modelo verificado está na imagem,
-não no Volume. A IaC preserva os dois segredos existentes e não cria banco, bucket, modelo remoto
-ou armazenamento público. O container e o Fastify usam a variável `PORT` fornecida pelo Railway.
+`.railway/railway.ts` manages the project and service with Railway's current Infrastructure as Code
+implementation. It configures `/health` as the health check and allows up to 300 seconds for the
+image to become healthy. The topology uses one replica and one shared 1024 MB (1 GB) Volume mounted
+at `/data`: `DATA_ROOT=/data/transcripts` stores jobs and artifacts, while
+`RAG_DATA_ROOT=/data/lancedb` stores local metadata and indexes. The verified model is in the image,
+not the Volume. IaC preserves both existing secrets and creates no database, bucket, remote model,
+or public storage. The container and Fastify use the `PORT` variable supplied by Railway.
 
-O limite de 1 GB é compartilhado pelas duas raízes. Monitore o espaço agregado e preserve a reserva
-de 128 MiB; um miss RAG é recusado com 507 antes de consumir essa reserva. Um Volume só pode ficar
-anexado ao deployment dessa réplica por vez. Isso causa indisponibilidade breve durante cada redeploy.
-O backup é responsabilidade do operador: excluir, recriar ou corromper o Volume sem uma cópia
-recuperável pode causar perda permanente de jobs, JSONs, PDFs e da base RAG.
+The 1 GB limit is shared by both roots. Monitor aggregate space and preserve the 128 MiB reserve; a
+RAG miss is rejected with 507 before consuming it. A Volume can attach to only one deployment of
+this replica at a time, causing brief downtime during each redeploy. Backups are the operator's responsibility:
+deleting, recreating, or corrupting the Volume without a recoverable copy can
+permanently lose jobs, JSON, PDFs, and the RAG knowledge base.
 
-Para revisar mudanças de infraestrutura antes de aplicá-las:
+To review infrastructure changes before applying them:
 
 ```bash
 railway config plan --file .railway/railway.ts
 ```
 
-Revise a contagem e cada item de add/change/destroy. A configuração não é aplicada automaticamente
-pelos testes; execute `railway config apply --file .railway/railway.ts` somente após aprovação
-explícita daquele plano exato. O plano de validação desta versão foi somente leitura, portanto não
-prova que o estado remoto já foi aplicado.
+Review the count and every add/change/destroy item. Tests do not apply configuration automatically;
+run `railway config apply --file .railway/railway.ts` only after explicit approval of that exact
+plan. This version's validation plan was read-only, so it does not prove that the remote state has
+already been applied.
 
-No primeiro deploy, execute na raiz do projeto:
+For the first deployment, run this from the project root:
 
 ```bash
 railway up
 ```
 
-Depois configure os dois segredos no serviço. Passe os valores por stdin para não gravá-los no
-histórico do shell:
+Then configure both service secrets. Pass values through stdin so they are not recorded in shell
+history:
 
 ```bash
 printf '%s' "$OPENCODE_API_KEY" | railway variable set OPENCODE_API_KEY --stdin --service transcript-youtube-videos-api
 printf '%s' "$API_ACCESS_KEY" | railway variable set API_ACCESS_KEY --stdin --service transcript-youtube-videos-api
 ```
 
-Uma alteração de variável dispara novo deploy. Gere o domínio público e confirme o estado:
+A variable change triggers a new deployment. Generate the public domain and confirm status:
 
 ```bash
 railway domain --service transcript-youtube-videos-api --json
 railway deployment list --service transcript-youtube-videos-api --json
 ```
 
-Use o domínio retornado nos mesmos exemplos de `curl`. Primeiro confirme `/health` sem credencial;
-em seguida confirme que um `POST /v1/transcripts` sem Bearer retorna 401 antes de testar a chamada
-autenticada. O valor real de `API_ACCESS_KEY` deve permanecer apenas no gerenciador de segredos e
-nos clientes autorizados.
+Use the returned domain in the same `curl` examples. First confirm `/health` without a credential,
+then confirm that `POST /v1/transcripts` without a Bearer token returns 401 before testing an
+authenticated call. Keep the real `API_ACCESS_KEY` only in the secret manager and authorized
+clients.
 
-Depois de copiar `API_ACCESS_KEY` para um gerenciador de senhas, você pode usar a ação **Seal** na
-aba Variables do Railway. O seal é irreversível e impede recuperar o valor pelo painel ou CLI, então
-faça isso somente depois de confirmar que o cliente autorizado guardou o token.
+After copying `API_ACCESS_KEY` into a password manager, you can use **Seal** in Railway's Variables
+tab. Sealing is irreversible and prevents retrieval through the dashboard or CLI, so do it only
+after confirming that the authorized client retained the token.
 
-Para separar saúde da plataforma, legendas, download, FFmpeg e Muse sem expor conteúdo, siga o
-[runbook de bloqueio do YouTube em datacenter](docs/runbooks/youtube-datacenter-blocking.md). Mesmo
-durante um incidente, preserve o Bearer, `MAX_CONCURRENT_TRANSCRIPTS`, `YT_DLP_TIMEOUT_MS`,
-`FFMPEG_TIMEOUT_MS` e `MUSE_TIMEOUT_MS`; não desative nem amplie esses controles para contornar uma
-falha de provedor.
+To separate platform health, captions, download, FFmpeg, and Muse without exposing content, follow
+the [YouTube datacenter blocking runbook](docs/runbooks/youtube-datacenter-blocking.md). Preserve the
+Bearer token, `MAX_CONCURRENT_TRANSCRIPTS`, `YT_DLP_TIMEOUT_MS`, `FFMPEG_TIMEOUT_MS`, and
+`MUSE_TIMEOUT_MS` even during an incident; do not disable or expand these controls to work around a
+provider failure.
 
-### Backup, restauração e modelo local
+### Backup, restore, and local model
 
-Faça uma janela de manutenção que impeça novas escritas. Garanta um backup verificável antes de qualquer compactação
-manual, fora do Volume, e preserve as duas raízes em conjunto; esta versão não
-expõe endpoint público de compactação. Um fluxo compatível com a CLI atual é criar o arquivo dentro
-de uma área operacional temporária, baixá-lo e verificar seu checksum local:
+Schedule a maintenance window that prevents new writes. Create a verifiable backup before any
+manual compaction, store it outside the Volume, and preserve both roots together; this version has
+no public compaction endpoint. A workflow compatible with the current CLI creates an archive in a
+temporary operations area, downloads it, and verifies its local checksum:
 
 ```bash
 railway ssh --service transcript-youtube-videos-api --environment production \
@@ -465,9 +463,9 @@ railway volume files download /data/.ops/volume-backup.tgz ./volume-backup.tgz \
 sha256sum ./volume-backup.tgz
 ```
 
-Registre o checksum e teste a leitura do arquivo em armazenamento separado. Não trate retenção ou
-snapshot eventual da plataforma como substituto desse backup. Para restaurar, mantenha a escrita
-interrompida, confira a origem/checksum, envie o arquivo e extraia ambas as raízes como uma unidade:
+Record the checksum and test the archive in separate storage. Do not treat platform retention or an
+eventual snapshot as a substitute for this backup. To restore, keep writes stopped, verify the
+source and checksum, upload the archive, and extract both roots as one unit:
 
 ```bash
 railway volume files upload ./volume-backup.tgz /data/.ops/volume-restore.tgz \
@@ -476,63 +474,63 @@ railway ssh --service transcript-youtube-videos-api --environment production \
   'tar -C /data -xzf /data/.ops/volume-restore.tgz'
 ```
 
-Depois reinicie a única réplica, confirme `/health`, espere `/ready` voltar a 200 e execute uma busca
-autenticada conhecida. Remova os arquivos de `.ops` só depois da validação e mantenha a cópia externa
-pela política de retenção aplicável.
+Then restart the single replica, confirm `/health`, wait for `/ready` to return 200, and run a known
+authenticated search. Remove `.ops` files only after validation and retain the external copy under
+the applicable retention policy.
 
-Cada namespace LanceDB registra o embedding fingerprint do modelo/chunker. Artefato inválido,
-ausente ou com fingerprint diferente falha fechado, deixa `/ready` em 503 e nunca aciona download ou
-embedding remoto. A aplicação recusa a migração implícita de um namespace incompatível: restaure o
-Volume com a mesma imagem/modelo ou faça uma reingestão explícita em um namespace compatível, mantendo
-o backup anterior até validar os resultados.
+Each LanceDB namespace records the model/chunker embedding fingerprint. An invalid or missing
+artifact, or a mismatched fingerprint, fails closed, leaves `/ready` at 503, and never triggers a
+download or remote embedding. The application rejects implicit migration of an incompatible
+namespace: restore the Volume with the same image and model, or explicitly reingest into a
+compatible namespace while retaining the previous backup until validation succeeds.
 
-A política de precisão UINT8 portável usa o namespace RAG `v2`. No primeiro deploy dessa versão, o
-namespace `v1` permanece intacto e fora das buscas; a aplicação cria `v2` vazio e volta a ficar pronta.
-Reenvie explicitamente os jobs-fonte ainda retidos para `/v1/rag/ingestions` — ou retranscreva uma
-fonte já expirada — e valide a busca antes de decidir sobre a retenção de `v1`. Não copie vetores ou
-metadados de fingerprint entre namespaces e não remova `v1` sem backup verificável.
+The portable UINT8 precision policy uses RAG namespace `v2`. On the first deployment of this
+version, namespace `v1` remains intact and excluded from searches; the application creates an empty
+`v2` and becomes ready again. Explicitly resubmit retained source jobs to `/v1/rag/ingestions`, or
+transcribe an expired source again, and validate search before deciding how long to retain `v1`.
+Never copy vectors or fingerprint metadata between namespaces, and do not remove `v1` without a verifiable backup.
 
-## Privacidade e limitações
+## Privacy and limitations
 
-- Áudio e blocos ficam em um diretório temporário exclusivo da requisição e são removidos em um
-  bloco `finally`; áudio nunca entra no Volume. JSONs, PDFs e metadados de job bem-sucedidos ficam
-  retidos em `DATA_ROOT` somente pelos TTLs configurados.
-- Os chunks usam MP3 a 48 kbps, duram até 10 minutos e são enviados ao OpenCode Go como Base64.
-- Rotas síncronas e jobs duráveis compartilham `MAX_CONCURRENT_TRANSCRIPTS`; use jobs para vídeos
-  que podem exceder o timeout do proxy. `MAX_QUEUED_JOBS` limita novos misses, mas não é uma quota
-  individual por cliente.
-- O YouTube pode bloquear IPs de datacenter, exigir login, aplicar rate limit ou alterar endpoints.
-  Esta versão aceita somente vídeos públicos acessíveis sem cookies e não contorna restrições.
-- O Bearer protege submissão, estado e cada leitura de JSON/PDF. Trate os artefatos persistidos como
-  conteúdo do vídeo e proteja também backups. Os documentos RAG sobrevivem ao TTL do bundle até
-  substituição ou deleção explícita; logs e métricas não incluem IDs, URLs, consulta ou conteúdo.
-- Não há retry automático. Preserve `MAX_CONCURRENT_TRANSCRIPTS`, `YT_DLP_TIMEOUT_MS`,
-  `FFMPEG_TIMEOUT_MS` e `MUSE_TIMEOUT_MS`; não amplie esses controles para contornar falhas.
-- DELETE remove o documento imediatamente da busca, mas é remoção lógica: fragmentos antigos do
-  LanceDB e backups podem persistir conforme compactação e retenção. Não prometa destruição física
-  segura; trate exportações e cópias segundo a mesma política de dados da transcrição.
-- Um `/health` bem-sucedido prova que a API está online; não prova que o YouTube aceitará requisições
-  originadas do IP do Railway nem que o RAG está pronto. Use `/ready` para prontidão local e
-  diagnostique erros do provedor separadamente.
+- Audio and chunks remain in a request-specific temporary directory and are removed in a `finally` block;
+  audio never enters the Volume. Successful JSON, PDFs, and job metadata remain in
+  `DATA_ROOT` only for configured TTLs.
+- Chunks use 48 kbps MP3, last up to 10 minutes, and are sent to OpenCode Go as Base64.
+- Synchronous routes and durable jobs share `MAX_CONCURRENT_TRANSCRIPTS`; use jobs for videos that
+  can exceed the proxy timeout. `MAX_QUEUED_JOBS` limits new misses but is not a per-client quota.
+- YouTube can block datacenter IPs, require login, rate-limit requests, or change endpoints. This
+  version accepts only public videos available without cookies and does not bypass restrictions.
+- Bearer authentication protects submission, status, and every JSON/PDF read. Treat persisted
+  artifacts as video content and protect backups too. RAG documents survive bundle TTL until
+  explicit replacement or deletion; logs and metrics exclude IDs, URLs, queries, and content.
+- There are no automatic retries. Preserve `MAX_CONCURRENT_TRANSCRIPTS`, `YT_DLP_TIMEOUT_MS`,
+  `FFMPEG_TIMEOUT_MS`, and `MUSE_TIMEOUT_MS`; do not expand them to work around failures.
+- DELETE removes a document from search immediately, but deletion is logical: old LanceDB fragments
+  and backups can persist according to compaction and retention. Do not promise secure physical
+  destruction; handle exports and copies under the same policy as transcription data.
+- A successful `/health` proves that the API is online; it does not prove that YouTube accepts
+  requests from the Railway IP or that RAG is ready. Use `/ready` for local readiness and diagnose
+  provider errors separately.
 
-## Qualidade
+## Quality
 
-Os testes de transcrição usam adapters falsos: não acessam YouTube/OpenCode Go e não executam
-`yt-dlp` ou FFmpeg. Os gates RAG usam o tokenizer, o encoder E5 e o LanceDB reais, sempre localmente.
+Transcription tests use fake adapters: they do not access YouTube/OpenCode Go or execute `yt-dlp`
+or FFmpeg. RAG gates use the real tokenizer, E5 encoder, and LanceDB locally.
 
-Baixe/verifique os cinco artefatos imutáveis somente durante a aquisição explícita e depois rode a
-suíte offline, que bloqueia rede e credenciais:
+Fetch and verify the five immutable artifacts only during explicit acquisition, then run the
+offline suite, which blocks network and credentials:
 
 ```bash
 npm run rag:model:fetch
 npm run test:rag:offline
 ```
 
-A avaliação contém exatamente 12 documentos automotivos fictícios e 48 qrels PT-BR, cobrindo busca
-exata, semântica, desambiguação modelo/ano, acentos/typos, números e distratores. Ela mede vector,
-FTS e híbrido, impõe Recall/MRR/nDCG e subgrupos, e exige IDs/ranks idênticos em três índices novos.
+The evaluation contains exactly 12 fictional Brazilian automotive documents and 48 PT-BR qrels
+covering exact search, semantic search, model/year disambiguation, accents and typos, numbers, and
+distractors. It measures vector, FTS, and hybrid retrieval, enforces Recall/MRR/nDCG and subgroup
+thresholds, and requires identical IDs and ranks across three fresh indexes.
 
-Rode também os gates de mutação, documentação/OpenAPI, dependências e container offline:
+Run the mutation, documentation/OpenAPI, dependency, and offline container gates too:
 
 ```bash
 npm exec -- vitest run test/integration/lancedb-rag-index.test.ts test/integration/rag-ingestion-worker.test.ts
@@ -543,28 +541,27 @@ docker build -t transcript-rag:local .
 docker run --rm --network none transcript-rag:local node scripts/rag-container-smoke.mjs
 ```
 
-O smoke executado na imagem de produção nega credenciais/rede e comprova vetor real de 384
-dimensões, substituição, busca vetorial/FTS, deleção, usuário sem privilégios e escrita em `/data`.
-Por fim, execute o gate completo:
+The smoke test runs inside the production image without credentials or network and proves a real
+384-dimensional vector, replacement, vector/FTS search, deletion, an unprivileged user, and writes
+under `/data`. Finally, run the complete gate:
 
 ```bash
 npm run check
 ```
 
-O comando executa lint, verificação estrita de tipos, testes unitários e de integração e o build.
+This command runs lint, strict type checking, unit and integration tests, and the production build.
 
-### Integração contínua
+### Continuous integration
 
-O GitHub Actions executa os mesmos gates em pushes para `main` e em pull requests. O workflow não
-recebe `OPENCODE_API_KEY` nem `API_ACCESS_KEY`: os testes usam adapters locais e o build do
-Dockerfile não acessa provedores.
+GitHub Actions runs the same gates for pushes to `main` and pull requests. The workflow receives
+neither `OPENCODE_API_KEY` nor `API_ACCESS_KEY`: tests use local adapters, and the Dockerfile build
+does not access providers.
 
-Se branch protection estiver habilitado em `main`, configure exatamente estes checks como
-obrigatórios:
+If branch protection is enabled on `main`, configure exactly these required checks:
 
 - `Source checks`
 - `Container build`
 
-O primeiro executa `npm ci` e `npm run check` no Node.js 22. O segundo só começa após o primeiro,
-constrói e carrega a imagem de produção sem publicá-la e executa nela o smoke com
+The first runs `npm ci` and `npm run check` on Node.js 22. The second starts only after the first,
+builds and loads the production image without publishing it, then runs the smoke test with
 `docker run --network none`.

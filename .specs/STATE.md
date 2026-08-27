@@ -106,6 +106,19 @@
 - **Date**: 2026-08-27
 - **Status**: active
 
+### AD-013
+
+- **Decision**: Source code, identifiers, comments, tests, the README, and operational documentation
+  use English. Portuguese is limited to transcription prompts and rendered transcription content,
+  plus PT-BR RAG corpora, queries, and behavioral fixtures.
+- **Reason**: One technical language keeps the repository consistent and accessible while preserving
+  the Brazilian Portuguese domain behavior that the API must evaluate and produce.
+- **Trade-off**: Tests intentionally retain Portuguese strings when the language itself is part of
+  the transcription or retrieval behavior under test.
+- **Scope**: Repository documentation, implementation, tests, transcription output, and RAG data.
+- **Date**: 2026-08-27
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: production improvement backlog (IMP-01..IMP-10)

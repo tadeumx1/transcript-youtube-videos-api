@@ -8,11 +8,11 @@ describe('YouTube datacenter blocking runbook contract', () => {
   it('keeps the required diagnostic stages in order with bounded placeholder commands', async () => {
     const runbook = await readFile(RUNBOOK_PATH, 'utf8')
     const orderedStages = [
-      '## 1. Plataforma, liveness, readiness e autenticação',
-      '## 2. Recuperação de legendas',
-      '## 3. Download de áudio com yt-dlp',
-      '## 4. Conversão com FFmpeg',
-      '## 5. Transcrição com Muse',
+      '## 1. Platform, liveness, readiness, and authentication',
+      '## 2. Caption retrieval',
+      '## 3. Audio download with yt-dlp',
+      '## 4. Conversion with FFmpeg',
+      '## 5. Transcription with Muse',
     ]
     const positions = orderedStages.map((stage) => runbook.indexOf(stage))
     const diagnosticCommands = runbook
@@ -69,24 +69,22 @@ describe('YouTube datacenter blocking runbook contract', () => {
 
     for (const code of requiredCodes) expect(runbook).toContain(`\`${code}\``)
     expect(runbook).toContain('SUCCESS/RUNNING')
-    expect(runbook).toContain('YouTube ou outro provedor')
+    expect(runbook).toContain('YouTube or another provider')
   })
 
   it('limits support to public videos and rejects restriction-bypass guidance', async () => {
     const runbook = await readFile(RUNBOOK_PATH, 'utf8')
 
-    expect(runbook).toContain('somente vídeos públicos acessíveis sem estado de conta')
+    expect(runbook).toContain('only public videos available without account state')
     expect(runbook).toContain(
-      'cookies, proxies residenciais, resolução de CAPTCHA, rotação de IP e contorno de restrições são explicitamente incompatíveis',
+      'Cookies, residential proxies, CAPTCHA solving, IP rotation, and restriction bypass are explicitly incompatible',
     )
     expect(runbook).not.toMatch(/--cookies|--proxy|cookies-from-browser/i)
-    expect(runbook).not.toMatch(
-      /use (um |uma )?(proxy|cookie)|configure (um |uma )?(proxy|cookie)/i,
-    )
-    expect(runbook).not.toMatch(/resolver captcha|rotacionar (o )?ip|burlar|contornar restriç/i)
-    expect(runbook).toContain('não reduza nem desative a autenticação Bearer')
-    expect(runbook).toContain('não aumente nem remova os timeouts')
-    expect(runbook).toContain('não aumente nem remova o limite de concorrência')
+    expect(runbook).not.toMatch(/use (?:a )?(?:proxy|cookie)|configure (?:a )?(?:proxy|cookie)/i)
+    expect(runbook).not.toMatch(/solve captcha|rotate (?:the )?ip|bypass restrictions/i)
+    expect(runbook).toContain('do not reduce or disable Bearer authentication')
+    expect(runbook).toContain('do not increase or remove timeouts')
+    expect(runbook).toContain('do not increase or remove the concurrency limit')
   })
 
   it('is linked from the README with production controls preserved', async () => {
