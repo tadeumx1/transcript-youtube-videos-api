@@ -49,7 +49,10 @@ type RagCoordinatorRepository = Pick<
   | 'queuedCount'
 >
 type RagTranscriptSource = Pick<DurableJobCoordinator, 'withVerifiedCompletedTranscript'>
-type RagCoordinatorWorker = Pick<RagIngestionWorker, 'recover' | 'start' | 'stop' | 'notify'>
+type RagCoordinatorWorker = Pick<
+  RagIngestionWorker,
+  'recover' | 'start' | 'stop' | 'notify' | 'setFatalHandler'
+>
 type RagCoordinatorIndex = Pick<
   LanceDbRagIndex,
   'initialize' | 'probe' | 'inspectDocument' | 'deleteDocument' | 'close'
@@ -76,6 +79,7 @@ export interface RagIngestionCoordinatorOptions {
   terminalTtlSeconds: number
   sweepIntervalMs: number
   retryIntervalMs: number
+  onWorkerHealthChanged?: (healthy: boolean) => void
   now?: () => Date
   createId?: () => string
 }
@@ -157,6 +161,7 @@ export class RagIngestionCoordinator {
   readonly #retryIntervalMs: number
   readonly #now: () => Date
   readonly #createId: () => string
+  readonly #onWorkerHealthChanged: ((healthy: boolean) => void) | undefined
   #submissionTail = Promise.resolve()
   #initialization: Promise<void> | undefined
   #stopPromise: Promise<void> | undefined
@@ -209,6 +214,8 @@ export class RagIngestionCoordinator {
     )
     this.#now = options.now ?? (() => new Date())
     this.#createId = options.createId ?? randomUUID
+    this.#onWorkerHealthChanged = options.onWorkerHealthChanged
+    this.#worker.setFatalHandler(() => this.#handleWorkerFatal())
     this.#searchAdmission.markUnavailable()
   }
 
@@ -237,6 +244,7 @@ export class RagIngestionCoordinator {
     this.#sweepTimer = undefined
     await this.#submissionTail
     await this.#worker.stop()
+    this.#onWorkerHealthChanged?.(false)
     this.#scheduler.stop()
     await this.#publicationLock.withWrite(undefined, async () => undefined)
     await this.#index.close()
@@ -245,91 +253,111 @@ export class RagIngestionCoordinator {
 
   async submit(jobId: string): Promise<RagIngestionSubmission> {
     this.#assertReady()
-    return this.#withSubmission(() => {
-      this.#assertReady()
-      return this.#durableSource.withVerifiedCompletedTranscript(jobId, async (source) => {
+    try {
+      return await this.#withSubmission(() => {
         this.#assertReady()
-        const documentId = computeDocumentId(source.cacheKey)
-        const versionId = computeVersionId({
-          documentId,
-          transcriptSha256: source.transcriptSha256,
-          embeddingFingerprint: EMBEDDING_FINGERPRINT,
-        })
-        return this.#documentMutex.withDocument(documentId, async () => {
-          const observed = await this.#observe(documentId)
-          if (!stateMatchesEpoch(observed)) throw fixedStorageError()
-
-          if (observed.state?.versionId === versionId) {
-            return this.#hit(source, observed.state)
-          }
-
-          const owner = this.#repository.activeOwner(documentId)
-          if (owner) {
-            if (owner.versionId === versionId) return toRagIngestionSubmission(owner, 'joined')
-            throw new RagError('RAG_DOCUMENT_UPDATE_IN_PROGRESS')
-          }
-          if (this.#repository.queuedCount >= this.#maxQueuedIngestions) {
-            throw new RagError('RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED')
-          }
-          const probe = await this.#repository.probe(this.#minFreeBytes)
-          if (!probe.healthy || probe.freeBytes < this.#minFreeBytes) {
-            throw new RagError('RAG_STORAGE_CAPACITY_EXCEEDED')
-          }
-          const queued = this.#queuedRecord(
-            source,
+        return this.#durableSource.withVerifiedCompletedTranscript(jobId, async (source) => {
+          this.#assertReady()
+          const documentId = computeDocumentId(source.cacheKey)
+          const versionId = computeVersionId({
             documentId,
-            versionId,
-            observed.epoch.generation,
-          )
-          await this.#repository.createQueued(queued, source)
-          this.#worker.notify()
-          return toRagIngestionSubmission(queued, 'miss')
+            transcriptSha256: source.transcriptSha256,
+            embeddingFingerprint: EMBEDDING_FINGERPRINT,
+          })
+          return this.#documentMutex.withDocument(documentId, async () => {
+            const observed = await this.#observe(documentId)
+            if (!stateMatchesEpoch(observed)) throw fixedStorageError()
+
+            if (observed.state?.versionId === versionId) {
+              return this.#hit(source, observed.state)
+            }
+
+            const owner = this.#repository.activeOwner(documentId)
+            if (owner) {
+              if (owner.versionId === versionId) return toRagIngestionSubmission(owner, 'joined')
+              throw new RagError('RAG_DOCUMENT_UPDATE_IN_PROGRESS')
+            }
+            if (this.#repository.queuedCount >= this.#maxQueuedIngestions) {
+              throw new RagError('RAG_INGESTION_QUEUE_CAPACITY_EXCEEDED')
+            }
+            const probe = await this.#repository.probe(this.#minFreeBytes)
+            if (!probe.healthy || probe.freeBytes < this.#minFreeBytes) {
+              throw new RagError('RAG_STORAGE_CAPACITY_EXCEEDED')
+            }
+            const queued = this.#queuedRecord(
+              source,
+              documentId,
+              versionId,
+              observed.epoch.generation,
+            )
+            await this.#repository.createQueued(queued, source)
+            this.#worker.notify()
+            return toRagIngestionSubmission(queued, 'miss')
+          })
         })
       })
-    })
+    } catch (error) {
+      this.#handleOperationalFailure(error)
+      throw error
+    }
   }
 
   async get(ingestionId: string): Promise<PublicRagIngestion> {
     const id = assertRagIngestionId(ingestionId)
     this.#assertReady()
-    const value = await this.#repository.get(id)
-    if (!value) throw new RagError('RAG_INGESTION_NOT_FOUND')
-    if (!isRecord(value)) throw new RagError('RAG_INGESTION_EXPIRED')
-    return toPublicRagIngestion(value)
+    try {
+      const value = await this.#repository.get(id)
+      if (!value) throw new RagError('RAG_INGESTION_NOT_FOUND')
+      if (!isRecord(value)) throw new RagError('RAG_INGESTION_EXPIRED')
+      return toPublicRagIngestion(value)
+    } catch (error) {
+      this.#handleOperationalFailure(error)
+      throw error
+    }
   }
 
   async search(request: unknown, signal?: AbortSignal): Promise<RagSearchResponse> {
     this.#assertReady()
-    return this.#searchService.search(request, signal)
+    try {
+      return await this.#searchService.search(request, signal)
+    } catch (error) {
+      this.#handleOperationalFailure(error)
+      throw error
+    }
   }
 
   async delete(documentId: string): Promise<void> {
     const id = assertDocumentId(documentId)
     this.#assertReady()
-    await this.#documentMutex.withDocument(id, () =>
-      this.#publicationLock.withWrite(undefined, async () => {
-        const observed = {
-          epoch: await this.#repository.inspectEpoch(id),
-          state: await this.#index.inspectDocument(id),
-        }
-        if (!stateMatchesEpoch(observed)) throw fixedStorageError()
-        if (!observed.state || observed.epoch.state !== 'active') {
-          throw new RagError('RAG_DOCUMENT_NOT_FOUND')
-        }
-        const intent: RagDocumentEpoch = {
-          ...observed.epoch,
-          generation: observed.epoch.generation + 1,
-          state: 'delete_pending',
-          updatedAt: this.#now().toISOString(),
-        }
-        await this.#repository.writeEpoch(observed.epoch.generation, intent)
-        await this.#index.deleteDocument(id)
-        await this.#repository.writeEpoch(
-          intent.generation,
-          deletedEpoch(intent, this.#now().toISOString()),
-        )
-      }),
-    )
+    try {
+      await this.#documentMutex.withDocument(id, () =>
+        this.#publicationLock.withWrite(undefined, async () => {
+          const observed = {
+            epoch: await this.#repository.inspectEpoch(id),
+            state: await this.#index.inspectDocument(id),
+          }
+          if (!stateMatchesEpoch(observed)) throw fixedStorageError()
+          if (!observed.state || observed.epoch.state !== 'active') {
+            throw new RagError('RAG_DOCUMENT_NOT_FOUND')
+          }
+          const intent: RagDocumentEpoch = {
+            ...observed.epoch,
+            generation: observed.epoch.generation + 1,
+            state: 'delete_pending',
+            updatedAt: this.#now().toISOString(),
+          }
+          await this.#repository.writeEpoch(observed.epoch.generation, intent)
+          await this.#index.deleteDocument(id)
+          await this.#repository.writeEpoch(
+            intent.generation,
+            deletedEpoch(intent, this.#now().toISOString()),
+          )
+        }),
+      )
+    } catch (error) {
+      this.#handleOperationalFailure(error)
+      throw error
+    }
   }
 
   async #initialize(absorbKnownFailure: boolean): Promise<void> {
@@ -373,6 +401,7 @@ export class RagIngestionCoordinator {
     }
     if (this.#retryTimer) clearTimeout(this.#retryTimer)
     this.#retryTimer = undefined
+    this.#onWorkerHealthChanged?.(true)
     this.#ready = true
     this.#searchAdmission.markReady()
   }
@@ -398,9 +427,30 @@ export class RagIngestionCoordinator {
     try {
       await this.#repository.sweep(this.#now())
     } catch {
-      this.#ready = false
-      this.#searchAdmission.markUnavailable()
+      this.#degrade()
     }
+  }
+
+  #handleWorkerFatal(): void {
+    if (this.#stopped) return
+    this.#workerStarted = false
+    this.#degrade()
+  }
+
+  #handleOperationalFailure(error: unknown): void {
+    if (
+      error instanceof RagError &&
+      (error.code === 'RAG_STORAGE_UNAVAILABLE' || error.code === 'RAG_MODEL_UNAVAILABLE')
+    ) {
+      this.#degrade()
+    }
+  }
+
+  #degrade(): void {
+    this.#ready = false
+    this.#searchAdmission.markUnavailable()
+    this.#onWorkerHealthChanged?.(false)
+    this.#scheduleRetry()
   }
 
   #scheduleRetry(): void {

@@ -123,6 +123,7 @@ class RepositoryFake {
   queuedCount = 0
   freeBytes = 1_000_000_000
   initializeFailures = 0
+  createQueuedFailures = 0
   sweepFailures = 0
   recovery: RagRecoverySnapshot = {
     queued: [],
@@ -156,6 +157,10 @@ class RepositoryFake {
 
   async createQueued(record: RagIngestionRecord): Promise<void> {
     this.events.push('repository.createQueued')
+    if (this.createQueuedFailures > 0) {
+      this.createQueuedFailures -= 1
+      throw new RagError('RAG_STORAGE_UNAVAILABLE')
+    }
     this.records.set(record.ingestionId, structuredClone(record))
     this.owner = structuredClone(record)
     this.queuedCount += 1
@@ -204,6 +209,7 @@ function fixture(
     ids?: string[]
     sourceGate?: Promise<void>
     maxQueuedIngestions?: number
+    onWorkerHealthChanged?: (healthy: boolean) => void
   } = {},
 ) {
   const events = options.events ?? []
@@ -236,6 +242,7 @@ function fixture(
       events.push('encoder.close')
     }),
   }
+  let fatalHandler: ((error: RagError) => void) | undefined
   const worker = {
     recover: vi.fn(async () => {
       events.push('worker.recover')
@@ -249,6 +256,12 @@ function fixture(
     notify: vi.fn(() => {
       events.push('worker.notify')
     }),
+    setFatalHandler: vi.fn((handler: (error: RagError) => void) => {
+      fatalHandler = handler
+    }),
+    triggerFatal() {
+      fatalHandler?.(new RagError('RAG_STORAGE_UNAVAILABLE'))
+    },
   }
   const admission = {
     ready: false,
@@ -303,6 +316,9 @@ function fixture(
     terminalTtlSeconds: 86_400,
     sweepIntervalMs: 3_600_000,
     retryIntervalMs: 1_000,
+    ...(options.onWorkerHealthChanged
+      ? { onWorkerHealthChanged: options.onWorkerHealthChanged }
+      : {}),
     now: () => new Date('2026-08-26T13:00:00.000Z'),
     createId: () => ids.shift() ?? '68f5f7d2-f1de-4b27-92df-28c0e30607f8',
   })
@@ -471,6 +487,27 @@ describe('durable RAG ingestion coordinator', () => {
     await value.coordinator.stop()
   })
 
+  it('degrades after admitted snapshot storage failure and recovers only after a healthy probe', async () => {
+    vi.useFakeTimers()
+    const value = fixture()
+    await value.coordinator.start()
+    value.repository.createQueuedFailures = 1
+
+    await expect(value.coordinator.submit(source().sourceJobId)).rejects.toMatchObject({
+      code: 'RAG_STORAGE_UNAVAILABLE',
+      statusCode: 503,
+    })
+
+    expect(value.coordinator.isReady).toBe(false)
+    expect(value.admission.ready).toBe(false)
+    expect(value.repository.records.size).toBe(0)
+
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(value.coordinator.isReady).toBe(true)
+    expect(value.repository.events.filter((event) => event === 'repository.probe')).toHaveLength(3)
+    await value.coordinator.stop()
+  })
+
   it('writes delete intent before LanceDB and makes repeated deletion not found without source access', async () => {
     const value = fixture()
     value.setState(activeState())
@@ -552,6 +589,48 @@ describe('durable RAG ingestion coordinator', () => {
       'encoder.close',
     ])
     expect(value.coordinator.isReady).toBe(false)
+  })
+
+  it('fails every RAG operation closed synchronously on worker fatal and restarts only once', async () => {
+    vi.useFakeTimers()
+    const health: boolean[] = []
+    const value = fixture({ onWorkerHealthChanged: (healthy) => health.push(healthy) })
+    await value.coordinator.start()
+    value.events.length = 0
+
+    value.worker.triggerFatal()
+
+    expect(value.coordinator.isReady).toBe(false)
+    expect(value.admission.ready).toBe(false)
+    expect(health.at(-1)).toBe(false)
+    await expect(value.coordinator.submit(source().sourceJobId)).rejects.toMatchObject({
+      code: 'RAG_STORAGE_UNAVAILABLE',
+      statusCode: 503,
+    })
+    await expect(value.coordinator.get(completed().ingestionId)).rejects.toMatchObject({
+      code: 'RAG_STORAGE_UNAVAILABLE',
+      statusCode: 503,
+    })
+    await expect(value.coordinator.search({ query: 'motor' })).rejects.toMatchObject({
+      code: 'RAG_STORAGE_UNAVAILABLE',
+      statusCode: 503,
+    })
+    await expect(value.coordinator.delete(documentId)).rejects.toMatchObject({
+      code: 'RAG_STORAGE_UNAVAILABLE',
+      statusCode: 503,
+    })
+
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    expect(value.coordinator.isReady).toBe(true)
+    expect(value.worker.recover).toHaveBeenCalledTimes(2)
+    expect(value.worker.start).toHaveBeenCalledTimes(2)
+    expect(health.at(-1)).toBe(true)
+
+    value.worker.triggerFatal()
+    await value.coordinator.stop()
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(value.worker.start).toHaveBeenCalledTimes(2)
   })
 
   it('distinguishes missing and expired ingestion metadata and delegates ready search only', async () => {

@@ -1,6 +1,11 @@
 import { Writable } from 'node:stream'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AsyncReadWriteLock } from '../../src/application/async-read-write-lock.js'
+import { RagEncoderScheduler } from '../../src/application/rag-encoder-scheduler.js'
+import { RagIngestionCoordinator } from '../../src/application/rag-ingestion-coordinator.js'
+import { RagDocumentMutex, RagIngestionWorker } from '../../src/application/rag-ingestion-worker.js'
+import { RagSearchController } from '../../src/application/rag-search-controller.js'
 import { RagError } from '../../src/domain/rag.js'
 import type { Transcript } from '../../src/domain/transcript.js'
 import type { NormalizedTranscriptRequest } from '../../src/domain/transcript-request.js'
@@ -9,6 +14,7 @@ import {
   type DurableApplicationCoordinator,
   type RagApplicationCoordinator,
 } from '../../src/http/app.js'
+import { RuntimeMetrics } from '../../src/infrastructure/observability/runtime-metrics.js'
 
 const API_KEY = 'rag-http-test-key'
 const AUTHORIZATION = { authorization: `Bearer ${API_KEY}` }
@@ -106,6 +112,116 @@ function dependencies(
     pdfRenderer: { render: vi.fn().mockResolvedValue(Buffer.from('%PDF fixture')) },
     ...(jobs ? { jobCoordinator: jobs } : {}),
     ...(rag ? { ragCoordinator: rag } : {}),
+  }
+}
+
+function fatalRuntimeCoordinator(metrics: RuntimeMetrics) {
+  let failWorkerLoop = false
+  const initialize = vi.fn(async () => ({
+    queued: [],
+    processing: [],
+    deletePending: [],
+    repairedDuplicates: 0,
+  }))
+  const repository = {
+    initialize,
+    activeOwner: vi.fn(() => undefined),
+    completedForVersion: vi.fn(() => undefined),
+    createQueued: vi.fn(async () => undefined),
+    createCompletedHit: vi.fn(async () => undefined),
+    get: vi.fn(async () => undefined),
+    inspectEpoch: vi.fn(async (id: string) => ({
+      schemaVersion: 1 as const,
+      documentId: id,
+      generation: 0,
+      state: 'deleted' as const,
+      activeVersionId: null,
+      publishedIngestionId: null,
+      expectedChunkCount: 0,
+      documentDigest: null,
+      updatedAt: createdAt,
+    })),
+    writeEpoch: vi.fn(async () => undefined),
+    probe: vi.fn(async () => ({ healthy: true, freeBytes: 1_000_000_000 })),
+    sweep: vi.fn(async () => ({
+      terminalExpired: 0,
+      tombstonesDeleted: 0,
+      snapshotsDeleted: 0,
+    })),
+    queuedCount: 0,
+    oldestQueued: vi.fn(() => {
+      if (failWorkerLoop) throw new RagError('RAG_STORAGE_UNAVAILABLE')
+      return undefined
+    }),
+    transition: vi.fn(async () => {
+      throw new Error('unexpected transition')
+    }),
+    readSnapshot: vi.fn(async () => {
+      throw new Error('unexpected snapshot read')
+    }),
+  }
+  const index = {
+    initialize: vi.fn(async () => undefined),
+    probe: vi.fn(async () => true),
+    inspectDocument: vi.fn(async () => undefined),
+    deleteDocument: vi.fn(async () => ({ existed: false, deletedRows: 0, lanceVersion: 0 })),
+    replaceDocument: vi.fn(async () => {
+      throw new Error('unexpected replacement')
+    }),
+    close: vi.fn(async () => undefined),
+  }
+  const encoder = {
+    initialize: vi.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
+    embedPassages: vi.fn(async () => []),
+  }
+  const scheduler = new RagEncoderScheduler()
+  const publicationLock = new AsyncReadWriteLock()
+  const documentMutex = new RagDocumentMutex()
+  const admission = new RagSearchController(4, 5, metrics)
+  const worker = new RagIngestionWorker({
+    repository,
+    chunker: { chunk: vi.fn(() => []) },
+    encoder,
+    scheduler,
+    index,
+    publicationLock,
+    documentMutex,
+    embeddingBatchSize: 8,
+    terminalTtlSeconds: 86_400,
+  })
+  const coordinator = new RagIngestionCoordinator({
+    repository,
+    durableSource: {
+      withVerifiedCompletedTranscript: vi.fn(async () => {
+        throw new Error('unexpected source access')
+      }),
+    },
+    worker,
+    index,
+    encoder,
+    scheduler,
+    searchService: { search: vi.fn(async () => ({ results: [] })) },
+    searchAdmission: admission,
+    publicationLock,
+    documentMutex,
+    maxQueuedIngestions: 25,
+    minFreeBytes: 134_217_728,
+    terminalTtlSeconds: 86_400,
+    sweepIntervalMs: 3_600_000,
+    retryIntervalMs: 100,
+    onWorkerHealthChanged: (healthy) => metrics.setRagComponentHealthy('worker', healthy),
+  })
+  return {
+    coordinator,
+    initialize,
+    triggerFatal() {
+      failWorkerLoop = true
+      worker.notify()
+    },
+    permitRecovery() {
+      failWorkerLoop = false
+    },
   }
 }
 
@@ -228,6 +344,80 @@ describe('Fastify RAG lifecycle integration', () => {
     expect(ragResponse.json()).toEqual({
       error: { code: 'RAG_STORAGE_UNAVAILABLE', message: 'RAG storage is unavailable' },
     })
+  })
+
+  it('fails closed through Fastify after a real post-start worker-loop fatal and recovers once', async () => {
+    const metrics = new RuntimeMetrics()
+    const runtime = fatalRuntimeCoordinator(metrics)
+    const app = buildApp(dependencies(jobs, runtime.coordinator), {
+      apiAccessKey: API_KEY,
+      runtimeMetrics: metrics,
+    })
+    await app.ready()
+    expect(runtime.coordinator.isReady).toBe(true)
+
+    runtime.triggerFatal()
+    await vi.waitFor(() => expect(runtime.coordinator.isReady).toBe(false))
+
+    const [health, ready, transcriptResponse, jobResponse] = await Promise.all([
+      app.inject({ method: 'GET', url: '/health' }),
+      app.inject({ method: 'GET', url: '/ready' }),
+      app.inject({
+        method: 'POST',
+        url: '/v1/transcripts',
+        headers: AUTHORIZATION,
+        payload: { url: videoUrl },
+      }),
+      app.inject({
+        method: 'POST',
+        url: '/v1/jobs',
+        headers: AUTHORIZATION,
+        payload: { url: videoUrl },
+      }),
+    ])
+    const ragResponses = await Promise.all([
+      app.inject({
+        method: 'POST',
+        url: '/v1/rag/ingestions',
+        headers: AUTHORIZATION,
+        payload: { jobId },
+      }),
+      app.inject({
+        method: 'GET',
+        url: `/v1/rag/ingestions/${ingestionId}`,
+        headers: AUTHORIZATION,
+      }),
+      app.inject({
+        method: 'POST',
+        url: '/v1/rag/search',
+        headers: AUTHORIZATION,
+        payload: { query: 'motor' },
+      }),
+      app.inject({
+        method: 'DELETE',
+        url: `/v1/rag/documents/${documentId}`,
+        headers: AUTHORIZATION,
+      }),
+    ])
+
+    expect(health.statusCode).toBe(200)
+    expect(health.json()).toEqual({ status: 'ok' })
+    expect(ready.statusCode).toBe(503)
+    expect(ready.json()).toEqual({ status: 'not_ready' })
+    expect(transcriptResponse.statusCode).toBe(200)
+    expect(transcriptResponse.json()).toEqual(transcript)
+    expect(jobResponse.statusCode).toBe(202)
+    for (const response of ragResponses) {
+      expect(response.statusCode).toBe(503)
+      expect(response.json()).toEqual({
+        error: { code: 'RAG_STORAGE_UNAVAILABLE', message: 'RAG storage is unavailable' },
+      })
+    }
+
+    runtime.permitRecovery()
+    await vi.waitFor(() => expect(runtime.coordinator.isReady).toBe(true))
+    expect(runtime.initialize).toHaveBeenCalledTimes(2)
+    await app.close()
   })
 
   it('reports ready only when transcript execution, durable jobs, and RAG are ready', async () => {

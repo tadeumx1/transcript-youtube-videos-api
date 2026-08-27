@@ -186,10 +186,6 @@ export function createApplication(
     documentMutex: ragDocumentMutex,
     embeddingBatchSize: config.ragEmbeddingBatchSize ?? 8,
     terminalTtlSeconds: ragTerminalTtlSeconds,
-    onFatal: () => {
-      metrics.setRagComponentHealthy('worker', false)
-      ragSearchAdmission.markUnavailable()
-    },
   })
   const ragCoordinator = new RagIngestionCoordinator({
     repository: ragRepository,
@@ -207,6 +203,7 @@ export function createApplication(
     terminalTtlSeconds: ragTerminalTtlSeconds,
     sweepIntervalMs: config.ragSweepIntervalMs ?? 60_000,
     retryIntervalMs: 1_000,
+    onWorkerHealthChanged: (healthy) => metrics.setRagComponentHealthy('worker', healthy),
   })
 
   return buildApp(

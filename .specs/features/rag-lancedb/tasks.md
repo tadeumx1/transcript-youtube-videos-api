@@ -1021,11 +1021,23 @@ exhaustion after admission without losing the prior searchable version or leavin
 
 **Done when**:
 
-- [ ] A real post-start worker fatal atomically makes coordinator readiness false, disables search admission, marks worker health false, and prevents every RAG content operation before the callback returns.
-- [ ] `/ready` returns the exact 503 body while `/health` and existing transcript/job handlers retain their contracts; all public/logged failures stay fixed and sanitized.
-- [ ] Bounded retry creates at most one fresh worker loop, reconciles persisted processing state before readiness, and never restarts after application shutdown.
-- [ ] ENOSPC/storage failure after admission at snapshot and publication boundaries produces the exact failed state, preserves the prior version, removes bounded staging when safe, and keeps readiness false until a successful probe/recovery.
-- [ ] Focused unit/composed integration tests and the Full, Offline RAG, and Build gates pass without test-count regression.
+- [x] A real post-start worker fatal atomically makes coordinator readiness false, disables search admission, marks worker health false, and prevents every RAG content operation before the callback returns.
+- [x] `/ready` returns the exact 503 body while `/health` and existing transcript/job handlers retain their contracts; all public/logged failures stay fixed and sanitized.
+- [x] Bounded retry creates at most one fresh worker loop, reconciles persisted processing state before readiness, and never restarts after application shutdown.
+- [x] ENOSPC/storage failure after admission at snapshot and publication boundaries produces the exact failed state, preserves the prior version, removes bounded staging when safe, and keeps readiness false until a successful probe/recovery.
+- [x] Focused unit/composed integration tests and the Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Evidence**: the focused real-loop/coordinator/Fastify set passed 36 tests. It injects a real
+post-start worker-loop fatal, proves synchronous coordinator/admission/worker-health degradation,
+exact 503 for all four RAG operations, exact `/ready` 503, and unchanged health/transcript/job
+responses. Retry re-runs reconciliation before one fresh loop, and shutdown prevents another start.
+Snapshot storage failure after a healthy admission probe becomes a fixed failed record with bounded
+snapshot cleanup; publication ENOSPC keeps only recoverable processing staging and preserves the
+prior version before requeue. `npm run check` passed 729 tests (724 pre-task), lint, strict types,
+and build; Offline RAG passed 30 tests with unchanged 12-document/48-qrel thresholds. The older
+snapshot scenario was corrected from non-fatal resolution to sanitized fatal rejection because its
+outcome contradicted EDGE-09/OPS-04; its failed-record, cleanup, zero-merge, and prior-version
+assertions were preserved and no assertion was weakened.
 
 **Tests**: unit + integration
 **Gate**: build

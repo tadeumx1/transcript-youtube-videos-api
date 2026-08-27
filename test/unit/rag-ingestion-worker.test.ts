@@ -140,6 +140,7 @@ class MemoryRepository {
   failSnapshot = false
   failWriteEpoch = false
   failComplete = false
+  failOldestQueued = false
 
   constructor(initial = record()) {
     this.current = structuredClone(initial)
@@ -157,6 +158,7 @@ class MemoryRepository {
   }
 
   oldestQueued(): RagIngestionRecord | undefined {
+    if (this.failOldestQueued) throw new RagError('RAG_STORAGE_UNAVAILABLE')
     return this.current.status === 'queued' ? structuredClone(this.current) : undefined
   }
 
@@ -201,11 +203,13 @@ class MemoryRepository {
 class MemoryIndex {
   state: IndexedDocumentState | undefined
   rows: RagChunkRow[] = []
+  replaceErrorBeforeCommit: Error | undefined
   replaceErrorAfterCommit: Error | undefined
   replaceCalls = 0
 
   async replaceDocument(rows: readonly RagChunkRow[]) {
     this.replaceCalls += 1
+    if (this.replaceErrorBeforeCommit) throw this.replaceErrorBeforeCommit
     this.rows = [...structuredClone(rows)]
     const first = rows[0]
     if (!first) throw new Error('rows required')
@@ -234,6 +238,7 @@ function worker(
     chunks?: DeterministicRagChunk[]
     chunkError?: Error
     embedPassages?: (passages: readonly string[], signal?: AbortSignal) => Promise<Float32Array[]>
+    onFatal?: (error: RagError) => void
   } = {},
 ) {
   const chunks = options.chunks ?? [chunk(0, 1)]
@@ -264,6 +269,7 @@ function worker(
       embeddingBatchSize: 8,
       terminalTtlSeconds: 86_400,
       now: () => new Date('2026-08-26T13:00:00.000Z'),
+      ...(options.onFatal ? { onFatal: options.onFatal } : {}),
     }),
   }
 }
@@ -331,7 +337,13 @@ describe('recoverable RAG ingestion worker', () => {
           : {}),
       })
 
-      await expect(value.value.processNext()).resolves.toBe(true)
+      if (scenario === 'snapshot') {
+        await expect(value.value.processNext()).rejects.toEqual(
+          new RagError('RAG_STORAGE_UNAVAILABLE'),
+        )
+      } else {
+        await expect(value.value.processNext()).resolves.toBe(true)
+      }
 
       expect(index.replaceCalls).toBe(0)
       expect(index.state.versionId).toBe('9'.repeat(64))
@@ -369,6 +381,43 @@ describe('recoverable RAG ingestion worker', () => {
     await expect(restarted.value.processNext()).resolves.toBe(true)
     expect(repository.current.status).toBe('completed')
     expect(index.replaceCalls).toBe(1)
+  })
+
+  it('fails storage work before publication, reports a real loop fatal, and permits one fresh loop', async () => {
+    const repository = new MemoryRepository()
+    repository.failSnapshot = true
+    const index = new MemoryIndex()
+    index.state = {
+      documentId,
+      versionId: '9'.repeat(64),
+      publishedIngestionId: '48f5f7d2-f1de-4b27-92df-28c0e30607f8',
+      generation: 0,
+      chunkCount: 1,
+      documentDigest: '8'.repeat(64),
+      lanceVersion: 3,
+    }
+    const fatals: RagError[] = []
+    const value = worker(repository, index, { onFatal: (error) => fatals.push(error) })
+
+    value.value.start()
+    await vi.waitFor(() => expect(fatals).toHaveLength(1))
+
+    expect(fatals[0]).toEqual(new RagError('RAG_STORAGE_UNAVAILABLE'))
+    expect(repository.current).toMatchObject({
+      status: 'failed',
+      snapshot: null,
+      failure: { code: 'RAG_STORAGE_UNAVAILABLE' },
+    })
+    expect(index.state.versionId).toBe('9'.repeat(64))
+    expect(index.replaceCalls).toBe(0)
+
+    repository.failOldestQueued = false
+    value.value.start()
+    await vi.waitFor(() => expect(value.value.isRunning).toBe(true))
+    await value.value.stop()
+    value.value.start()
+    expect(value.value.isRunning).toBe(false)
+    expect(fatals).toHaveLength(1)
   })
 
   it('honors a newer deletion generation immediately before publication', async () => {
@@ -416,6 +465,52 @@ describe('recoverable RAG ingestion worker', () => {
       activeVersionId: versionId,
       publishedIngestionId: ingestionId,
     })
+  })
+
+  it('preserves the prior version and recoverable staging on a publication ENOSPC fatal', async () => {
+    const priorVersionId = '9'.repeat(64)
+    const priorIngestionId = '48f5f7d2-f1de-4b27-92df-28c0e30607f8'
+    const priorDigest = '8'.repeat(64)
+    const repository = new MemoryRepository()
+    repository.epoch = {
+      ...repository.epoch,
+      state: 'active',
+      activeVersionId: priorVersionId,
+      publishedIngestionId: priorIngestionId,
+      expectedChunkCount: 1,
+      documentDigest: priorDigest,
+    }
+    const index = new MemoryIndex()
+    index.state = {
+      documentId,
+      versionId: priorVersionId,
+      publishedIngestionId: priorIngestionId,
+      generation: 0,
+      chunkCount: 1,
+      documentDigest: priorDigest,
+      lanceVersion: 3,
+    }
+    index.replaceErrorBeforeCommit = Object.assign(new Error('disk full'), { code: 'ENOSPC' })
+    const fatals: RagError[] = []
+    const value = worker(repository, index, { onFatal: (error) => fatals.push(error) })
+
+    value.value.start()
+    await vi.waitFor(() => expect(fatals).toHaveLength(1))
+
+    expect(fatals[0]).toEqual(new RagError('RAG_STORAGE_UNAVAILABLE'))
+    expect(repository.current).toMatchObject({ status: 'processing' })
+    expect(repository.current.snapshot).not.toBeNull()
+    expect(index.state).toMatchObject({
+      versionId: priorVersionId,
+      publishedIngestionId: priorIngestionId,
+      documentDigest: priorDigest,
+    })
+
+    index.replaceErrorBeforeCommit = undefined
+    const recovered = worker(repository, index)
+    await recovered.value.recover([repository.current])
+    expect(repository.current.status).toBe('queued')
+    expect(repository.current.snapshot).not.toBeNull()
   })
 
   it('reconciles an active epoch when the terminal record write crashed after publication', async () => {

@@ -70,6 +70,7 @@ describe('RAG ingestion coordinator durable integration', () => {
       start: vi.fn(),
       stop: vi.fn(async () => undefined),
       notify: vi.fn(),
+      setFatalHandler: vi.fn(),
     }
     const sourceAccess = vi.fn()
     const durableSource = {

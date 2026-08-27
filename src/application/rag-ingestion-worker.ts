@@ -309,11 +309,12 @@ export class RagIngestionWorker {
   readonly #embeddingBatchSize: number
   readonly #terminalTtlSeconds: number
   readonly #now: () => Date
-  readonly #onFatal: ((error: RagError) => void) | undefined
+  #onFatal: ((error: RagError) => void) | undefined
   #stopController: AbortController | undefined
   #loopPromise: Promise<void> | undefined
   #wake: (() => void) | undefined
   #fatal: RagError | undefined
+  #stopped = false
 
   constructor(options: RagIngestionWorkerOptions) {
     this.#repository = options.repository
@@ -345,10 +346,22 @@ export class RagIngestionWorker {
     return this.#fatal
   }
 
+  setFatalHandler(handler: (error: RagError) => void): void {
+    this.#onFatal = handler
+  }
+
   start(): void {
-    if (this.#loopPromise) return
+    if (this.#stopped || this.#loopPromise) return
+    this.#fatal = undefined
     this.#stopController = new AbortController()
-    this.#loopPromise = this.#run(this.#stopController.signal)
+    const loop = this.#run(this.#stopController.signal)
+    this.#loopPromise = loop
+    void loop.finally(() => {
+      if (this.#loopPromise !== loop) return
+      this.#loopPromise = undefined
+      this.#stopController = undefined
+      this.#wake = undefined
+    })
   }
 
   notify(): void {
@@ -356,10 +369,12 @@ export class RagIngestionWorker {
   }
 
   async stop(): Promise<void> {
-    if (!this.#loopPromise) return
+    this.#stopped = true
+    const loop = this.#loopPromise
+    if (!loop) return
     this.#stopController?.abort()
     this.#wake?.()
-    await this.#loopPromise
+    await loop
   }
 
   async processNext(signal: AbortSignal = new AbortController().signal): Promise<boolean> {
@@ -489,6 +504,9 @@ export class RagIngestionWorker {
         expiresAt: addSeconds(at, this.#terminalTtlSeconds),
         failure: terminalFailure(error, stage),
       })
+      if (stage === 'storage' && !(error instanceof StaleRagWorkerError)) {
+        throw fixedStorageError()
+      }
       return true
     }
   }
