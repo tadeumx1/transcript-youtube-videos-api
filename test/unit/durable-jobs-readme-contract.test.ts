@@ -17,7 +17,7 @@ describe('durable jobs documentation contract', () => {
     const readme = await readDocumentation()
     const durableSection = readme.slice(
       readme.indexOf('### Jobs duráveis'),
-      readme.indexOf('\n## Erros'),
+      readme.indexOf('\n### Base de conhecimento RAG local'),
     )
 
     expect(durableSection).toContain(`POST \${API_BASE_URL}/v1/jobs`)

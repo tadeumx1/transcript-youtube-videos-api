@@ -954,7 +954,7 @@ changed.
 **Gate**: build
 **Commit**: `fix(deps): patch rag transitive vulnerabilities`
 
-### T27: Document RAG operation and deletion semantics
+### T27: Document RAG operation and deletion semantics ✅
 
 **What**: Document local ingestion/search/delete usage, configuration, no-provider guarantees,
 retention/capacity, backup/restore, logical deletion limits, readiness/metrics, evaluation, and Railway runbook.
@@ -971,11 +971,25 @@ retention/capacity, backup/restore, logical deletion limits, readiness/metrics, 
 
 **Done when**:
 
-- [ ] Examples cover all four authenticated routes and explain that ingestion reuses durable transcripts with no retranscription/PDF/LLM/network embedding.
-- [ ] Runbook covers fixed config/bounds, 1 GB shared capacity, readiness/degradation, safe metrics, model/evaluation commands, backup-before-compaction, restart, and migration fingerprint refusal.
-- [ ] Deletion promises immediate logical search removal but explicitly disclaims secure physical erase of fragments/backups.
-- [ ] Contract tests reject missing commands/limits/errors/privacy language and accidental secret/content examples.
-- [ ] Full repository, mutation, dependency, offline RAG, container, OpenAPI, and documentation gates pass with no test-count regression.
+- [x] Examples cover all four authenticated routes and explain that ingestion reuses durable transcripts with no retranscription/PDF/LLM/network embedding.
+- [x] Runbook covers fixed config/bounds, 1 GB shared capacity, readiness/degradation, safe metrics, model/evaluation commands, backup-before-compaction, restart, and migration fingerprint refusal.
+- [x] Deletion promises immediate logical search removal but explicitly disclaims secure physical erase of fragments/backups.
+- [x] Contract tests reject missing commands/limits/errors/privacy language and accidental secret/content examples.
+- [x] Full repository, mutation, dependency, offline RAG, container, OpenAPI, and documentation gates pass with no test-count regression.
+
+**Evidence**: five documentation-contract cases assert all four authenticated file-output examples,
+every fixed config/bound/capacity/error, local-only source reuse, readiness and safe metrics,
+evaluation/backup/restore/restart/fingerprint commands, and logical-delete language that expressly
+rejects physical secure-erasure claims and content/secret examples. Full gates passed 550 unit + 172
+integration tests; the focused mutation gate passed 11 and OpenAPI/docs passed 16. The patched exact
+dependency tree audited at zero vulnerabilities. Offline RAG passed 30 tests and retained the 12-doc/
+48-qrel hybrid Recall@5 `0.9791667`, MRR@10 `0.8833333`, and nDCG@10 `0.9074851` thresholds.
+Fourteen static container/CI cases passed; no Docker, Podman, Buildah, Nerdctl, or Finch binary exists
+in this environment, so an additional image build remains evidence-zero while T24's real direct
+smoke and fail-closed CI build contract remain unchanged. `npm run check` passed all 724 tests,
+lint, typecheck, and build. Mechanical corrections only: the older durable-jobs README test now ends
+at the new RAG subsection, and the secure-erasure negative regex distinguishes the required explicit
+Portuguese `não oferece` disclaimer from a positive promise. No Railway command or remote mutation ran.
 
 **Tests**: unit
 **Gate**: build

@@ -284,20 +284,20 @@ the production Linux image.
 | LIFE-02 | Delete/operate safely | T15, T18, T20 | Complete |
 | LIFE-03 | Delete/operate safely | T8, T15, T17-T18 | In Progress |
 | LIFE-04 | Delete/operate safely | T15, T18 | In Progress |
-| LIFE-05 | Delete/operate safely | Specify | Proposed |
+| LIFE-05 | Delete/operate safely | T27 | Complete |
 | LIFE-06 | Delete/operate safely | T13, T18, T20 | Complete |
 | CAP-01 | Delete/operate safely | T3, T13, T18, T26 | Complete |
 | CAP-02 | Delete/operate safely | T3, T13, T18, T26 | In Progress |
-| OPS-01 | Production/evaluation | T3, T27 | In Progress |
+| OPS-01 | Production/evaluation | T3, T27 | Complete |
 | OPS-02 | Production/evaluation | T24, T26 | Complete |
-| OPS-03 | Production/evaluation | T18, T21-T22, T27 | In Progress |
-| OPS-04 | Production/evaluation | T18, T21-T22, T27 | In Progress |
+| OPS-03 | Production/evaluation | T18, T21-T22, T27 | Complete |
+| OPS-04 | Production/evaluation | T18, T21-T22, T27 | Complete |
 | OPS-05 | Production/evaluation | T19 | Complete |
-| OPS-06 | Production/evaluation | T2, T12, T16, T19-T21, T27 | In Progress |
+| OPS-06 | Production/evaluation | T2, T12, T16, T19-T21, T27 | Complete |
 | OPS-07 | Production/evaluation | T23 | Complete |
 | OPS-08 | Production/evaluation | T25 | Complete |
 | OPS-09 | Production/evaluation | T25 | Complete |
-| OPS-10 | Production/evaluation | T1, T5, T24-T25, T28, T27 | In Progress |
+| OPS-10 | Production/evaluation | T1, T5, T24-T25, T28, T27 | Complete |
 | EDGE-01 | Authentication order | T20-T21 | Complete |
 | EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |
 | EDGE-03 | Pre-publication crash | T13, T17 | In Progress |
