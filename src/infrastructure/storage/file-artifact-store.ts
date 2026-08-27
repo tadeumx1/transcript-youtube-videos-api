@@ -233,17 +233,22 @@ function parseManifest(value: unknown): ArtifactManifest {
   ) {
     throw new CorruptArtifactError()
   }
-  return {
-    schemaVersion: 1,
-    artifactId: assertJobId(value.artifactId),
-    cacheKey: assertSha256(value.cacheKey),
-    producerJobId: value.producerJobId === null ? null : assertJobId(value.producerJobId),
-    cacheSchemaVersion: 1,
-    transcriptPolicyVersion: 1,
-    createdAt: value.createdAt,
-    expiresAt: value.expiresAt,
-    transcript: parseMetadata(value.transcript),
-    pdf: parseMetadata(value.pdf),
+  try {
+    return {
+      schemaVersion: 1,
+      artifactId: assertJobId(value.artifactId),
+      cacheKey: assertSha256(value.cacheKey),
+      producerJobId: value.producerJobId === null ? null : assertJobId(value.producerJobId),
+      cacheSchemaVersion: 1,
+      transcriptPolicyVersion: 1,
+      createdAt: value.createdAt,
+      expiresAt: value.expiresAt,
+      transcript: parseMetadata(value.transcript),
+      pdf: parseMetadata(value.pdf),
+    }
+  } catch (error) {
+    if (error instanceof TypeError) throw new CorruptArtifactError()
+    throw error
   }
 }
 
@@ -543,7 +548,7 @@ export class FileArtifactStore {
         this.#operations.readFile(join(artifactPath, 'transcript.pdf')),
       ])
     } catch (error) {
-      if (isMissing(error)) throw new MissingArtifactError()
+      if (isMissing(error)) throw new CorruptArtifactError()
       throw error
     }
     this.#verifyBytes(transcriptBytes, manifest.transcript)

@@ -809,7 +809,7 @@ later apply approval without mutating remote state.
 
 ## Verification Fix Tasks: Round 2
 
-### T29: Normalize malformed manifests as corruption
+### T29: Normalize malformed manifests as corruption ✅
 
 **What**: Classify strict UUID/SHA validation failures and missing children inside an existing
 artifact as corruption before operational I/O mapping, then invalidate/quarantine and return a miss.
@@ -819,11 +819,11 @@ artifact as corruption before operational I/O mapping, then invalidate/quarantin
 
 **Done when**:
 
-- [ ] Invalid manifest cache key, artifact ID, producer ID, checksum, and missing child all remove the owned pointer first and quarantine under an opaque name.
-- [ ] Cache lookup returns a miss eligible for new work; completed-job read remains sanitized 503.
-- [ ] True EIO remains sanitized 503 without quarantine or pointer deletion.
-- [ ] Real-filesystem tests assert every malformed field, pointer/quarantine order, and unrelated-content preservation.
-- [ ] `npm run test:unit` passes with at least 422 total tests and no silent deletions.
+- [x] Invalid manifest cache key, artifact ID, producer ID, checksum, and missing child all remove the owned pointer first and quarantine under an opaque name.
+- [x] Cache lookup returns a miss eligible for new work; completed-job read remains sanitized 503.
+- [x] True EIO remains sanitized 503 without quarantine or pointer deletion.
+- [x] Real-filesystem tests assert every malformed field, pointer/quarantine order, and unrelated-content preservation.
+- [x] `npm run test:unit` passes with at least 422 total tests and no silent deletions.
 
 **Tests**: unit/real filesystem
 **Gate**: quick
@@ -902,7 +902,7 @@ boundaries are the only batch boundaries.
 | T26 | One full-capacity hit discrimination test | ✅ Complete |
 | T27 | One expiry/resubmission integration scenario | ✅ Complete |
 | T28 | One Railway plan evidence artifact | ✅ Complete |
-| T29 | One malformed-manifest corruption boundary | Verification fix |
+| T29 | One malformed-manifest corruption boundary | ✅ Complete |
 | T30 | One post-rename publication rollback | Verification fix |
 
 ## Diagram-Definition Cross-Check

@@ -9,6 +9,7 @@ import type { Transcript } from '../../src/domain/transcript.js'
 import {
   AtomicFileWriter,
   createStoragePaths,
+  type StoragePaths,
 } from '../../src/infrastructure/storage/atomic-file-writer.js'
 import {
   ArtifactStorageError,
@@ -73,6 +74,64 @@ function tracedWriter(root: string, events: string[]): ArtifactStoreAtomicWriter
       await writer.publishDirectory(temporary, target)
     },
   }
+}
+
+const strictManifestCorruptions = [
+  'cache key',
+  'artifact ID',
+  'producer job ID',
+  'checksum',
+  'missing child',
+] as const
+
+type StrictManifestCorruption = (typeof strictManifestCorruptions)[number]
+
+async function publishRelatedAndUnrelated(root: string) {
+  const ids = [artifactId, temporaryId, unrelatedArtifactId, unrelatedTemporaryId]
+  const store = new FileArtifactStore({
+    root,
+    createId: () => ids.shift() ?? unrelatedTemporaryId,
+  })
+  const reference = await store.publishBundle(publishingInput())
+  await store.publishBundle({
+    ...publishingInput(),
+    cacheKey: unrelatedCacheKey,
+    producerJobId: unrelatedJobId,
+  })
+  return { paths: createStoragePaths(root), reference }
+}
+
+async function corruptStrictManifest(
+  paths: StoragePaths,
+  corruption: StrictManifestCorruption,
+): Promise<void> {
+  const artifactPath = paths.artifact(artifactId)
+  const manifestPath = join(artifactPath, 'manifest.json')
+  if (corruption === 'missing child') {
+    await rm(join(artifactPath, 'transcript.pdf'))
+    return
+  }
+
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+  if (corruption === 'cache key') manifest.cacheKey = 'invalid-cache-key'
+  if (corruption === 'artifact ID') manifest.artifactId = 'invalid-artifact-id'
+  if (corruption === 'producer job ID') manifest.producerJobId = 'invalid-producer-id'
+  if (corruption === 'checksum') manifest.transcript.sha256 = 'invalid-checksum'
+  await writeFile(manifestPath, JSON.stringify(manifest))
+}
+
+function trackedCorruptionOperations(paths: StoragePaths, events: string[]) {
+  return {
+    ...nodeArtifactStoreFileOperations,
+    async remove(path: string, recursive?: boolean) {
+      if (path === paths.cache(cacheKey)) events.push('remove:pointer')
+      await nodeArtifactStoreFileOperations.remove(path, recursive)
+    },
+    async rename(from: string, to: string) {
+      if (from === paths.artifact(artifactId)) events.push(`quarantine:${basename(to)}`)
+      await nodeArtifactStoreFileOperations.rename(from, to)
+    },
+  } satisfies ArtifactStoreFileOperations
 }
 
 afterEach(async () => {
@@ -164,6 +223,93 @@ describe('FileArtifactStore', () => {
       expect(quarantine.join('')).not.toMatch(/dQw4w9WgXcQ|Carro|a{64}/)
     },
   )
+
+  it.each(strictManifestCorruptions)(
+    'treats an invalid manifest %s as a cache miss after pointer-first opaque quarantine',
+    async (corruption) => {
+      const root = await temporaryRoot()
+      const { paths } = await publishRelatedAndUnrelated(root)
+      await corruptStrictManifest(paths, corruption)
+      const events: string[] = []
+      const store = new FileArtifactStore({
+        root,
+        operations: trackedCorruptionOperations(paths, events),
+        createId: () => quarantineId,
+      })
+
+      await expect(store.find(cacheKey, new Date(createdAt))).resolves.toBeUndefined()
+      expect(events).toEqual(['remove:pointer', `quarantine:${quarantineId}.invalid`])
+      await expect(access(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+      const quarantine = await readdir(join(root, 'v1/quarantine'))
+      expect(quarantine).toEqual([`${quarantineId}.invalid`])
+      expect(quarantine.join('')).not.toMatch(
+        new RegExp(`${jobId}|${artifactId}|${cacheKey}|dQw4w9WgXcQ|Carro`),
+      )
+      await expect(store.find(unrelatedCacheKey, new Date(createdAt))).resolves.toMatchObject({
+        transcript,
+        pdf,
+      })
+    },
+  )
+
+  it.each(strictManifestCorruptions)(
+    'maps an invalid completed-job manifest %s to 503 after pointer-first opaque quarantine',
+    async (corruption) => {
+      const root = await temporaryRoot()
+      const { paths, reference } = await publishRelatedAndUnrelated(root)
+      await corruptStrictManifest(paths, corruption)
+      const events: string[] = []
+      const store = new FileArtifactStore({
+        root,
+        operations: trackedCorruptionOperations(paths, events),
+        createId: () => quarantineId,
+      })
+
+      await expect(store.readForJob(reference)).rejects.toEqual(
+        expect.objectContaining({
+          name: 'ArtifactStorageError',
+          code: 'JOB_STORAGE_UNAVAILABLE',
+          statusCode: 503,
+          message: 'Transcript job storage is unavailable',
+        }),
+      )
+      expect(events).toEqual(['remove:pointer', `quarantine:${quarantineId}.invalid`])
+      await expect(access(paths.cache(cacheKey))).rejects.toMatchObject({ code: 'ENOENT' })
+      expect(await readdir(join(root, 'v1/quarantine'))).toEqual([`${quarantineId}.invalid`])
+      await expect(store.find(unrelatedCacheKey, new Date(createdAt))).resolves.toMatchObject({
+        transcript,
+        pdf,
+      })
+    },
+  )
+
+  it('keeps the cache pointer and avoids quarantine for operational cache-read EIO', async () => {
+    const root = await temporaryRoot()
+    const initial = new FileArtifactStore({ root, createId: () => artifactId })
+    await initial.publishBundle(publishingInput())
+    const paths = createStoragePaths(root)
+    const operations: ArtifactStoreFileOperations = {
+      ...nodeArtifactStoreFileOperations,
+      async readFile(path) {
+        if (path.endsWith('transcript.pdf')) {
+          throw Object.assign(new Error('/data/private operational failure'), { code: 'EIO' })
+        }
+        return nodeArtifactStoreFileOperations.readFile(path)
+      },
+    }
+    const store = new FileArtifactStore({ root, operations, createId: () => quarantineId })
+
+    await expect(store.find(cacheKey, new Date(createdAt))).rejects.toEqual(
+      expect.objectContaining({
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+    await expect(readFile(paths.cache(cacheKey))).resolves.toBeDefined()
+    await expect(readFile(join(paths.artifact(artifactId), 'manifest.json'))).resolves.toBeDefined()
+    await expect(access(join(root, 'v1/quarantine'))).rejects.toMatchObject({ code: 'ENOENT' })
+  })
 
   it('removes the pointer before opaquely quarantining a corrupt completed-job artifact', async () => {
     const root = await temporaryRoot()
