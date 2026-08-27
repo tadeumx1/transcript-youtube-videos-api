@@ -91,7 +91,7 @@ describe('local RAG dependency contract', () => {
     expect(installedLancePackages).toEqual(['lancedb', 'lancedb-linux-x64-gnu'])
     expect(manifest.scripts['rag:model:fetch']).toBe('node scripts/fetch-rag-model.mjs')
     expect(manifest.scripts['test:rag:offline']).toBe(
-      'vitest run test/unit/rag-chunker.test.ts test/integration/local-e5-encoder.test.ts test/integration/lancedb-rag-index.test.ts test/integration/rag-search-service.test.ts test/integration/rag-ingestion-worker.test.ts test/evaluation',
+      'vitest run test/unit/rag-chunker.test.ts test/integration/local-e5-encoder.test.ts test/integration/lancedb-rag-index.test.ts test/integration/rag-search-service.test.ts test/integration/rag-ingestion-worker.test.ts test/integration/rag-lifecycle-independence.test.ts test/evaluation',
     )
   })
 })

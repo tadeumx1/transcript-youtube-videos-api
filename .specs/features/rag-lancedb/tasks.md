@@ -1141,11 +1141,28 @@ artifact bytes and that active indexed content remains searchable after independ
 
 **Done when**:
 
-- [ ] After ingest then replace/delete, byte hashes of the source job record, transcript JSON, and PDF are unchanged and their public resources remain exact.
-- [ ] After source artifact expiry/sweep, the independently active RAG document still returns exact text and all stored provenance captured before expiry.
-- [ ] Tests prove no RAG lifecycle call reaches transcript generation, PDF rendering, Muse, captions, media, or network providers.
-- [ ] Any exposed boundary defect is fixed surgically without coupling RAG retention to source retention.
-- [ ] Full, Offline RAG, and Build gates pass without test-count regression.
+- [x] After ingest then replace/delete, byte hashes of the source job record, transcript JSON, and PDF are unchanged and their public resources remain exact.
+- [x] After source artifact expiry/sweep, the independently active RAG document still returns exact text and all stored provenance captured before expiry.
+- [x] Tests prove no RAG lifecycle call reaches transcript generation, PDF rendering, Muse, captions, media, or network providers.
+- [x] Any exposed boundary defect is fixed surgically without coupling RAG retention to source retention.
+- [x] Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Evidence**: the missing-file RED became one real end-to-end integration case with two durable
+completed jobs and two real artifact bundles sharing one document cache key, distinct transcripts,
+and distinct PDF bytes. The case uses the production file job/artifact stores, file RAG repository,
+LanceDB index, local verified E5 encoder, chunker, ingestion coordinator/worker, and search service.
+SHA-256 hashes of both source job JSON records, both transcript JSON files, and both PDFs plus their
+public job/transcript/PDF resources remain exact after first ingestion, replacement, and deletion.
+After restoring the replacement and running the real source sweep at expiry, both source artifact
+directories are gone and the durable source is expired while the full RAG response, exact text, and
+stored provenance equal the pre-expiry response. Forbidden artifact preparation/generation, PDF,
+Muse, captions, media, and global network sentinels recorded zero calls. No production boundary
+defect was exposed. The first Full run only exposed a default 5-second timeout under concurrent real
+model load and the offline-script literal contract; increasing the test budget and adding the new
+mandatory path to that exact contract preserved every outcome and assertion. The focused lifecycle
+case and five lifecycle/dependency cases passed; `npm run check` passed 738 tests (737 pre-task),
+lint, strict types, and build; Offline RAG passed 31 tests with unchanged 12-document/48-qrel
+thresholds; `npm audit --omit=dev` found zero vulnerabilities.
 
 **Tests**: integration
 **Gate**: offline rag
