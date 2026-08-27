@@ -249,12 +249,12 @@ the production Linux image.
 | ING-01 | Submit verified transcript | Specify | Proposed |
 | ING-02 | Submit verified transcript | Specify | Proposed |
 | ING-03 | Submit verified transcript | Specify | Proposed |
-| ING-04 | Submit verified transcript | Specify | Proposed |
+| ING-04 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
 | ING-05 | Submit verified transcript | Specify | Proposed |
-| ING-06 | Submit verified transcript | Specify | Proposed |
+| ING-06 | Submit verified transcript | T2, T13, T18, T20 | In Progress |
 | ING-07 | Submit verified transcript | Specify | Proposed |
 | ING-08 | Submit verified transcript | Specify | Proposed |
-| VER-01 | Idempotent atomic versions | Specify | Proposed |
+| VER-01 | Idempotent atomic versions | T2, T13, T18 | In Progress |
 | VER-02 | Idempotent atomic versions | Specify | Proposed |
 | VER-03 | Idempotent atomic versions | Specify | Proposed |
 | VER-04 | Idempotent atomic versions | Specify | Proposed |
@@ -265,8 +265,8 @@ the production Linux image.
 | CHUNK-01 | Deterministic chunks/embeddings | Specify | Proposed |
 | CHUNK-02 | Deterministic chunks/embeddings | Specify | Proposed |
 | CHUNK-03 | Deterministic chunks/embeddings | Specify | Proposed |
-| CHUNK-04 | Deterministic chunks/embeddings | Specify | Proposed |
-| CHUNK-05 | Deterministic chunks/embeddings | Specify | Proposed |
+| CHUNK-04 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
+| CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
 | CHUNK-06 | Deterministic chunks/embeddings | Specify | Proposed |
 | EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | In Progress |
 | EMB-02 | Deterministic chunks/embeddings | Specify | Proposed |
@@ -293,7 +293,7 @@ the production Linux image.
 | OPS-03 | Production/evaluation | Specify | Proposed |
 | OPS-04 | Production/evaluation | Specify | Proposed |
 | OPS-05 | Production/evaluation | Specify | Proposed |
-| OPS-06 | Production/evaluation | Specify | Proposed |
+| OPS-06 | Production/evaluation | T2, T12, T16, T19-T21, T27 | In Progress |
 | OPS-07 | Production/evaluation | Specify | Proposed |
 | OPS-08 | Production/evaluation | Specify | Proposed |
 | OPS-09 | Production/evaluation | Specify | Proposed |

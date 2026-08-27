@@ -126,7 +126,7 @@ lockfile as mechanical output.
 **Gate**: build
 **Commit**: `build(rag): pin local retrieval dependencies`
 
-### T2: Define the RAG domain model
+### T2: Define the RAG domain model ✅
 
 **What**: Implement validated identities, canonical hashes, records, public resources, legal
 revision-guarded transitions, fixed failure maps, and search/request/result value types.
@@ -143,11 +143,13 @@ revision-guarded transitions, fixed failure maps, and search/request/result valu
 
 **Done when**:
 
-- [ ] Canonical SHA-256 identities include the frozen schema/chunk/model inputs and never expose preimages.
-- [ ] UUID/SHA/query/filter validators and public mappers accept only exact designed shapes.
-- [ ] Every legal/illegal/revision-conflict transition and fixed failure code/message has a 1:1 unit test.
-- [ ] Logs/errors produced by domain helpers contain no identifiers, content, paths, stack, or nested cause.
-- [ ] Quick gate passes without reducing the pre-task test count.
+- [x] Canonical SHA-256 identities include the frozen schema/chunk/model inputs and never expose preimages.
+- [x] UUID/SHA/query/filter validators and public mappers accept only exact designed shapes.
+- [x] Every legal/illegal/revision-conflict transition and fixed failure code/message has a 1:1 unit test.
+- [x] Logs/errors produced by domain helpers contain no identifiers, content, paths, stack, or nested cause.
+- [x] Quick gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit` passed 377 tests (340 pre-task); 37 domain cases cover canonical hashes, strict boundaries, four legal and twelve illegal transition pairs, revision conflict, every fixed failure/error, exact public payloads, and redaction.
 
 **Tests**: unit
 **Gate**: quick
