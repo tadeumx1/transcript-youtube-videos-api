@@ -43,7 +43,7 @@ discrimination sensor, traceability, and atomic commits.
 | Full | After tasks with integration tests | `npm run test:unit && npm run test:integration` |
 | Build | After every phase and config/supply-chain work | `npm run check` |
 | Offline RAG | After encoder/index/evaluation tasks once model assets are verified | `npm run test:rag:offline` |
-| Container | After production-image changes | `docker build --target rag-smoke -t transcript-rag:smoke . && docker build -t transcript-rag:local .` |
+| Container | After production-image changes | `docker build -t transcript-rag:local . && docker run --rm --network none transcript-rag:local node scripts/rag-container-smoke.mjs` |
 | Railway Plan | After Railway IaC changes; read-only until a fresh exact plan is approved | `npx railway plan --environment production` |
 
 ---
@@ -81,7 +81,7 @@ T24 -> T25 -> T26 -> T28 -> T27
 ### Phase 5: Validation round 1 fixes
 
 ```
-T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> independent re-verification
+T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> T35 -> independent re-verification
 ```
 
 ### Sequential batch packing
@@ -91,7 +91,7 @@ T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> independent re-verification
 | 1 | Phase 1 | T1-T9 | One sub-agent, sequential tasks, atomic commits, phase Build gate |
 | 2 | Phase 2 | T10-T18 | One fresh sub-agent after Batch 1, sequential tasks, atomic commits, Full + Offline RAG + Build gates |
 | 3 | Phases 3-4 | T19-T28 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
-| Fix 1 | Phase 5 | T29-T34 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
+| Fix 1 | Phase 5 | T29-T35 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
 
 After Batch 3, a fresh independent Verifier must validate every requirement against evidence and may
 not author fixes. The main agent owns any verifier findings, Railway approval/apply/deploy, UAT,
@@ -1251,6 +1251,40 @@ job is reported as PASS.
 **Gate**: container + build
 **Commit**: `fix(ci): provision verified rag model`
 
+### T35: Make the smoke stage parse on Railway
+
+**What**: Remove the Railway-unsupported Dockerfile build-network directive without changing the
+smoke stage's credential removal, non-root execution, or real RAG assertions.
+**Where**: `Dockerfile`
+**Depends on**: T34
+**Reuses**: `scripts/rag-container-smoke.mjs` and the existing `rag-smoke` stage.
+**Requirement**: OPS-10, EMB-01, EMB-02
+
+**Tools**:
+
+- MCP: GitHub/Railway evidence only after push
+- Skill: `tlc-spec-driven`, `use-railway`
+- Local: `apply_patch`, Vitest, Dockerfile contract
+
+**Done when**:
+
+- [x] The Dockerfile contains no `RUN --network=none` directive rejected by Railway.
+- [x] The `rag-smoke` stage still runs as `node`, removes every provider/API credential, and invokes
+  the existing real-model/LanceDB smoke script.
+- [x] Focused container contracts and the Build gate pass without test-count regression.
+
+**Evidence**: `test/unit/container-contract.test.ts:145`-`157` rejects the unsupported directive and
+proves the retained stage, non-root user, credential removal, smoke command, runtime stage, and data
+root. The focused container/CI contracts passed 14/14. The Build gate passed 738/738 after one
+independently passing reproduction of an unrelated timing fluctuation. Railway deployment evidence
+for the exact task tree is `d4fa5f20-aec8-4445-bee9-ce73ac9f8173`: the production Dockerfile parsed,
+built, passed its healthcheck, and reached terminal `SUCCESS` with image digest
+`sha256:de8e36042b8e3b5141ccf46ab9ce300d4a8836c04223f436da2d85a75a5ad5b8`.
+
+**Tests**: unit + container integration
+**Gate**: container + build
+**Commit**: `fix(container): support railway docker parser`
+
 ---
 
 ## Requirement-to-Task Traceability
@@ -1260,11 +1294,11 @@ job is reported as PASS.
 | ING-01-08 | T10, T11, T13, T17, T18, T20-T22 |
 | VER-01-08 | T2, T8, T13, T15-T18 |
 | CHUNK-01-06 | T2-T3, T6, T17 |
-| EMB-01-04 | T1, T3-T7, T14, T17, T24 |
+| EMB-01-04 | T1, T3-T7, T14, T17, T24, T35 |
 | SEARCH-01-08 | T2-T4, T7, T9, T14-T16, T20, T25 |
 | LIFE-01-06 | T8, T13, T15, T18, T20, T27, T29, T31-T32 |
 | CAP-01-02 | T3, T13, T18, T26 |
-| OPS-01-10 | T1-T5, T12, T14, T16, T18-T34 |
+| OPS-01-10 | T1-T5, T12, T14, T16, T18-T35 |
 | EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21, T29, T31 |
 
 ## Phase Execution Map
@@ -1296,6 +1330,7 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | T32 | One lifecycle evidence deliverable | Real-store integration test | ✅ Granular |
 | T33 | One score-projection compatibility correction | Real-index integration test | ✅ Granular |
 | T34 | One hermetic CI workflow correction | Static, clean-checkout, and remote run evidence | ✅ Granular |
+| T35 | One Railway-compatible container smoke correction | Static, Build, and Railway image evidence | ✅ Granular |
 
 No task owns more than one production source/config/document deliverable. Test files, snapshots,
 lockfiles, and generated evidence are atomic companions required to verify that deliverable.
@@ -1315,7 +1350,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T28 | T26 | same immediately prior arrow | ✅ Match |
 | T27 | T28 | same immediately prior arrow | ✅ Match |
 | T29 | T27 | prior phase completion | ✅ Match |
-| T30-T34 | immediately prior task T29-T33 | same immediately prior arrow | ✅ Match |
+| T30-T35 | immediately prior task T29-T34 | same immediately prior arrow | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -1330,7 +1365,7 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T25 | Real retrieval evaluation | integration | integration | ✅ OK |
 | T29-T31, T33 | Lifecycle/application/index correction | unit + integration | matching per task | ✅ OK |
 | T32 | Cross-store lifecycle boundary | integration | integration | ✅ OK |
-| T34 | CI/container workflow | unit + integration | matching static/clean/remote evidence | ✅ OK |
+| T34-T35 | CI/container workflow | unit + integration | matching static/clean/remote evidence | ✅ OK |
 
 There are no deferred tests and no `Tests: none` tasks. Every task must add its required tests before
 its commit, run the named gate, compare the pre/post test count, and record evidence in this file.

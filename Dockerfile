@@ -61,8 +61,7 @@ CMD ["node", "dist/server.js"]
 FROM runtime-base AS rag-smoke
 
 USER node
-RUN --network=none \
-  env -u API_ACCESS_KEY \
+RUN env -u API_ACCESS_KEY \
       -u OPENCODE_API_KEY \
       -u ANTHROPIC_AUTH_TOKEN \
       -u ANTHROPIC_API_KEY \

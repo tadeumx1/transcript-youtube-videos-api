@@ -142,7 +142,7 @@ describe('Docker runtime contract', () => {
     expect(source).not.toMatch(/(?:MODEL_REPOSITORY|MODEL_REVISION|MODEL_SHA256)=/)
   })
 
-  it('executes a credential-free non-root offline RAG smoke stage', async () => {
+  it('keeps a Railway-compatible credential-free non-root RAG smoke stage', async () => {
     const source = await readFile(dockerfile, 'utf8')
 
     expect(source).toContain('FROM runtime-base AS rag-smoke')
@@ -150,7 +150,8 @@ describe('Docker runtime contract', () => {
       'COPY scripts/rag-container-smoke.mjs ./scripts/rag-container-smoke.mjs',
     )
     expect(source).toContain('USER node')
-    expect(source).toMatch(/RUN --network=none[\s\\]+env -u API_ACCESS_KEY/)
+    expect(source).not.toContain('RUN --network=none')
+    expect(source).toMatch(/RUN env -u API_ACCESS_KEY[\s\\]+-u OPENCODE_API_KEY/)
     expect(source).toContain('node scripts/rag-container-smoke.mjs')
     expect(source).toContain('FROM runtime-base AS runtime')
     expect(source).toContain('RAG_DATA_ROOT=/data/lancedb')
