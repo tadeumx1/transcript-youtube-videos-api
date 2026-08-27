@@ -212,7 +212,7 @@ embedding fingerprint, and reusable fail-closed integrity verifier.
 **Gate**: quick
 **Commit**: `feat(rag): verify pinned embedding assets`
 
-### T5: Fetch model assets reproducibly
+### T5: Fetch model assets reproducibly ✅
 
 **What**: Add an idempotent build-time fetcher that downloads only immutable revision URLs into a
 temporary directory, verifies the checked-in manifest, and atomically publishes the local model.
@@ -229,11 +229,13 @@ temporary directory, verifies the checked-in manifest, and atomically publishes 
 
 **Done when**:
 
-- [ ] URLs contain the exact approved immutable revision and no branch aliases.
-- [ ] Existing verified assets are reused; incomplete/mismatched assets never replace a good local copy.
-- [ ] Mocked unit cases cover download/status/length/hash/rename failures and cleanup.
-- [ ] One real fetch verifies the local `.models` cache for later offline tests without checking model bytes into git.
-- [ ] Build gate passes without reducing the pre-task test count.
+- [x] URLs contain the exact approved immutable revision and no branch aliases.
+- [x] Existing verified assets are reused; incomplete/mismatched assets never replace a good local copy.
+- [x] Mocked unit cases cover download/status/length/hash/rename failures and cleanup.
+- [x] One real fetch verifies the local `.models` cache for later offline tests without checking model bytes into git.
+- [x] Build gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run check` passed 531 tests (530 before the final adequacy case); eight fetcher cases cover immutable URLs, verified reuse, network/status/header/body/hash/rename failures, restoration and cleanup. A real 129 MiB pinned cache fetched, verified, then reused offline; `.models/` is ignored.
 
 **Tests**: unit
 **Gate**: build

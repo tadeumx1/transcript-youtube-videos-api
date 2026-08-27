@@ -269,7 +269,7 @@ the production Linux image.
 | CHUNK-05 | Deterministic chunks/embeddings | T2, T6, T15 | In Progress |
 | CHUNK-06 | Deterministic chunks/embeddings | T3, T6, T17 | In Progress |
 | EMB-01 | Deterministic chunks/embeddings | T1, T4, T5, T14, T24 | In Progress |
-| EMB-02 | Deterministic chunks/embeddings | Specify | Proposed |
+| EMB-02 | Deterministic chunks/embeddings | T5, T14, T24 | In Progress |
 | EMB-03 | Deterministic chunks/embeddings | T4, T14, T17 | In Progress |
 | EMB-04 | Deterministic chunks/embeddings | T3, T7, T17 | In Progress |
 | SEARCH-01 | Hybrid retrieval | Specify | Proposed |
@@ -297,7 +297,7 @@ the production Linux image.
 | OPS-07 | Production/evaluation | Specify | Proposed |
 | OPS-08 | Production/evaluation | Specify | Proposed |
 | OPS-09 | Production/evaluation | Specify | Proposed |
-| OPS-10 | Production/evaluation | T1, T24, T25, T27 | In Progress |
+| OPS-10 | Production/evaluation | T1, T5, T24, T25, T27 | In Progress |
 | EDGE-01 | Authentication order | Specify | Proposed |
 | EDGE-02 | Source-expiry race | Specify | Proposed |
 | EDGE-03 | Pre-publication crash | Specify | Proposed |
