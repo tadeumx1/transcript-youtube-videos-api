@@ -12,7 +12,7 @@ discrimination sensor, traceability, and atomic commits.
 ---
 
 **Design**: `.specs/features/rag-lancedb/design.md`
-**Status**: T1-T41 complete locally; independent final re-verification pending
+**Status**: Verified on 2026-08-27 (T1-T41 complete; independent final PASS)
 
 ---
 
@@ -1500,7 +1500,7 @@ golden-vector integration, real 48-qrel evaluation, and T34-T37's hermetic Linux
   signed `model_int8.onnx` asset is rejected instead of permitting CPU-dependent outputs.
 - [x] The new embedding policy uses an empty `v2` RAG namespace while preserving `v1` untouched for
   backup/explicit reingestion, with exact path and operator-documentation contracts.
-- [ ] Unit, real-encoder, real-index/search, three-run evaluation, Full, Offline RAG, dependency
+- [x] Unit, real-encoder, real-index/search, three-run evaluation, Full, Offline RAG, dependency
   audit, production-image network-none smoke, exact-HEAD GitHub CI, and Railway deployment/UAT all
   pass with unchanged evaluation thresholds and no skipped tests.
 
@@ -1515,8 +1515,14 @@ mutation sensors proved that reverting dtype, changing the SHA, or selecting nam
 corresponding contract. The focused real-model/evaluation set passed 58/58; two consecutive default-
 parallel Build gates passed 740/740 with lint, strict types, and build; Offline RAG passed 31/31 with
 12 documents/48 qrels, hybrid Recall@5 `0.979167`, MRR@10 `0.888889`, nDCG@10 `0.912200`, and semantic
-Recall@5 `0.958333`; dependency audit and both strict validators returned zero. Exact-HEAD CI,
-production-image smoke, Railway deployment/UAT, and independent verification remain pending.
+Recall@5 `0.958333`; dependency audit and both strict validators returned zero. Exact-HEAD GitHub
+run 33101923417 passed Source job 98621578883 (740/740, Offline RAG 31/31, audit zero) and Container
+job 98621994139 (production-image network-none smoke). Railway deployment
+`c9b69eb6-366d-4fcf-a9f1-bcf6348f5093` is `SUCCESS/RUNNING` on image
+`sha256:faba7e9cf48b04f120b670146ece9936d2811a7816961e2b64f6e75003e1a9f9`; health/readiness,
+protected metrics, drift-free IaC, READY Volume, preserved `v1`, new `v2`, retained-source
+reingestion, and authenticated search all passed. The fresh independent verifier reported PASS for
+52/52 ACs, 10/10 edge cases, IMP-01..10, and 15/15 killed sensors with no material finding.
 
 **Tests**: unit + integration
 **Gate**: container + railway + build

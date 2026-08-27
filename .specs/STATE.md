@@ -92,13 +92,33 @@
 - **Date**: 2026-08-26
 - **Status**: active
 
+### AD-012
+
+- **Decision**: The local multilingual E5 encoder uses the immutable official UINT8 ONNX artifact,
+  embedding policy version 2, and isolated RAG storage namespace `v2`; the previous `v1` namespace
+  is preserved for backup and explicit source reingestion only.
+- **Reason**: Signed INT8 arithmetic produced CPU-ISA-dependent embeddings across GitHub x64 runner
+  pools, while the official unsigned artifact is portable and preserves every retrieval threshold.
+- **Trade-off**: The first deployment starts with an empty searchable `v2`; retained source jobs must
+  be explicitly reingested, and expired sources must be retranscribed before reingestion.
+- **Scope**: Local embedding model integrity, fingerprint compatibility, RAG storage evolution, CI,
+  and Railway operations.
+- **Date**: 2026-08-27
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Validate / round 3 complete; T34's external OPS-10 evidence remains pending
-- **Completed**: T1-T33 and T35-T39; T34's local/static and clean-checkout outcomes; public GitHub repository through `e8c45c3`; drift-free Railway IaC with the `sfo` Volume; deployment `15d6b998-29db-458f-a3cf-ba849cfd4f21` in `SUCCESS`; production health, readiness, auth, transcript JSON/PDF, restart persistence, durable job, RAG ingest/search/delete UAT; Full 738/738, Offline RAG 31/31, audit 0, and round-3 sensor 8/8
+- **Feature**: production improvement backlog (IMP-01..IMP-10)
+- **Phase / Task**: Execute and Validate complete; RAG T1-T41 independently verified
+- **Completed**: all ten production improvements; public GitHub runtime commit `3f85c6a`; exact CI
+  run 33101923417 with Source and Container green; local Build 740/740; Offline RAG 31/31; audit
+  zero; independent 52/52 AC, 10/10 edge, and 15/15 sensor PASS; Railway deployment
+  `c9b69eb6-366d-4fcf-a9f1-bcf6348f5093` `SUCCESS/RUNNING`; health/readiness/auth/metrics,
+  retained-source reingestion/search UAT, READY 1024 MB Volume, preserved RAG `v1`, active `v2`,
+  and drift-free IaC
 - **In-progress** (file:line): none
-- **Next step**: the owner resolves the GitHub billing/account lock, then reruns `.github/workflows/ci.yml` at `e8c45c3` or a later content-equivalent commit; after real green Source checks and Container build, close T34/OPS-10, rerun final evidence review, and execute `validate_state.py`
-- **Blockers**: exact-HEAD run 33094772986 started zero Source steps with `The job was not started because your account is locked due to a billing issue.` and skipped Container build; this owner-side billing state is the sole remaining evidence gap
-- **Uncommitted files**: round-3 `validation.md` and this Handoff pending one atomic documentation commit
+- **Next step**: explicitly reingest any other retained source jobs needed by the knowledge base into
+  `v2`; retranscribe expired sources first; keep `v1` until a verified backup/retention decision
+- **Blockers**: none
+- **Uncommitted files**: none after the final documentation commit
 - **Branch**: `main`

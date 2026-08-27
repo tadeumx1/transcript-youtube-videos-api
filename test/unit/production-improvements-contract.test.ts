@@ -110,9 +110,10 @@ describe('production improvement backlog contract', () => {
     expect(traceability).toBeDefined()
     expect(traceability).not.toContain('In Progress')
     expect(tasks).toContain(
-      '**Status**: T1-T41 complete locally; independent final re-verification pending',
+      '**Status**: Verified on 2026-08-27 (T1-T41 complete; independent final PASS)',
     )
     expect(tasks).toContain('Exact-HEAD push run 33099114338 completed successfully')
+    expect(tasks).toContain('Exact-HEAD GitHub\nrun 33101923417 passed')
     expect(tasks).not.toContain('account billing lock')
     expect(tasks).not.toContain('remains evidence-zero under T34')
   })
