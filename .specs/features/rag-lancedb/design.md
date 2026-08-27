@@ -824,6 +824,7 @@ real Railway baseline exists. The evaluation performs no network request and nee
 | RAG startup failure through Fastify `onReady` | `src/http/app.ts` lifecycle | `/health` and existing routes would never listen. | RAG start absorbs known failure, marks degraded, exposes fixed RAG 503, and retries locally; durable core behavior unchanged. |
 | Lance native + ORT + model image size/RAM | New dependencies; temporary install ~596 MB before pruning | Slow deploy/start or Railway memory pressure. | One Transformers override, CPU/Linux-x64-only runtime pruning, packaged int8 model, one session, batch 8, container smoke and RSS/image report before deploy. |
 | Optional LanceDB Transformers 3.0.2 duplicates 4.2.0 | npm metadata/temporary install | Two ONNX runtimes and ambiguous behavior. | Root override to 4.2.0; never use Lance embedding registry; lockfile/tree assertion and real smoke. |
+| Vulnerable transitive archive/image runtimes | `onnxruntime-node`/Transformers tree; GHSA-xcpc-8h2w-3j85 and GHSA-f88m-g3jw-g9cj | Crafted archives can exhaust memory and inherited libvips flaws affect untrusted image processing. | Exact root security overrides `adm-zip: 0.6.0` and `sharp: 0.35.4`; preserve direct/model pins; prove clean lifecycle install, native imports, audit, and real offline retrieval. |
 | FTS can omit recent rows with `fastSearch` | LanceDB FTS API | Search violates immediate publication. | Encapsulated adapter never exposes/calls it; integration test immediately after merge before optimize. |
 | `mergeInsert` duplicate matches are undefined | LanceDB 0.37.1 API | Duplicate rows/corrupt replacement. | Deterministic unique IDs, pre-merge uniqueness assertion, post-merge exact digest/count/version inspection, fail readiness on impossible state. |
 | SQL predicates are strings | LanceDB filter API | Injection if raw input reaches predicates. | UUID/SHA-only validators and a single quoted-literal helper with direct mutation tests; raw query never becomes SQL. |
@@ -846,6 +847,7 @@ real Railway baseline exists. The evaluation performs no network request and nee
 | Hybrid fusion | Two bounded queries + application RRF k=60 | Enforces candidate cap, finite score, deterministic ties, and evaluation visibility. |
 | Embeddings | Pinned offline multilingual E5 int8 through application adapter | Portuguese retrieval without paid calls or runtime downloads. |
 | Model/runtime versions | Transformers 4.2.0 override, LanceDB 0.37.1, Arrow 18.1.0 | One dependency tree, explicit schema, and smoke-tested Node 22 compatibility. |
+| Transitive security overrides | adm-zip 0.6.0 and Sharp 0.35.4 | GitHub advisories identify adm-zip 0.6.0 and Sharp 0.35.0+ as patched; exact current overrides remove known production findings without downgrading or changing the frozen direct/model pins. |
 | Chunk offsets | Unicode code points, half-open | Stable public provenance across JS/non-JS consumers without splitting surrogate pairs. |
 | RAG retention | No automatic document TTL | Knowledge-base membership changes only by explicit delete/replacement. |
 | ANN | Deferred | Exact flat search is simpler and suitable for the bounded initial corpus. |
@@ -865,3 +867,7 @@ real Railway baseline exists. The evaluation performs no network request and nee
   https://huggingface.co/Xenova/multilingual-e5-small/tree/761b726dd34fb83930e26aab4e9ac3899aa1fa78
 - Upstream multilingual E5 model/prefix behavior:
   https://huggingface.co/intfloat/multilingual-e5-small
+- GitHub advisory for adm-zip patched version 0.6.0:
+  https://github.com/advisories/GHSA-xcpc-8h2w-3j85
+- GitHub advisory for Sharp patched versions 0.35.0 and later:
+  https://github.com/advisories/GHSA-f88m-g3jw-g9cj

@@ -297,7 +297,7 @@ the production Linux image.
 | OPS-07 | Production/evaluation | T23 | Complete |
 | OPS-08 | Production/evaluation | T25 | Complete |
 | OPS-09 | Production/evaluation | T25 | Complete |
-| OPS-10 | Production/evaluation | T1, T5, T24, T25, T27 | In Progress |
+| OPS-10 | Production/evaluation | T1, T5, T24-T25, T28, T27 | In Progress |
 | EDGE-01 | Authentication order | T20-T21 | Complete |
 | EDGE-02 | Source-expiry race | T10-T11, T18 | In Progress |
 | EDGE-03 | Pre-publication crash | T13, T17 | In Progress |

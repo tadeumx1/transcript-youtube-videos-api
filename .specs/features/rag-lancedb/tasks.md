@@ -75,7 +75,7 @@ T19 -> T20 -> T21 -> T22 -> T23
 ### Phase 4: Production evidence and operations
 
 ```
-T24 -> T25 -> T26 -> T27
+T24 -> T25 -> T26 -> T28 -> T27
 ```
 
 ### Sequential batch packing
@@ -84,7 +84,7 @@ T24 -> T25 -> T26 -> T27
 | ----- | ------------ | ----- | --------------- |
 | 1 | Phase 1 | T1-T9 | One sub-agent, sequential tasks, atomic commits, phase Build gate |
 | 2 | Phase 2 | T10-T18 | One fresh sub-agent after Batch 1, sequential tasks, atomic commits, Full + Offline RAG + Build gates |
-| 3 | Phases 3-4 | T19-T27 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
+| 3 | Phases 3-4 | T19-T28 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
 
 After Batch 3, a fresh independent Verifier must validate every requirement against evidence and may
 not author fixes. The main agent owns any verifier findings, Railway approval/apply/deploy, UAT,
@@ -917,12 +917,49 @@ Conventional Commits validator, so the metadata uses its equivalent allowed `cho
 **Gate**: railway plan
 **Commit**: `chore(railway): persist embedded rag data`
 
+### T28: Remediate vulnerable transitive RAG dependencies ✅
+
+**What**: Override only the vulnerable transitive archive/image packages at their approved patched
+versions while preserving the direct LanceDB, Transformers, Arrow, ONNX runtime, and model pins.
+**Where**: `package.json`
+**Depends on**: T26
+**Reuses**: T1's exact dependency-tree contract and the existing clean-install/container/offline gates.
+**Requirement**: OPS-10
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, npm clean install/audit/tree, real native imports and offline RAG tests
+
+**Done when**:
+
+- [x] Root overrides are exactly `adm-zip: 0.6.0` and `sharp: 0.35.4` in addition to the approved Transformers override; neither package becomes a direct dependency.
+- [x] The lockfile and installed tree contain exactly those patched versions once, and `npm audit --omit=dev` reports zero vulnerabilities.
+- [x] A clean reinstall, including lifecycle scripts, proves ONNX Runtime extraction remains compatible and a real Sharp import loads on Node 22.
+- [x] Real offline E5 encoding, Lance replacement/search/delete, and all 12-document/48-qrel evaluation thresholds still pass.
+- [x] Build gate passes without changing direct LanceDB/Transformers/Arrow pins or any model artifact/hash.
+
+**Evidence**: the dependency contract failed first on the absent overrides and Sharp 0.34.5, then
+passed four cases after the exact transitive remediation. `npm ci` performed a clean install of 267
+packages with lifecycle scripts enabled; native Sharp 0.35.4 and ONNX Runtime 1.24.3 imports loaded.
+The installed tree contains one overridden adm-zip 0.6.0 and one overridden Sharp 0.35.4 beneath the
+unchanged Transformers 4.2.0/LanceDB 0.37.1/Arrow 18.1.0 tree. `npm audit --omit=dev` reported zero
+vulnerabilities. Offline RAG passed 30 tests with the same 12 documents, 48 qrels and hybrid Recall@5
+`0.9791667`, MRR@10 `0.8833333`, nDCG@10 `0.9074851`; `npm run check` passed 724 tests, typecheck,
+lint and build. No direct dependency, model manifest, artifact, revision, dimension, dtype, or hash
+changed.
+
+**Tests**: unit + integration
+**Gate**: build
+**Commit**: `fix(deps): patch rag transitive vulnerabilities`
+
 ### T27: Document RAG operation and deletion semantics
 
 **What**: Document local ingestion/search/delete usage, configuration, no-provider guarantees,
 retention/capacity, backup/restore, logical deletion limits, readiness/metrics, evaluation, and Railway runbook.
 **Where**: `README.md`
-**Depends on**: T26
+**Depends on**: T28
 **Reuses**: Existing API examples and durable-job/Volume operational sections.
 **Requirement**: LIFE-05, OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-08, OPS-09, OPS-10
 
@@ -957,7 +994,7 @@ retention/capacity, backup/restore, logical deletion limits, readiness/metrics, 
 | SEARCH-01-08 | T2-T4, T7, T9, T14-T16, T20, T25 |
 | LIFE-01-06 | T8, T13, T15, T18, T20, T27 |
 | CAP-01-02 | T3, T13, T18, T26 |
-| OPS-01-10 | T1-T5, T12, T14, T16, T18-T27 |
+| OPS-01-10 | T1-T5, T12, T14, T16, T18-T28 |
 | EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21 |
 
 ## Phase Execution Map
@@ -982,6 +1019,7 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | T24 | One production container contract | Static + smoke tests | ✅ Granular |
 | T25 | One retrieval-evaluation gate | Authored fixture inside the test module | ✅ Granular |
 | T26 | One Railway IaC change | Contract test + read-only generated plan | ✅ Granular |
+| T28 | One transitive dependency remediation in `package.json` | npm lockfile + dependency contract test | ✅ Granular |
 | T27 | One operator runbook | Documentation contract test | ✅ Granular |
 
 No task owns more than one production source/config/document deliverable. Test files, snapshots,
@@ -998,13 +1036,15 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T19 | T18 (prior phase) | prior phase completion | ✅ Match |
 | T20-T23 | immediately prior task T19-T22 | same immediately prior arrow | ✅ Match |
 | T24 | T23 (prior phase) | prior phase completion | ✅ Match |
-| T25-T27 | immediately prior task T24-T26 | same immediately prior arrow | ✅ Match |
+| T25-T26 | immediately prior task T24-T25 | same immediately prior arrow | ✅ Match |
+| T28 | T26 | same immediately prior arrow | ✅ Match |
+| T27 | T28 | same immediately prior arrow | ✅ Match |
 
 ## Test Co-location Validation
 
 | Task(s) | Code layer created/modified | Matrix requires | Task says | Status |
 | ------- | --------------------------- | --------------- | --------- | ------ |
-| T1, T3-T5, T19, T26-T27 | Config/manifest/metrics/script/IaC/docs contract | unit | unit | ✅ OK |
+| T1, T3-T5, T19, T26-T28 | Config/manifest/metrics/script/IaC/dependency/docs contract | unit | unit | ✅ OK |
 | T2, T6-T9 | Domain/application policy | unit | unit | ✅ OK |
 | T10-T13 | Artifact/repository boundary | unit + integration (path helper: unit) | matching per task | ✅ OK |
 | T14-T18 | Encoder/index/worker/coordinator | unit + integration | unit + integration | ✅ OK |
