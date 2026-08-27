@@ -86,6 +86,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: CACHE-07 (storage)
 - last seen: 2026-08-26T23:59:01Z
 
+### L-013 - Prove derived-data lifecycle independence end to end by byte-comparing retained source artifacts and querying derived data after source expiry.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `rag-lifecycle` · harmful: 0
+- features: rag-lancedb
+- evidence: LIFE-04 (rag-lifecycle)
+- last seen: 2026-08-27T05:42:25Z
+
+### L-014 - Drive readiness tests through real post-start component failures instead of only substituting a pre-degraded coordinator.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `readiness` · harmful: 0
+- features: rag-lancedb
+- evidence: OPS-04 (readiness)
+- last seen: 2026-08-27T05:42:26Z
+
+### L-015 - Verify telemetry through production operations and scraped metrics instead of invoking registry methods directly.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `observability` · harmful: 0
+- features: rag-lancedb
+- evidence: OPS-05 (observability)
+- last seen: 2026-08-27T05:42:26Z
+
+### L-016 - Run model-dependent gates from a clean checkout that fetches and verifies ignored immutable assets before testing.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `ci` · harmful: 0
+- features: rag-lancedb
+- evidence: OPS-10 (ci)
+- last seen: 2026-08-27T05:42:26Z
+
+### L-017 - Inject storage exhaustion after admission and assert cleanup, prior-state preservation, and readiness degradation end to end.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `storage` · harmful: 0
+- features: rag-lancedb
+- evidence: EDGE-09 (storage)
+- last seen: 2026-08-27T05:42:26Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

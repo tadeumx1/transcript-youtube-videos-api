@@ -95,10 +95,10 @@
 ## Handoff
 
 - **Feature**: rag-lancedb (IMP-10)
-- **Phase / Task**: Validate / independent Verifier next
-- **Completed**: T1-T28 committed through `9bb0f71`; local gates pass 724 tests, 30 offline RAG tests, TypeScript build, and zero production audit vulnerabilities; the private GitHub repository is connected and the first registered CI run is pending
+- **Phase / Task**: Execute / validation round 1 fix loop; T29 next
+- **Completed**: T1-T28 plus validation round 1; Verifier recorded 48/52 ACs, 9/10 edges, 724/724 local tests, 30/30 offline RAG tests, and 5/5 killed P0 mutations in `validation.md`
 - **In-progress** (file:line): none
-- **Next step**: validate real `rag-smoke` and production image builds in GitHub Actions, then dispatch a fresh read-only independent Verifier against every requirement and task
-- **Blockers**: none for verification; Railway apply/deploy remain separately approval-gated after a fresh exact plan
-- **Uncommitted files**: only this handoff refresh before its atomic documentation commit
+- **Next step**: implement approved sequential fixes T29-T34, then run a fresh independent re-Verifier and close traceability only on PASS
+- **Blockers**: GitHub Actions has repository/account-level `startup_failure` with zero jobs and needs owner-side resolution for real container evidence; Railway apply/deploy remains separately approval-gated after the verified fix commit
+- **Uncommitted files**: fix-plan and lesson artifacts pending their atomic documentation commit
 - **Branch**: `main`

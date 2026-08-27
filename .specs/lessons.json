@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 13,
+  "next_id": 18,
   "lessons": [
     {
       "id": "L-001",
@@ -220,6 +220,96 @@
       ],
       "created": "2026-08-26T23:59:01Z",
       "last_seen": "2026-08-26T23:59:01Z"
+    },
+    {
+      "id": "L-013",
+      "key": "ac_gap::prove derived data lifecycle independence end to end by byte comparing retained source artifacts and querying derived data after source expiry",
+      "text": "Prove derived-data lifecycle independence end to end by byte-comparing retained source artifacts and querying derived data after source expiry.",
+      "signal": "ac_gap",
+      "scope": "rag-lifecycle",
+      "status": "candidate",
+      "features": [
+        "rag-lancedb"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "LIFE-04 (rag-lifecycle)"
+      ],
+      "created": "2026-08-27T05:42:25Z",
+      "last_seen": "2026-08-27T05:42:25Z"
+    },
+    {
+      "id": "L-014",
+      "key": "ac_gap::drive readiness tests through real post start component failures instead of only substituting a pre degraded coordinator",
+      "text": "Drive readiness tests through real post-start component failures instead of only substituting a pre-degraded coordinator.",
+      "signal": "ac_gap",
+      "scope": "readiness",
+      "status": "candidate",
+      "features": [
+        "rag-lancedb"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "OPS-04 (readiness)"
+      ],
+      "created": "2026-08-27T05:42:26Z",
+      "last_seen": "2026-08-27T05:42:26Z"
+    },
+    {
+      "id": "L-015",
+      "key": "ac_gap::verify telemetry through production operations and scraped metrics instead of invoking registry methods directly",
+      "text": "Verify telemetry through production operations and scraped metrics instead of invoking registry methods directly.",
+      "signal": "ac_gap",
+      "scope": "observability",
+      "status": "candidate",
+      "features": [
+        "rag-lancedb"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "OPS-05 (observability)"
+      ],
+      "created": "2026-08-27T05:42:26Z",
+      "last_seen": "2026-08-27T05:42:26Z"
+    },
+    {
+      "id": "L-016",
+      "key": "ac_gap::run model dependent gates from a clean checkout that fetches and verifies ignored immutable assets before testing",
+      "text": "Run model-dependent gates from a clean checkout that fetches and verifies ignored immutable assets before testing.",
+      "signal": "ac_gap",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "rag-lancedb"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "OPS-10 (ci)"
+      ],
+      "created": "2026-08-27T05:42:26Z",
+      "last_seen": "2026-08-27T05:42:26Z"
+    },
+    {
+      "id": "L-017",
+      "key": "ac_gap::inject storage exhaustion after admission and assert cleanup prior state preservation and readiness degradation end to end",
+      "text": "Inject storage exhaustion after admission and assert cleanup, prior-state preservation, and readiness degradation end to end.",
+      "signal": "ac_gap",
+      "scope": "storage",
+      "status": "candidate",
+      "features": [
+        "rag-lancedb"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "EDGE-09 (storage)"
+      ],
+      "created": "2026-08-27T05:42:26Z",
+      "last_seen": "2026-08-27T05:42:26Z"
     }
   ]
 }

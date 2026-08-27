@@ -12,7 +12,7 @@ discrimination sensor, traceability, and atomic commits.
 ---
 
 **Design**: `.specs/features/rag-lancedb/design.md`
-**Status**: In Progress; T1-T28 complete and committed; independent Verifier pending
+**Status**: In Progress; T1-T28 complete; validation round 1 failed 48/52 ACs; T29-T34 approved fix loop pending
 
 ---
 
@@ -78,6 +78,12 @@ T19 -> T20 -> T21 -> T22 -> T23
 T24 -> T25 -> T26 -> T28 -> T27
 ```
 
+### Phase 5: Validation round 1 fixes
+
+```
+T29 -> T30 -> T31 -> T32 -> T33 -> T34 -> independent re-verification
+```
+
 ### Sequential batch packing
 
 | Batch | Whole phases | Tasks | Worker contract |
@@ -85,6 +91,7 @@ T24 -> T25 -> T26 -> T28 -> T27
 | 1 | Phase 1 | T1-T9 | One sub-agent, sequential tasks, atomic commits, phase Build gate |
 | 2 | Phase 2 | T10-T18 | One fresh sub-agent after Batch 1, sequential tasks, atomic commits, Full + Offline RAG + Build gates |
 | 3 | Phases 3-4 | T19-T28 | One fresh sub-agent after Batch 2, sequential tasks, atomic commits, all gates and evidence handoff |
+| Fix 1 | Phase 5 | T29-T34 | One fresh implementer, sequential atomic fixes from `validation.md`, then one fresh independent Verifier |
 
 After Batch 3, a fresh independent Verifier must validate every requirement against evidence and may
 not author fixes. The main agent owns any verifier findings, Railway approval/apply/deploy, UAT,
@@ -995,6 +1002,169 @@ Portuguese `não oferece` disclaimer from a positive promise. No Railway command
 **Gate**: build
 **Commit**: `docs(rag): add local knowledge base runbook`
 
+### Phase 5: Validation round 1 fixes
+
+### T29: Fail readiness closed on post-start worker/storage degradation
+
+**What**: Make the coordinator own worker-fatal degradation and safe recovery, and cover storage
+exhaustion after admission without losing the prior searchable version or leaving staging behind.
+**Where**: `src/application/rag-ingestion-coordinator.ts` with worker/composition companions
+**Depends on**: T27
+**Reuses**: Existing RAG-only initialization retry, fixed storage errors, search admission switch, and worker recovery protocol.
+**Requirement**: OPS-04, EDGE-09, ING-07, ING-08, VER-05, VER-08
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, Vitest
+
+**Done when**:
+
+- [ ] A real post-start worker fatal atomically makes coordinator readiness false, disables search admission, marks worker health false, and prevents every RAG content operation before the callback returns.
+- [ ] `/ready` returns the exact 503 body while `/health` and existing transcript/job handlers retain their contracts; all public/logged failures stay fixed and sanitized.
+- [ ] Bounded retry creates at most one fresh worker loop, reconciles persisted processing state before readiness, and never restarts after application shutdown.
+- [ ] ENOSPC/storage failure after admission at snapshot and publication boundaries produces the exact failed state, preserves the prior version, removes bounded staging when safe, and keeps readiness false until a successful probe/recovery.
+- [ ] Focused unit/composed integration tests and the Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Tests**: unit + integration
+**Gate**: build
+**Commit**: `fix(rag): fail readiness on worker degradation`
+
+### T30: Wire RAG telemetry through production operations
+
+**What**: Inject narrow observability ports into the real coordinator, worker, search, and lifecycle
+paths so every approved metric family reflects production operations rather than direct registry calls.
+**Where**: `src/infrastructure/observability/runtime-metrics.ts` with application/composition wiring companions
+**Depends on**: T29
+**Reuses**: `RuntimeMetrics` fixed-label methods and existing narrow dependency interfaces.
+**Requirement**: OPS-05, OPS-06
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, Vitest
+
+**Done when**:
+
+- [ ] Real miss/join/hit/reject, queued/processing/terminal, duration/failure, active document/chunk, and repository/index/model/worker health paths update exact fixed-label metrics.
+- [ ] Real search success/failure/abort/capacity paths update count, duration, result-count, and active gauges exactly once, including every `finally`/abort path.
+- [ ] Composed tests drive operations through the application and scrape `/metrics`; they do not call `RuntimeMetrics` mutation methods directly and assert exact deltas.
+- [ ] Failure tests prove no query/text/vector/URL/ID/path/credential/provider data becomes a label or metric value.
+- [ ] Quick, Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Tests**: unit + integration
+**Gate**: build
+**Commit**: `fix(metrics): connect rag operation telemetry`
+
+### T31: Trigger serialized safe RAG maintenance
+
+**What**: Track successful mutations and changed rows, run safe optimize at the approved thresholds,
+and instrument reconcile/sweep/optimize/delete outcomes on their real paths.
+**Where**: `src/application/rag-ingestion-worker.ts` with coordinator/index companions
+**Depends on**: T30
+**Reuses**: Writer-preferred publication lock, index `optimize()`, and fixed maintenance metric allowlists.
+**Requirement**: OPS-05, LIFE-03, EDGE-08
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, real local LanceDB, Vitest
+
+**Done when**:
+
+- [ ] The twentieth successful mutation or cumulative 100,000 changed rows schedules exactly one optimize under the publication write lock; sub-threshold work does not.
+- [ ] Counters reset only after successful optimize, failed/aborted maintenance remains retryable, and shutdown leaves no orphan maintenance promise or lock waiter.
+- [ ] Optimization uses the existing non-destructive cleanup policy, preserves active results and immediate FTS visibility, and cannot interleave with publication/delete/search.
+- [ ] Real reconcile, sweep, optimize, and delete operations emit exact success/failure/skipped maintenance outcomes without dynamic labels.
+- [ ] Focused mutation/real-index tests and the Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Tests**: unit + integration
+**Gate**: offline rag
+**Commit**: `fix(rag): schedule safe index maintenance`
+
+### T32: Prove source and RAG lifecycle independence end to end
+
+**What**: Add real-store integration evidence that RAG replace/delete never mutate transcript job or
+artifact bytes and that active indexed content remains searchable after independent source expiry.
+**Where**: `test/integration/rag-lifecycle-independence.test.ts`
+**Depends on**: T31
+**Reuses**: Real durable artifact repository/store, file RAG repository, LanceDB index, and search service fixtures.
+**Requirement**: LIFE-04
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, Vitest, real local LanceDB/model
+
+**Done when**:
+
+- [ ] After ingest then replace/delete, byte hashes of the source job record, transcript JSON, and PDF are unchanged and their public resources remain exact.
+- [ ] After source artifact expiry/sweep, the independently active RAG document still returns exact text and all stored provenance captured before expiry.
+- [ ] Tests prove no RAG lifecycle call reaches transcript generation, PDF rendering, Muse, captions, media, or network providers.
+- [ ] Any exposed boundary defect is fixed surgically without coupling RAG retention to source retention.
+- [ ] Full, Offline RAG, and Build gates pass without test-count regression.
+
+**Tests**: integration
+**Gate**: offline rag
+**Commit**: `test(rag): prove source lifecycle independence`
+
+### T33: Project LanceDB score metadata explicitly
+
+**What**: Select vector distance and FTS score metadata explicitly so ranking does not rely on
+deprecated score auto-projection and offline runs remain warning-free for this behavior.
+**Where**: `src/infrastructure/rag/lancedb-rag-index.ts`
+**Depends on**: T32
+**Reuses**: Existing public-column allowlist, candidate validation, and real LanceDB ranking tests.
+**Requirement**: SEARCH-02, SEARCH-03, SEARCH-07, OPS-10
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, real local LanceDB, Vitest
+
+**Done when**:
+
+- [ ] Vector queries explicitly project `_distance` and FTS queries explicitly project `_score` while public candidates still exclude internal metadata and vectors.
+- [ ] Finite score and stable-rank tests pass with scoring auto-projection disabled/future behavior adopted where the pinned API supports it.
+- [ ] The Offline RAG gate emits zero `_distance`/`_score` auto-projection warnings and preserves all retrieval thresholds/determinism.
+- [ ] Full and Build gates pass without test-count regression.
+
+**Tests**: unit + integration
+**Gate**: offline rag
+**Commit**: `fix(rag): project lancedb score metadata`
+
+### T34: Make clean-checkout CI model gates hermetic
+
+**What**: Fetch and verify the immutable ignored model in CI before model-dependent source gates,
+cache only the verified asset tree, and expose a manual rerun trigger without weakening tests.
+**Where**: `.github/workflows/ci.yml`
+**Depends on**: T33
+**Reuses**: `npm run rag:model:fetch`, immutable manifest hashes, locked npm install, and existing two-target Docker build.
+**Requirement**: OPS-10, EMB-01, EMB-02
+
+**Tools**:
+
+- MCP: GitHub read/run evidence only after push
+- Skill: `tlc-spec-driven`
+- Local: `apply_patch`, actionlint/YAML contract, clean detached worktree
+
+**Done when**:
+
+- [ ] CI supports push, pull request, and manual dispatch; after `npm ci` it restores/fetches `.models`, then the fetcher verifies the exact manifest before `npm run check`.
+- [ ] Cache identity changes with the checked-in model manifest and an empty/poisoned cache cannot bypass hash/size/exact-set verification.
+- [ ] A clean-checkout simulation with no pre-existing `.models` passes the same source/offline gates without secrets or provider credentials.
+- [ ] GitHub jobs actually start and retain green source, audit, `rag-smoke`, and production-image evidence; a repository/account `startup_failure` remains evidence-zero and must not be reported as PASS.
+- [ ] Static CI contracts, actionlint, Full, Offline RAG, dependency audit, and Build gates pass without test-count regression.
+
+**Tests**: unit + integration
+**Gate**: container + build
+**Commit**: `fix(ci): provision verified rag model`
+
 ---
 
 ## Requirement-to-Task Traceability
@@ -1006,10 +1176,10 @@ Portuguese `não oferece` disclaimer from a positive promise. No Railway command
 | CHUNK-01-06 | T2-T3, T6, T17 |
 | EMB-01-04 | T1, T3-T7, T14, T17, T24 |
 | SEARCH-01-08 | T2-T4, T7, T9, T14-T16, T20, T25 |
-| LIFE-01-06 | T8, T13, T15, T18, T20, T27 |
+| LIFE-01-06 | T8, T13, T15, T18, T20, T27, T29, T31-T32 |
 | CAP-01-02 | T3, T13, T18, T26 |
-| OPS-01-10 | T1-T5, T12, T14, T16, T18-T28 |
-| EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21 |
+| OPS-01-10 | T1-T5, T12, T14, T16, T18-T34 |
+| EDGE-01-10 | T4, T6, T8, T10-T18, T20-T21, T29, T31 |
 
 ## Phase Execution Map
 
@@ -1021,6 +1191,7 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | 2 | Durable RAG core | 2 | Full, Offline RAG, and Build |
 | 3 | HTTP/application integration | 3 | Full and Build |
 | 4 | Production evidence/operations | 3 | Offline RAG, container, read-only Railway plan, and Build |
+| 5 | Validation round 1 fixes | Fix 1 | Full, Offline RAG, hermetic CI/container evidence, and independent re-verification |
 
 ## Task Granularity Check
 
@@ -1035,6 +1206,10 @@ Phases and execution batches remain sequential; phase boundaries are the only al
 | T26 | One Railway IaC change | Contract test + read-only generated plan | ✅ Granular |
 | T28 | One transitive dependency remediation in `package.json` | npm lockfile + dependency contract test | ✅ Granular |
 | T27 | One operator runbook | Documentation contract test | ✅ Granular |
+| T29-T31 | One readiness, telemetry, or maintenance correction each | Co-located unit/integration tests | ✅ Granular |
+| T32 | One lifecycle evidence deliverable | Real-store integration test | ✅ Granular |
+| T33 | One score-projection compatibility correction | Real-index integration test | ✅ Granular |
+| T34 | One hermetic CI workflow correction | Static, clean-checkout, and remote run evidence | ✅ Granular |
 
 No task owns more than one production source/config/document deliverable. Test files, snapshots,
 lockfiles, and generated evidence are atomic companions required to verify that deliverable.
@@ -1053,6 +1228,8 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T25-T26 | immediately prior task T24-T25 | same immediately prior arrow | ✅ Match |
 | T28 | T26 | same immediately prior arrow | ✅ Match |
 | T27 | T28 | same immediately prior arrow | ✅ Match |
+| T29 | T27 | prior phase completion | ✅ Match |
+| T30-T34 | immediately prior task T29-T33 | same immediately prior arrow | ✅ Match |
 
 ## Test Co-location Validation
 
@@ -1065,6 +1242,9 @@ lockfiles, and generated evidence are atomic companions required to verify that 
 | T20-T23 | HTTP/composition/OpenAPI | integration | integration | ✅ OK |
 | T24 | Production container | unit + integration | unit + integration | ✅ OK |
 | T25 | Real retrieval evaluation | integration | integration | ✅ OK |
+| T29-T31, T33 | Lifecycle/application/index correction | unit + integration | matching per task | ✅ OK |
+| T32 | Cross-store lifecycle boundary | integration | integration | ✅ OK |
+| T34 | CI/container workflow | unit + integration | matching static/clean/remote evidence | ✅ OK |
 
 There are no deferred tests and no `Tests: none` tasks. Every task must add its required tests before
 its commit, run the named gate, compare the pre/post test count, and record evidence in this file.
@@ -1076,8 +1256,9 @@ its commit, run the named gate, compare the pre/post test count, and record evid
   and Railway operations through the `use-railway` skill.
 - Skills: `tlc-spec-driven` for every task; `use-railway` for T24 deployment validation and T26-T27.
 - MCPs: none are required or assumed.
-- Agents: exactly three sequential execution-batch sub-agents, followed by one fresh read-only
-  independent Verifier. No nested agents and no parallel writes.
+- Agents: three completed sequential execution-batch sub-agents, validation round 1's fresh read-only
+  Verifier, then one fresh sequential fix implementer and one fresh independent re-Verifier. No
+  parallel writes.
 
 Railway `apply` and deployment are intentionally outside a worker task: after the exact final plan is
 shown and separately approved, the main agent applies it, deploys the verified commit, probes health,
