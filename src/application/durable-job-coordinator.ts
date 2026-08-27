@@ -13,6 +13,7 @@ import type { ParsedYouTubeUrl } from '../domain/youtube-url.js'
 import type {
   ArtifactBundle,
   ArtifactReference,
+  VerifiedArtifactTranscript,
 } from '../infrastructure/storage/file-artifact-store.js'
 import type {
   JobRecoverySnapshot,
@@ -48,7 +49,21 @@ export interface DurableCoordinatorArtifactCoordinator {
 
 export interface DurableCoordinatorArtifactStore {
   readForJob(reference: ArtifactReference): Promise<ArtifactBundle>
+  withVerifiedTranscript<T>(
+    reference: ArtifactReference,
+    consume: (source: VerifiedArtifactTranscript) => Promise<T>,
+  ): Promise<T>
   probe(): Promise<boolean>
+}
+
+export interface VerifiedCompletedTranscript {
+  sourceJobId: string
+  artifactId: string
+  cacheKey: string
+  artifactExpiresAt: string
+  transcriptSha256: string
+  transcriptBytes: Buffer
+  transcript: Transcript
 }
 
 export interface DurableCoordinatorWorker {
@@ -297,6 +312,58 @@ export class DurableJobCoordinator {
   async getPdf(jobId: string): Promise<{ transcript: Transcript; pdf: Buffer }> {
     const bundle = await this.#readCompleted(jobId)
     return { transcript: bundle.transcript, pdf: bundle.pdf }
+  }
+
+  async withVerifiedCompletedTranscript<T>(
+    jobId: string,
+    consume: (source: VerifiedCompletedTranscript) => Promise<T>,
+  ): Promise<T> {
+    const record = await this.#getRecord(jobId)
+    if (record.status === 'queued' || record.status === 'processing') {
+      throw new DurableJobError('JOB_NOT_COMPLETED', 409, 2)
+    }
+    if (record.status === 'failed') {
+      throw new DurableJobError('JOB_FAILED', 409)
+    }
+    if (!record.artifactId || !record.expiresAt) {
+      throw new DurableJobError('JOB_STORAGE_UNAVAILABLE', 503)
+    }
+    if (Date.parse(record.expiresAt) <= this.#now().getTime()) {
+      throw new DurableJobError('JOB_EXPIRED', 410)
+    }
+
+    let consumerFailed = false
+    let consumerFailure: unknown
+    try {
+      return await this.#artifactStore.withVerifiedTranscript(
+        {
+          artifactId: record.artifactId,
+          cacheKey: record.request.cacheKey,
+          producerJobId: record.jobId,
+          expiresAt: record.expiresAt,
+        },
+        async (source) => {
+          try {
+            return await consume({
+              sourceJobId: record.jobId,
+              artifactId: source.reference.artifactId,
+              cacheKey: source.reference.cacheKey,
+              artifactExpiresAt: source.reference.expiresAt,
+              transcriptSha256: source.manifest.transcript.sha256,
+              transcriptBytes: source.transcriptBytes,
+              transcript: source.transcript,
+            })
+          } catch (error) {
+            consumerFailed = true
+            consumerFailure = error
+            throw error
+          }
+        },
+      )
+    } catch (error) {
+      if (consumerFailed && error === consumerFailure) throw error
+      throw new DurableJobError('JOB_STORAGE_UNAVAILABLE', 503)
+    }
   }
 
   async #readCompleted(jobId: string): Promise<ArtifactBundle> {

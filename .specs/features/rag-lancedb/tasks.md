@@ -407,11 +407,17 @@ existing public job errors before invoking the artifact callback.
 
 **Done when**:
 
-- [ ] Queued/processing, failed, absent, expired, and corrupt/unavailable states map exactly and invoke no consumer when ineligible.
-- [ ] `expiresAt <= now` is rejected before artifact access even without a published tombstone.
-- [ ] Completed success invokes exactly once and preserves the lock through the async consumer.
-- [ ] Unit and temporary-files integration cases cover all source states and forbidden-call spies.
-- [ ] Full gate passes without reducing the pre-task test count.
+- [x] Queued/processing, failed, absent, expired, and corrupt/unavailable states map exactly and invoke no consumer when ineligible.
+- [x] `expiresAt <= now` is rejected before artifact access even without a published tombstone.
+- [x] Completed success invokes exactly once and preserves the lock through the async consumer.
+- [x] Unit and temporary-files integration cases cover all source states and forbidden-call spies.
+- [x] Full gate passes without reducing the pre-task test count.
+
+**Evidence**: `npm run test:unit && npm run test:integration` passed 583 tests (574 pre-task).
+Eight focused unit cases assert the exact public mapping for queued, processing, failed, unknown,
+tombstoned, exact-expiry, storage-failure, and completed states with forbidden-call spies. A real
+temporary-files integration case proves the coordinator keeps the artifact lock until the async RAG
+snapshot consumer durably finishes.
 
 **Tests**: unit + integration
 **Gate**: full

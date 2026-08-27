@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  type DurableCoordinatorArtifactStore,
   type DurableCoordinatorRepository,
   DurableJobCoordinator,
   DurableJobError,
@@ -16,6 +17,7 @@ import { normalizeTranscriptRequest } from '../../src/domain/transcript-request.
 import type {
   ArtifactBundle,
   ArtifactReference,
+  VerifiedArtifactTranscript,
 } from '../../src/infrastructure/storage/file-artifact-store.js'
 
 const now = new Date('2026-08-26T12:00:00.000Z')
@@ -180,7 +182,34 @@ function createFixture(records: Array<TranscriptJobRecord | JobTombstone> = []) 
   const repository = new MemoryRepository(records)
   const find = vi.fn().mockResolvedValue(undefined)
   const readForJob = vi.fn().mockResolvedValue(artifactBundle(jobId))
+  const withVerifiedTranscript = vi
+    .fn<
+      (
+        reference: ArtifactReference,
+        consume: (source: VerifiedArtifactTranscript) => Promise<unknown>,
+      ) => Promise<unknown>
+    >()
+    .mockImplementation(async (reference, consume) => {
+      const bundle = artifactBundle(reference.producerJobId)
+      return consume({
+        reference: bundle.reference,
+        manifest: bundle.manifest,
+        transcript: bundle.transcript,
+        transcriptBytes: Buffer.from(JSON.stringify(bundle.transcript)),
+      })
+    })
   const probe = vi.fn().mockResolvedValue(true)
+  async function callWithVerifiedTranscript<T>(
+    reference: ArtifactReference,
+    consume: (source: VerifiedArtifactTranscript) => Promise<T>,
+  ): Promise<T> {
+    return withVerifiedTranscript(reference, consume) as Promise<T>
+  }
+  const artifactStore: DurableCoordinatorArtifactStore = {
+    readForJob,
+    probe,
+    withVerifiedTranscript: callWithVerifiedTranscript,
+  }
   const worker = {
     recover: vi.fn().mockResolvedValue(undefined),
     start: vi.fn(),
@@ -199,7 +228,7 @@ function createFixture(records: Array<TranscriptJobRecord | JobTombstone> = []) 
       prepare: vi.fn().mockReturnValue(request),
       find,
     },
-    artifactStore: { readForJob, probe },
+    artifactStore,
     worker,
     metrics,
     maxQueuedJobs: 100,
@@ -207,7 +236,17 @@ function createFixture(records: Array<TranscriptJobRecord | JobTombstone> = []) 
     now: () => now,
     createId: () => ids.shift() ?? secondJobId,
   })
-  return { coordinator, find, metrics, probe, readForJob, repository, worker }
+  return {
+    coordinator,
+    find,
+    metrics,
+    probe,
+    readForJob,
+    repository,
+    artifactStore,
+    withVerifiedTranscript,
+    worker,
+  }
 }
 
 describe('DurableJobCoordinator', () => {
@@ -243,7 +282,7 @@ describe('DurableJobCoordinator', () => {
     const saturated = new DurableJobCoordinator({
       repository: fixture.repository,
       artifactCoordinator: { prepare: vi.fn(), find: fixture.find },
-      artifactStore: { readForJob: fixture.readForJob, probe: fixture.probe },
+      artifactStore: fixture.artifactStore,
       worker: fixture.worker,
       metrics: fixture.metrics,
       maxQueuedJobs: 1,
@@ -281,7 +320,7 @@ describe('DurableJobCoordinator', () => {
     const saturated = new DurableJobCoordinator({
       repository: fixture.repository,
       artifactCoordinator: { prepare: vi.fn(), find: fixture.find },
-      artifactStore: { readForJob: fixture.readForJob, probe: fixture.probe },
+      artifactStore: fixture.artifactStore,
       worker: fixture.worker,
       metrics: fixture.metrics,
       maxQueuedJobs: 1,
@@ -326,7 +365,7 @@ describe('DurableJobCoordinator', () => {
     const saturated = new DurableJobCoordinator({
       repository: fixture.repository,
       artifactCoordinator: { prepare: vi.fn(), find: fixture.find },
-      artifactStore: { readForJob: fixture.readForJob, probe: fixture.probe },
+      artifactStore: fixture.artifactStore,
       worker: fixture.worker,
       metrics: fixture.metrics,
       maxQueuedJobs: 1,
@@ -457,6 +496,100 @@ describe('DurableJobCoordinator', () => {
         message: 'Transcript job storage is unavailable',
       }),
     )
+  })
+
+  it('exposes one verified completed transcript callback with source identity and raw bytes', async () => {
+    const fixture = createFixture([completed()])
+    const consume = vi.fn(async (source) => {
+      expect(source).toEqual({
+        sourceJobId: jobId,
+        artifactId,
+        cacheKey: request.cacheKey,
+        artifactExpiresAt: expiresAt,
+        transcriptSha256: 'a'.repeat(64),
+        transcriptBytes: Buffer.from(JSON.stringify(transcript)),
+        transcript,
+      })
+      return 'accepted'
+    })
+
+    await expect(fixture.coordinator.withVerifiedCompletedTranscript(jobId, consume)).resolves.toBe(
+      'accepted',
+    )
+    expect(consume).toHaveBeenCalledOnce()
+    expect(fixture.withVerifiedTranscript).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ['queued', queued(), 'JOB_NOT_COMPLETED', 409, 2],
+    ['processing', processing(), 'JOB_NOT_COMPLETED', 409, 2],
+    ['failed', failed(), 'JOB_FAILED', 409, undefined],
+    [
+      'expired-at-now',
+      { ...completed(), expiresAt: now.toISOString() },
+      'JOB_EXPIRED',
+      410,
+      undefined,
+    ],
+  ] as const)(
+    'rejects a %s RAG source before artifact access',
+    async (_name, record, code, statusCode, retryAfterSeconds) => {
+      const fixture = createFixture([record])
+      const consume = vi.fn()
+
+      await expect(
+        fixture.coordinator.withVerifiedCompletedTranscript(jobId, consume),
+      ).rejects.toEqual(
+        expect.objectContaining({
+          code,
+          statusCode,
+          ...(retryAfterSeconds ? { publicMetadata: { retryAfterSeconds } } : {}),
+        }),
+      )
+      expect(fixture.withVerifiedTranscript).not.toHaveBeenCalled()
+      expect(consume).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ['unknown', [], 'JOB_NOT_FOUND', 404],
+    [
+      'tombstoned',
+      [createJobTombstone(jobId, now.toISOString(), '2026-08-27T12:00:00.000Z')],
+      'JOB_EXPIRED',
+      410,
+    ],
+  ] as const)(
+    'rejects an %s RAG source without invoking storage or consumer',
+    async (_name, records, code, statusCode) => {
+      const fixture = createFixture([...records])
+      const consume = vi.fn()
+
+      await expect(
+        fixture.coordinator.withVerifiedCompletedTranscript(jobId, consume),
+      ).rejects.toEqual(expect.objectContaining({ code, statusCode }))
+      expect(fixture.withVerifiedTranscript).not.toHaveBeenCalled()
+      expect(consume).not.toHaveBeenCalled()
+    },
+  )
+
+  it('maps verified source storage failures and never invokes the consumer', async () => {
+    const fixture = createFixture([completed()])
+    fixture.withVerifiedTranscript.mockRejectedValue(
+      new Error('/data/private/corrupt transcript provider-secret'),
+    )
+    const consume = vi.fn()
+
+    await expect(
+      fixture.coordinator.withVerifiedCompletedTranscript(jobId, consume),
+    ).rejects.toEqual(
+      expect.objectContaining({
+        code: 'JOB_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+        message: 'Transcript job storage is unavailable',
+      }),
+    )
+    expect(consume).not.toHaveBeenCalled()
   })
 
   it('initializes, reconciles, and starts before readiness, then stops idempotently', async () => {
