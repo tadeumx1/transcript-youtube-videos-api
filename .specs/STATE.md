@@ -154,24 +154,17 @@
 
 ## Handoff
 
-- **Feature**: channel-transcript-library
-- **Phase**: Complete — independent Round 3 PASS, 56/56 checks proven at `daf868d`.
-- **Completed**: complete pinned lean skill; approved plan and proof-backed checks; separate
-  Node API and React/Vite reader; durable SQLite collection, retries and recovery; initial ten
-  videos and daily discovery; configurable OpenCode Go correction, summary and key points;
-  setup documentation and separate library CI workflow. Historical feature specs are unchanged.
-- **Evidence**: independent root 740, library backend 69 and Chromium 17 tests passed (826 total).
-  Lint, type checks and builds passed. Production server boot/static/auth/shutdown exercised.
-  Completion validator exits 0 with no warnings; see the independent verification.md report.
-  Library production audit has zero findings; six root dependency findings predate this feature.
-- **Authorization**: owner requested continuous execution and approved routine decisions in advance.
-- **In-progress**: none for the local implementation. No live-provider success claimed.
-- **Next step**: configure `services/channel-library/.env` using its README, run both API services,
-  and perform a real channel import. The library process must stay running for daily collection.
-- **Live prerequisites**: YouTube Data API key and transcript-service access credential were not
-  present locally. OpenCode key was not printed or used for paid validation. Configure a separate
-  library owner key. No deployment or push was performed.
-- **Uncommitted files**: none after the final verification-record commit.
-- **Feature base**: `8310d8cf7884e77cf79ead213d4706300d6c03d6`
-- **Verified implementation**: `daf868d1d118e221f5954c11dc0d9fce1bfdd9fe`
+- **Feature**: local-services-security
+- **Phase**: Implementation and author proofs complete; independent verification next.
+- **Completed**: docs/running-all-services.md and root README link; Fastify 5.12.5, adm-zip 0.6.1,
+  fast-uri 3.1.8/4.2.1 and undici 6.29.0. Updated exact ZIP version assertions. Inference/runtime
+  packages, model fingerprint and historical feature specs unchanged.
+- **Evidence**: both full audits zero; both checks pass all 826 tests, lint, typecheck and builds;
+  real concurrent development and compiled startup smoke passed, including RAG readiness.
+- **Environment note**: root clean install succeeded; local make is absent, so the library's documented
+  prebuilt/ignore-scripts alternative was used and its real SQLite binding and full suite passed.
+- **Authorization**: user requested docs and vulnerability fixes; standing routine approvals apply.
+- **Next step**: commit and dispatch a fresh independent verifier over all four checks.
+- **Uncommitted files**: this feature's docs, manifest/lock updates, exact dependency assertions and specs.
+- **Feature base**: `78bbe80`
 - **Branch**: `main`

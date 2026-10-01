@@ -106,6 +106,12 @@ RAG, and metrics endpoints fail closed with HTTP 503; they never become public a
 Never send `OPENCODE_API_KEY` in a request body, commit, or API response. Send `API_ACCESS_KEY` only
 in the `Authorization` header and treat it as a production credential.
 
+## Running all services
+
+See [Run all services locally](docs/running-all-services.md) for the transcript API, channel
+library API and React reader together: environment setup, ports, model assets, development and
+compiled startup, verification and shutdown.
+
 ## Running the API
 
 For development:
