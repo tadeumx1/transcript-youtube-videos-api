@@ -565,3 +565,16 @@ If branch protection is enabled on `main`, configure exactly these required chec
 The first runs `npm ci` and `npm run check` on Node.js 22. The second starts only after the first,
 builds and loads the production image without publishing it, then runs the smoke test with
 `docker run --network none`.
+
+## Channel reading library
+
+A separate React/Vite and Node application now lives in
+[`services/channel-library`](services/channel-library/README.md). It follows public channels,
+imports the ten latest videos, checks for new publications daily, and retains original transcripts
+plus configurable OpenCode Go corrections, summaries, and key points. It consumes this API over
+HTTP and owns an independent SQLite library. See its README for setup and credentials.
+
+Run `npm run check:all` after installing both packages and the library's Playwright browser to
+verify the original API and the library together. New feature work follows the pinned
+[`tlc-spec-lean`](.agents/skills/tlc-spec-lean/SKILL.md) skill; historical specifications remain
+in `.specs/features/`.

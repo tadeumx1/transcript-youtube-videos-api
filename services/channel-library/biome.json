@@ -1,0 +1,21 @@
+{
+  "extends": ["../../biome.json"],
+  "files": {
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.json",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/package-lock.json",
+      "!**/test-results",
+      "!**/playwright-report"
+    ]
+  },
+  "linter": {
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "root": false
+}

@@ -18,7 +18,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "library:check": "npm --prefix services/channel-library run check",
+    "check:all": "npm run check && npm run library:check",
+    "library:dev:api": "npm --prefix services/channel-library run dev:api",
+    "library:dev:web": "npm --prefix services/channel-library run dev:web"
   },
   "dependencies": {
     "@fastify/swagger": "9.8.1",

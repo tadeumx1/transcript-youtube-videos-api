@@ -1,0 +1,25 @@
+name: Channel library
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  library:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/channel-library/package-lock.json
+      - run: npm --prefix services/channel-library ci
+      - run: npm --prefix services/channel-library exec playwright install --with-deps chromium
+      - run: npm --prefix services/channel-library run check
+      - run: npm --prefix services/channel-library audit --omit=dev
+      - run: sha256sum --check .agents/skills/tlc-spec-lean.sha256
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 .agents/skills/tlc-spec-lean/scripts/selftest.py

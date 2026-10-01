@@ -6,3 +6,6 @@ coverage/
 .env
 *.log
 .DS_Store
+playwright-report/
+test-results/
+__pycache__/
