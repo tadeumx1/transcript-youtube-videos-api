@@ -155,19 +155,23 @@
 ## Handoff
 
 - **Feature**: channel-transcript-library
-- **Phase**: Round 2 proof findings fixed; scoped independent Round 3 next.
-- **Completed**: pinned complete lean skill; plan approved by instruction to finish all work;
-  proof-backed checks; separate API, durable SQLite scheduler/worker, OpenCode adapters, React/Vite
-  reader; source/browser tests; setup documentation; separate library CI workflow.
-- **Evidence**: existing API check passed 740 tests; library 69 backend and 17 Chromium tests passed;
-  production server boot/static serving/auth/shutdown exercised; library production audit clean;
-  local skill self-test killed all 46 injected faults. See checks.md and forthcoming verification.md.
-- **Authorization**: owner explicitly authorized continuing until completion and approved routine
-  decisions/steps in advance; historical tlc-spec-driven specs must remain intact.
-- **In-progress**: Round 1 implementation fixes verified; two Round 2 proof gaps addressed; independent Round 3 pending. No live-provider success claimed.
-- **Next step**: commit fixes and re-run independent verification over the fix diff plus all previous FAIL verdicts; all proof targets rerun before the completion gate.
+- **Phase**: Complete — independent Round 3 PASS, 56/56 checks proven at `daf868d`.
+- **Completed**: complete pinned lean skill; approved plan and proof-backed checks; separate
+  Node API and React/Vite reader; durable SQLite collection, retries and recovery; initial ten
+  videos and daily discovery; configurable OpenCode Go correction, summary and key points;
+  setup documentation and separate library CI workflow. Historical feature specs are unchanged.
+- **Evidence**: independent root 740, library backend 69 and Chromium 17 tests passed (826 total).
+  Lint, type checks and builds passed. Production server boot/static/auth/shutdown exercised.
+  Completion validator exits 0 with no warnings; see the independent verification.md report.
+  Library production audit has zero findings; six root dependency findings predate this feature.
+- **Authorization**: owner requested continuous execution and approved routine decisions in advance.
+- **In-progress**: none for the local implementation. No live-provider success claimed.
+- **Next step**: configure `services/channel-library/.env` using its README, run both API services,
+  and perform a real channel import. The library process must stay running for daily collection.
 - **Live prerequisites**: YouTube Data API key and transcript-service access credential were not
-  present locally. OpenCode key is present but was not printed or used for paid validation.
-- **Uncommitted files**: Round 2 report, scoped proof fixes, and memory/lesson updates.
+  present locally. OpenCode key was not printed or used for paid validation. Configure a separate
+  library owner key. No deployment or push was performed.
+- **Uncommitted files**: none after the final verification-record commit.
 - **Feature base**: `8310d8cf7884e77cf79ead213d4706300d6c03d6`
+- **Verified implementation**: `daf868d1d118e221f5954c11dc0d9fce1bfdd9fe`
 - **Branch**: `main`
