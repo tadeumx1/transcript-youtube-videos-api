@@ -1,0 +1,15 @@
+a2d30360a56dacb5bc58526e4a7e43751033c73c7fb9bfdf22b8bd0a01af23d0  .agents/skills/tlc-spec-lean/SKILL.md
+60eb384b30f9540ecf781f5ab55d17518a4b3cb1acf223f7ccf13d1f20edf476  .agents/skills/tlc-spec-lean/references/build.md
+3fc7a49ed9d82ecea305d5b068fff5f0d092f7579d25253f271d1371a86999e2  .agents/skills/tlc-spec-lean/references/checks.md
+02a7400f2267b5bdb62c737b7125e21d6e79b880bff523d783a4dd0059c5a602  .agents/skills/tlc-spec-lean/references/memory.md
+5750a5618f049e1c70fc5cffe5d60b604f61f70cf68a67e192842a3ba887c6f1  .agents/skills/tlc-spec-lean/references/plan.md
+0bd3c39dbbca03e68ac679dfd91be8e9f5b26e49a26b782d5d75ecb1408ae777  .agents/skills/tlc-spec-lean/references/verify.md
+b6c3cb118df9ba5127c01614bf25741926ef5dfbb136b9f52f9846d2c956cf4b  .agents/skills/tlc-spec-lean/scripts/check_commit.py
+9923f912118a65fa7f740962c1f2cd642937cc39561953681df935da7ec17d02  .agents/skills/tlc-spec-lean/scripts/fixtures/checks.md
+41029685e33a3c8b5dfc1621423c48a622cec54f9966c0130880b4823fc1c8dd  .agents/skills/tlc-spec-lean/scripts/fixtures/plan.md
+08def61fc61dba6a81fd32a731aba905c1bf536f09fee3df9d34ef2a64f29167  .agents/skills/tlc-spec-lean/scripts/fixtures/verification.md
+2813173d91d971e2dc46d75a3665e9d94bc90d8f1edd86aacd3ed2526421d916  .agents/skills/tlc-spec-lean/scripts/lessons.py
+c33c0ab97895ad503ef9d70fd6d1609eeeaac0f229cc63be65fcc95b12d8a9e0  .agents/skills/tlc-spec-lean/scripts/selftest.py
+93e0c98e3f6132770d9cdb50a16c9d335b75ebaf4c79f0758ed314e5d03e3fc6  .agents/skills/tlc-spec-lean/scripts/validate_checks.py
+4780d00c855097f29122b6b95dc34bcfe3c40dc6562276503603c54ba9678fcd  .agents/skills/tlc-spec-lean/scripts/validate_plan.py
+8e1a13f35699b81d181cdf92bf7dd4cbab66c02ac2771515cae36071e6acf9ce  .agents/skills/tlc-spec-lean/scripts/validate_verification.py

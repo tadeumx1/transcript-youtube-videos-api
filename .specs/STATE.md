@@ -119,19 +119,56 @@
 - **Date**: 2026-08-27
 - **Status**: active
 
+### AD-014
+
+- **Decision**: New feature work uses the repository-pinned `tlc-spec-lean` skill in
+  `.agents/skills/tlc-spec-lean`; historical tlc-spec-driven artifacts remain unchanged.
+- **Reason**: The owner explicitly requested the lean workflow and a complete copy of its files
+  in this repository for the channel transcript library and new tasks.
+- **Trade-off**: Upstream skill updates must be reviewed and explicitly repinned; the lean
+  workflow requires plan review before checks/build and independent verification afterward.
+- **Scope**: New feature planning, implementation, and verification.
+- **Date**: 2026-10-01
+- **Status**: active
+
+### AD-015
+
+- **Decision**: The channel library is an independent Node/Fastify and React/Vite application under
+  `services/channel-library`, consuming the existing transcript API only through authenticated HTTP.
+- **Reason**: Reading and channel scheduling need an independent lifecycle from media extraction.
+- **Trade-off**: Operators configure two API processes and separate owner/upstream credentials.
+- **Scope**: Channel library integration and future reader features.
+- **Date**: 2026-10-01
+- **Status**: active
+
+### AD-016
+
+- **Decision**: The single-owner library retains immutable originals and editorial results in its
+  own versioned SQLite database, with one worker process, durable cursors, and unique video/channel IDs.
+- **Reason**: Source-job TTLs must not remove reading history; retries and restarts must preserve progress.
+- **Trade-off**: Library storage needs its own backup/capacity management; multiple writer replicas
+  are unsupported and external calls can repeat after a crash before local persistence.
+- **Scope**: Library persistence, collection scheduling, and processing recovery.
+- **Date**: 2026-10-01
+- **Status**: active
+
 ## Handoff
 
-- **Feature**: production improvement backlog (IMP-01..IMP-10)
-- **Phase / Task**: Execute and Validate complete; RAG T1-T41 independently verified
-- **Completed**: all ten production improvements; public GitHub runtime commit `3f85c6a`; exact CI
-  run 33101923417 with Source and Container green; local Build 740/740; Offline RAG 31/31; audit
-  zero; independent 52/52 AC, 10/10 edge, and 15/15 sensor PASS; Railway deployment
-  `c9b69eb6-366d-4fcf-a9f1-bcf6348f5093` `SUCCESS/RUNNING`; health/readiness/auth/metrics,
-  retained-source reingestion/search UAT, READY 1024 MB Volume, preserved RAG `v1`, active `v2`,
-  and drift-free IaC
-- **In-progress** (file:line): none
-- **Next step**: explicitly reingest any other retained source jobs needed by the knowledge base into
-  `v2`; retranscribe expired sources first; keep `v1` until a verified backup/retention decision
-- **Blockers**: none
-- **Uncommitted files**: none after the final documentation commit
+- **Feature**: channel-transcript-library
+- **Phase**: Build complete; independent Verify next.
+- **Completed**: pinned complete lean skill; plan approved by instruction to finish all work;
+  proof-backed checks; separate API, durable SQLite scheduler/worker, OpenCode adapters, React/Vite
+  reader; source/browser tests; setup documentation; separate library CI workflow.
+- **Evidence**: existing API check passed 740 tests; library backend and 12 Chromium tests passed;
+  production server boot/static serving/auth/shutdown exercised; library production audit clean;
+  local skill self-test killed all 46 injected faults. See checks.md and forthcoming verification.md.
+- **Authorization**: owner explicitly authorized continuing until completion and approved routine
+  decisions/steps in advance; historical tlc-spec-driven specs must remain intact.
+- **In-progress**: independent review pending; no live-provider success claimed.
+- **Next step**: commit coherent feature work, dispatch a fresh Verifier for all 56 checks,
+  fix any findings, and pass validate_verification.py before reporting completion.
+- **Live prerequisites**: YouTube Data API key and transcript-service access credential were not
+  present locally. OpenCode key is present but was not printed or used for paid validation.
+- **Uncommitted files**: new skill/docs/specs and channel-library implementation plus root integration.
+- **Feature base**: `8310d8cf7884e77cf79ead213d4706300d6c03d6`
 - **Branch**: `main`
