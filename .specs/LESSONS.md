@@ -4,7 +4,7 @@
 > Canonical state lives in `.specs/lessons.json`. Edit lessons only via the script.
 > promote_threshold=2 distinct features · window_days=45 · quarantine_threshold=2
 
-## Confirmed (load these at Specify/Design)
+## Confirmed (load these at Plan/Checks)
 
 Corroborated across multiple features. Safe to apply as guidance.
 
@@ -115,6 +115,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: rag-lancedb
 - evidence: EDGE-09 (storage)
 - last seen: 2026-08-27T05:42:26Z
+
+### L-018 - Normalize malformed top-level provider envelopes at the same boundary as malformed content and assert both error codes.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `provider-validation` · harmful: 0
+- features: channel-transcript-library
+- evidence: verification.md Round 1 C30; 0eca123:services/channel-library/api/remote.ts:267 (provider-validation)
+- last seen: 2026-10-01T04:11:34Z
+
+### L-019 - Exercise production fallback logging through a failing runtime operation and assert every required event field.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `observability` · harmful: 0
+- features: channel-transcript-library
+- evidence: verification.md Round 1 C52; 0eca123:services/channel-library/api/server.ts:29 (observability)
+- last seen: 2026-10-01T04:11:34Z
+
+### L-020 - Use contrasting records, restart boundaries, and populated-view refresh failures to prove claims beyond the initial successful example.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `feature-proofs` · harmful: 0
+- features: channel-transcript-library
+- evidence: verification.md Round 1 C15 C22 C35 C42 C56 (feature-proofs)
+- last seen: 2026-10-01T04:11:34Z
 
 ## Quarantined (failed when applied - ignore)
 

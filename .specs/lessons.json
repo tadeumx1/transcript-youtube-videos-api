@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 18,
+  "next_id": 21,
   "lessons": [
     {
       "id": "L-001",
@@ -310,6 +310,60 @@
       ],
       "created": "2026-08-27T05:42:26Z",
       "last_seen": "2026-08-27T05:42:26Z"
+    },
+    {
+      "id": "L-018",
+      "key": "ac_gap::normalize malformed top level provider envelopes at the same boundary as malformed content and assert both error codes",
+      "text": "Normalize malformed top-level provider envelopes at the same boundary as malformed content and assert both error codes.",
+      "signal": "ac_gap",
+      "scope": "provider-validation",
+      "status": "candidate",
+      "features": [
+        "channel-transcript-library"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md Round 1 C30; 0eca123:services/channel-library/api/remote.ts:267 (provider-validation)"
+      ],
+      "created": "2026-10-01T04:11:34Z",
+      "last_seen": "2026-10-01T04:11:34Z"
+    },
+    {
+      "id": "L-019",
+      "key": "ac_gap::exercise production fallback logging through a failing runtime operation and assert every required event field",
+      "text": "Exercise production fallback logging through a failing runtime operation and assert every required event field.",
+      "signal": "ac_gap",
+      "scope": "observability",
+      "status": "candidate",
+      "features": [
+        "channel-transcript-library"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md Round 1 C52; 0eca123:services/channel-library/api/server.ts:29 (observability)"
+      ],
+      "created": "2026-10-01T04:11:34Z",
+      "last_seen": "2026-10-01T04:11:34Z"
+    },
+    {
+      "id": "L-020",
+      "key": "ac_gap::use contrasting records restart boundaries and populated view refresh failures to prove claims beyond the initial successful example",
+      "text": "Use contrasting records, restart boundaries, and populated-view refresh failures to prove claims beyond the initial successful example.",
+      "signal": "ac_gap",
+      "scope": "feature-proofs",
+      "status": "candidate",
+      "features": [
+        "channel-transcript-library"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md Round 1 C15 C22 C35 C42 C56 (feature-proofs)"
+      ],
+      "created": "2026-10-01T04:11:34Z",
+      "last_seen": "2026-10-01T04:11:34Z"
     }
   ]
 }

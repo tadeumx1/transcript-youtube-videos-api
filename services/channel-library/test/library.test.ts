@@ -1,4 +1,4 @@
-import { execFileSync, spawn } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -867,4 +867,393 @@ test('C37 video API orders newest first with deterministic ID ties', async () =>
     'zzzzzzzzzzz',
     videoId,
   ])
+})
+
+test('C3 absent canonical channel has the exact public error code', async () => {
+  const f = fixture()
+  f.remote.resolveChannel.mockRejectedValue(new RemoteError('CHANNEL_NOT_FOUND', 404))
+  const response = await f.request('POST', '/api/v1/channels', {
+    url: 'https://youtube.com/@missing',
+  })
+  expect(response.statusCode).toBe(404)
+  expect(response.json().error.code).toBe('CHANNEL_NOT_FOUND')
+})
+test('C4 concurrent duplicate exposes CHANNEL_EXISTS', async () => {
+  const f = fixture()
+  const responses = await Promise.all([
+    f.request('POST', '/api/v1/channels', { url: 'https://youtube.com/@one' }),
+    f.request('POST', '/api/v1/channels', { url: 'https://youtube.com/@two' }),
+  ])
+  expect(responses.find((r) => r.statusCode === 409)?.json().error.code).toBe('CHANNEL_EXISTS')
+})
+test('C5 exact recent identities and fewer-than-ten imports', async () => {
+  for (const count of [3, 15]) {
+    const f = fixture()
+    f.remote.listVideos.mockResolvedValue({
+      items: Array.from({ length: count }, (_, i) => ({
+        id: `vid${String(i).padStart(8, '0')}`,
+        title: `Video ${i}`,
+        publishedAt: new Date(f.getTime() - i * 1000).toISOString(),
+        thumbnail: null,
+      })),
+      nextPageToken: null,
+    })
+    await f.seed()
+    expect(f.store.videos({}).items.map((v) => v.id)).toEqual(
+      count === 3
+        ? ['vid00000000', 'vid00000001', 'vid00000002']
+        : [
+            'vid00000000',
+            'vid00000001',
+            'vid00000002',
+            'vid00000003',
+            'vid00000004',
+            'vid00000005',
+            'vid00000006',
+            'vid00000007',
+            'vid00000008',
+            'vid00000009',
+          ],
+    )
+  }
+})
+test('C15 interrupted discovery resumes the saved page after reopening SQLite', async () => {
+  const f = fixture()
+  await f.seed()
+  const previous = f.store.channel(channelId)?.checkpoint
+  f.advance(86400000)
+  f.worker.schedule()
+  const run = f.store.activeRuns()[0]
+  f.remote.listVideos
+    .mockResolvedValueOnce({
+      items: [
+        {
+          id: 'secondvideo',
+          title: 'Second',
+          publishedAt: new Date(f.getTime()).toISOString(),
+          thumbnail: null,
+        },
+      ],
+      nextPageToken: 'saved-page',
+    })
+    .mockRejectedValueOnce(new RemoteError('TIMEOUT', 502, true))
+  await f.worker.collect(run.id)
+  expect(f.store.run(run.id)?.pageToken).toBe('saved-page')
+  expect(f.store.channel(channelId)?.checkpoint).toBe(previous)
+  f.store.updateRun(run.id, { status: 'processing' })
+  await f.close()
+  const next = createLibrary(f.config, { remote: f.remote, now: () => f.getTime() })
+  cleanup.push(() => next.close())
+  f.remote.listVideos.mockResolvedValueOnce({
+    items: [
+      {
+        id: 'thirdvideo0',
+        title: 'Third',
+        publishedAt: new Date(f.getTime()).toISOString(),
+        thumbnail: null,
+      },
+    ],
+    nextPageToken: null,
+  })
+  await next.worker.collect(run.id)
+  expect(f.remote.listVideos.mock.calls.at(-1)?.[1]).toBe('saved-page')
+  expect(next.store.video('secondvideo')).not.toBeNull()
+  expect(next.store.video('thirdvideo0')).not.toBeNull()
+  expect(next.store.run(run.id)?.status).toBe('completed')
+  expect(next.store.channel(channelId)?.checkpoint).toBe(run.cutoff)
+})
+test('C18 transcript HTTP verbs and submission body match the upstream contract', async () => {
+  const f = fixture()
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ jobId: 'job' }))
+    .mockResolvedValueOnce(Response.json({ status: 'completed' }))
+    .mockResolvedValueOnce(Response.json(original))
+  const remote = new HttpRemote(f.config, fetcher)
+  await remote.submit(videoId)
+  await remote.getJob('job')
+  await remote.getTranscript('job')
+  expect(fetcher.mock.calls.map((c) => c[1].method)).toEqual(['POST', 'GET', 'GET'])
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
+    url: 'https://www.youtube.com/watch?v=abcdefghijk',
+  })
+})
+test('C22 discovery retry budget and due time survive reopening', async () => {
+  const f = fixture()
+  const added = await f.register()
+  f.remote.listVideos.mockRejectedValue(new RemoteError('TIMEOUT', 502, true))
+  await f.worker.collect(added.collectionId)
+  expect(f.store.run(added.collectionId)?.nextAttemptAt).toBe(f.getTime() + 60000)
+  await f.close()
+  const next = createLibrary(f.config, { remote: f.remote, now: () => f.getTime() })
+  cleanup.push(() => next.close())
+  await next.worker.runOnce()
+  expect(f.remote.listVideos).toHaveBeenCalledTimes(1)
+  f.advance(60000)
+  await next.worker.runOnce()
+  expect(next.store.run(added.collectionId)?.nextAttemptAt).toBe(f.getTime() + 300000)
+  f.advance(300000)
+  await next.worker.runOnce()
+  expect(next.store.run(added.collectionId)?.status).toBe('failed')
+  expect(f.remote.listVideos).toHaveBeenCalledTimes(3)
+})
+test('C22 enrichment retry budget and due time survive reopening', async () => {
+  const f = fixture()
+  await f.seed()
+  f.remote.enrich.mockRejectedValue(new RemoteError('UPSTREAM_UNAVAILABLE', 502, true))
+  await f.worker.processVideo(videoId)
+  expect(f.store.video(videoId)?.nextAttemptAt).toBe(f.getTime() + 60000)
+  await f.close()
+  const next = createLibrary(f.config, { remote: f.remote, now: () => f.getTime() })
+  cleanup.push(() => next.close())
+  await next.worker.runOnce()
+  expect(f.remote.enrich).toHaveBeenCalledTimes(1)
+  f.advance(60000)
+  await next.worker.runOnce()
+  expect(next.store.video(videoId)?.nextAttemptAt).toBe(f.getTime() + 300000)
+  f.advance(300000)
+  await next.worker.runOnce()
+  expect(next.store.video(videoId)?.status).toBe('failed')
+  expect(f.remote.enrich).toHaveBeenCalledTimes(3)
+  expect(f.remote.submit).toHaveBeenCalledTimes(1)
+})
+test('C28 reduction consumes every chunk summary and persists the reduced result', async () => {
+  const f = fixture()
+  await f.seed()
+  f.remote.getTranscript.mockResolvedValue({
+    ...original,
+    text: `${'a'.repeat(12000)}${'b'.repeat(12000)}c`,
+  })
+  f.remote.enrich.mockImplementation(async (text, mode) =>
+    mode === 'chunk'
+      ? { correctedText: text, summary: `Summary ${text[0]}`, keyPoints: [`Point ${text[0]}`] }
+      : { correctedText: '', summary: 'Reduced summary', keyPoints: ['Reduced point'] },
+  )
+  await f.worker.processVideo(videoId)
+  const reductions = f.remote.enrich.mock.calls.filter((c) => c[1] === 'summary')
+  expect(reductions).toHaveLength(2)
+  expect(JSON.parse(reductions[0][0])).toEqual([
+    { summary: 'Summary a', keyPoints: ['Point a'] },
+    { summary: 'Summary b', keyPoints: ['Point b'] },
+  ])
+  expect(JSON.parse(reductions[1][0])).toEqual([
+    { summary: 'Reduced summary', keyPoints: ['Reduced point'] },
+    { summary: 'Summary c', keyPoints: ['Point c'] },
+  ])
+  expect(f.store.enrichment(videoId)).toMatchObject({
+    summary: 'Reduced summary',
+    keyPoints: ['Reduced point'],
+  })
+})
+test('C37 channel and status filters exclude contrasting records and accept maximum page size', async () => {
+  const f = fixture()
+  await f.seed()
+  const first = f.store.channel(channelId)
+  if (!first) throw new Error('Missing fixture')
+  const second = { ...first, id: `UC${'b'.repeat(22)}`, title: 'Another channel' }
+  f.store.addChannel(second)
+  f.store.insertVideos(second, [
+    { id: 'secondvideo', title: 'Other', publishedAt: original.extractedAt, thumbnail: null },
+  ])
+  f.store.updateVideo('secondvideo', { status: 'failed' })
+  expect(
+    (await f.request('GET', `/api/v1/videos?channelId=${channelId}`))
+      .json()
+      .items.map((v: { id: string }) => v.id),
+  ).toEqual([videoId])
+  expect(
+    (await f.request('GET', '/api/v1/videos?status=failed'))
+      .json()
+      .items.map((v: { id: string }) => v.id),
+  ).toEqual(['secondvideo'])
+  expect(
+    (await f.request('GET', `/api/v1/videos?channelId=${channelId}&status=failed`)).json().items,
+  ).toEqual([])
+  expect((await f.request('GET', '/api/v1/videos?pageSize=100')).json().pageSize).toBe(100)
+})
+test('C53 missing transcript and LLM keys fail affected stages while retaining readable data', async () => {
+  for (const stage of ['transcription', 'enrichment']) {
+    const f = fixture()
+    await f.seed()
+    if (stage === 'enrichment') f.store.saveOriginal(videoId, original)
+    await f.close()
+    const next = createLibrary({ ...f.config, transcriptApiKey: '', opencodeApiKey: '' })
+    cleanup.push(() => next.close())
+    await next.worker.processVideo(videoId)
+    expect(next.store.video(videoId)?.failure?.code).toBe('CONFIGURATION_REQUIRED')
+    expect(next.store.video(videoId)?.status).toBe('failed')
+    const response = await next.app.inject({
+      url: `/api/v1/videos/${videoId}`,
+      headers: { authorization: 'Bearer owner-test-key' },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json().video.title).toBe('A video')
+    if (stage === 'enrichment') expect(response.json().original).toEqual(original)
+  }
+})
+
+test('C56 exact error envelopes cover every protected route failure', async () => {
+  const f = fixture()
+  await f.seed()
+  await f.request('PATCH', `/api/v1/channels/${channelId}`, { paused: true })
+  const check = (
+    response: {
+      statusCode: number
+      json: () => { error: { code: string; message: string }; requestId: string }
+    },
+    status: number,
+    code: string,
+  ) => {
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({
+      error: { code, message: expect.any(String) },
+      requestId: expect.any(String),
+    })
+    expect(response.json().error.message.length).toBeGreaterThan(0)
+  }
+  const cases: [string, string, unknown, number, string][] = [
+    ['POST', '/api/v1/channels', { url: 'invalid' }, 400, 'INVALID_CHANNEL_URL'],
+    ['POST', '/api/v1/channels', { url: 'https://youtube.com/@duplicate' }, 409, 'CHANNEL_EXISTS'],
+    ['PATCH', '/api/v1/channels/bad', { paused: true }, 400, 'INVALID_REQUEST'],
+    ['PATCH', `/api/v1/channels/UC${'z'.repeat(22)}`, { paused: true }, 404, 'CHANNEL_NOT_FOUND'],
+    ['POST', '/api/v1/channels/bad/sync', undefined, 400, 'INVALID_REQUEST'],
+    ['POST', `/api/v1/channels/UC${'z'.repeat(22)}/sync`, undefined, 404, 'CHANNEL_NOT_FOUND'],
+    ['POST', `/api/v1/channels/${channelId}/sync`, undefined, 409, 'CHANNEL_PAUSED'],
+    ['GET', '/api/v1/videos?page=0', undefined, 400, 'INVALID_REQUEST'],
+    ['GET', '/api/v1/videos/bad', undefined, 400, 'INVALID_REQUEST'],
+    ['GET', '/api/v1/videos/zzzzzzzzzzz', undefined, 404, 'VIDEO_NOT_FOUND'],
+    ['POST', '/api/v1/videos/bad/retry', undefined, 400, 'INVALID_REQUEST'],
+    ['POST', '/api/v1/videos/zzzzzzzzzzz/retry', undefined, 404, 'VIDEO_NOT_FOUND'],
+    ['POST', `/api/v1/videos/${videoId}/retry`, undefined, 409, 'VIDEO_NOT_RETRYABLE'],
+  ]
+  for (const [method, url, body, status, code] of cases)
+    check(await f.request(method, url, body), status, code)
+  const routes = [
+    ['GET', '/api/v1/channels'],
+    ['POST', '/api/v1/channels'],
+    ['PATCH', `/api/v1/channels/${channelId}`],
+    ['POST', `/api/v1/channels/${channelId}/sync`],
+    ['GET', '/api/v1/videos'],
+    ['GET', `/api/v1/videos/${videoId}`],
+    ['POST', `/api/v1/videos/${videoId}/retry`],
+  ]
+  for (const [method, url] of routes)
+    check(await f.request(method, url, undefined, 'invalid'), 401, 'UNAUTHORIZED')
+  const closed = createLibrary({ ...f.config, accessKey: '' }, { remote: f.remote })
+  cleanup.push(() => closed.close())
+  for (const [method, url] of routes)
+    check(await closed.app.inject({ method: method as 'GET', url }), 503, 'CONFIGURATION_REQUIRED')
+  for (const [status, code] of [
+    [404, 'CHANNEL_NOT_FOUND'],
+    [502, 'UPSTREAM_UNAVAILABLE'],
+    [503, 'CONFIGURATION_REQUIRED'],
+    [429, 'RATE_LIMITED'],
+  ] as const) {
+    const g = fixture()
+    g.remote.resolveChannel.mockRejectedValue(new RemoteError(code, status, false))
+    check(
+      await g.request('POST', '/api/v1/channels', { url: 'https://youtube.com/@x' }),
+      status,
+      code,
+    )
+  }
+  const limited = fixture()
+  for (let i = 0; i < 30; i++) await limited.request('POST', '/api/v1/channels', { url: 'invalid' })
+  for (const url of [
+    '/api/v1/channels',
+    `/api/v1/channels/${channelId}/sync`,
+    `/api/v1/videos/${videoId}/retry`,
+  ])
+    check(await limited.request('POST', url), 429, 'RATE_LIMITED')
+})
+
+test('C52 production worker failure logs elapsed time and no sensitive identifiers', async () => {
+  buildService()
+  const f = fixture()
+  const socket = createServer()
+  await new Promise<void>((r) => socket.listen(0, '127.0.0.1', r))
+  const address = socket.address()
+  if (!address || typeof address === 'string') throw new Error('Missing address')
+  const port = address.port
+  await new Promise<void>((r) => socket.close(() => r()))
+  const dir = join(f.dir, 'failure-smoke')
+  let stderr = ''
+  const child = spawn(process.execPath, ['dist/api/server.js'], {
+    env: {
+      ...process.env,
+      LIBRARY_PORT: String(port),
+      LIBRARY_HOST: '127.0.0.1',
+      LIBRARY_ACCESS_KEY: 'log-private-owner',
+      LIBRARY_DATA_DIR: dir,
+    },
+    stdio: 'pipe',
+  })
+  child.stderr.on('data', (data) => {
+    stderr += String(data)
+  })
+  const exited = new Promise<number | null>((r) => child.on('exit', r))
+  cleanup.push(async () => {
+    if (child.exitCode === null) {
+      child.kill('SIGTERM')
+      await exited
+    }
+  })
+  let ready = false
+  for (let i = 0; i < 100; i++) {
+    try {
+      if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) {
+        ready = true
+        break
+      }
+    } catch {}
+    await new Promise((r) => setTimeout(r, 30))
+  }
+  expect(ready).toBe(true)
+  const { default: Database } = await import('better-sqlite3')
+  const db = new Database(join(dir, 'library.sqlite'))
+  db.exec('DROP TABLE videos')
+  db.close()
+  await vi.waitFor(() => expect(stderr).toContain('"stage":"worker"'), { timeout: 5000 })
+  const event = JSON.parse(
+    stderr
+      .trim()
+      .split('\n')
+      .find((line) => line.includes('"stage":"worker"')) || '{}',
+  )
+  expect(event).toEqual({ stage: 'worker', outcome: 'failure', elapsedMs: expect.any(Number) })
+  expect(event.elapsedMs).toBeGreaterThanOrEqual(0)
+  for (const secret of ['log-private-owner', videoId, original.text, 'http://', 'SQLITE'])
+    expect(stderr).not.toContain(secret)
+  child.kill('SIGTERM')
+  expect(await exited).toBe(0)
+})
+test('C54 documented and CI Playwright commands forward flags to the browser installer', () => {
+  expect(readFileSync('README.md', 'utf8')).toContain('exec -- playwright install chromium')
+  expect(readFileSync('../../.github/workflows/channel-library.yml', 'utf8')).toContain(
+    'exec -- playwright install --with-deps chromium',
+  )
+  const result = spawnSync(
+    'npm',
+    ['exec', '--', 'playwright', 'install', '--dry-run', '--with-deps', 'chromium'],
+    { encoding: 'utf8' },
+  )
+  // Playwright 1.63 dry-run exits 1 when optional system dependencies are absent.
+  expect(result.status).toBe(result.stdout.includes('Missing system dependencies') ? 1 : 0)
+  expect(result.stdout).toContain('Chrome for Testing')
+  expect(result.stdout).toContain('chromium')
+  expect(result.stdout).toContain('Install location:')
+  expect(result.stderr).not.toContain('Unknown cli config')
+})
+test('C30 malformed HTTP envelope does not publish an enrichment', async () => {
+  const f = fixture()
+  await f.seed()
+  f.store.saveOriginal(videoId, original)
+  await f.close()
+  const remote = new HttpRemote(f.config, async () => Response.json(null))
+  const next = createLibrary(f.config, { remote })
+  cleanup.push(() => next.close())
+  await next.worker.processVideo(videoId)
+  expect(next.store.video(videoId)?.failure?.code).toBe('INVALID_LLM_RESPONSE')
+  expect(next.store.enrichment(videoId)).toBeNull()
+  expect(next.store.original(videoId)).toEqual(original)
 })

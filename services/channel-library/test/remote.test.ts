@@ -153,3 +153,12 @@ test('C23 HTTP provider credential and quota denials are terminal', async () => 
     })
   }
 })
+
+test('C30 malformed top-level LLM envelopes use INVALID_LLM_RESPONSE', async () => {
+  for (const body of [null, [], {}, 'unexpected']) {
+    const remote = new HttpRemote(config, async () => Response.json(body))
+    await expect(remote.enrich('source', 'chunk')).rejects.toMatchObject({
+      code: 'INVALID_LLM_RESPONSE',
+    })
+  }
+})

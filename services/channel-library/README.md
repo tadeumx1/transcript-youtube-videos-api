@@ -115,7 +115,7 @@ prompt; this service preserves that upstream limitation and keeps original/corre
 ## Checks
 
 ```sh
-npm --prefix services/channel-library exec playwright install chromium
+npm --prefix services/channel-library exec -- playwright install chromium
 npm --prefix services/channel-library run check
 ```
 

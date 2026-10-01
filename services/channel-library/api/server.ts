@@ -23,10 +23,18 @@ async function main() {
         : reply.sendFile('index.html'),
     )
   }
-  const tick = () =>
-    library.worker
-      .runOnce()
-      .catch(() => process.stderr.write('{"stage":"worker","outcome":"failure"}\n'))
+  const tick = () => {
+    const startedAt = performance.now()
+    return library.worker.runOnce().catch(() => {
+      process.stderr.write(
+        `${JSON.stringify({
+          stage: 'worker',
+          outcome: 'failure',
+          elapsedMs: performance.now() - startedAt,
+        })}\n`,
+      )
+    })
+  }
   await library.app.listen({ host: config.host, port: config.port })
   const timer = setInterval(() => {
     void tick()

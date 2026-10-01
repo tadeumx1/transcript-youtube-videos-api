@@ -108,7 +108,11 @@ export class HttpRemote implements Remote {
         if (status === 429) throw new RemoteError('RATE_LIMITED', 429, true, seconds)
         throw new RemoteError('UPSTREAM_UNAVAILABLE', 502, status >= 500, seconds)
       }
-      return await response.json()
+      try {
+        return await response.json()
+      } catch {
+        throw new RemoteError('INVALID_PROVIDER_RESPONSE', 502, false)
+      }
     } catch (error) {
       if (controller.signal.aborted) throw new RemoteError('TIMEOUT', 502, true)
       if (error instanceof RemoteError) throw error
@@ -264,21 +268,21 @@ export class HttpRemote implements Remote {
           ],
           max_tokens: 16000,
         }
-    const raw = object(
-      await this.request(
-        `${this.config.llmBaseUrl}/${responses ? 'responses' : 'chat/completions'}`,
-        {
-          method: 'POST',
-          headers: {
-            authorization: `Bearer ${this.config.opencodeApiKey}`,
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        },
-        120000,
-      ),
-    )
     try {
+      const raw = object(
+        await this.request(
+          `${this.config.llmBaseUrl}/${responses ? 'responses' : 'chat/completions'}`,
+          {
+            method: 'POST',
+            headers: {
+              authorization: `Bearer ${this.config.opencodeApiKey}`,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify(body),
+          },
+          120000,
+        ),
+      )
       let output: string
       if (responses) {
         if (raw.status && raw.status !== 'completed') throw new Error('incomplete')
@@ -298,7 +302,8 @@ export class HttpRemote implements Remote {
         output = string(object(choice.message).content)
       }
       return validateEnrichment(JSON.parse(output), mode === 'summary')
-    } catch {
+    } catch (error) {
+      if (error instanceof RemoteError && error.code !== 'INVALID_PROVIDER_RESPONSE') throw error
       throw new RemoteError('INVALID_LLM_RESPONSE', 502, false)
     }
   }

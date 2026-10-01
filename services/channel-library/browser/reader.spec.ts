@@ -226,3 +226,117 @@ test('C46 keyboard navigation has labels focus and operable tabs', async ({ page
   await expect(page.getByText('Retomar após falhas.', { exact: true })).toBeVisible()
   expect(await tab.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe('none')
 })
+
+test('C35 collection state and pause resume actions reflect saved channel state', async ({
+  page,
+}) => {
+  await mock(page)
+  let paused = false
+  await page.route('**/api/v1/channels**', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      paused = route.request().postDataJSON().paused
+      await route.fulfill({ json: { channel: { ...channel, paused } } })
+    } else await route.fulfill({ json: { items: [{ ...channel, paused }] } })
+  })
+  await page.getByRole('button', { name: 'Channels', exact: true }).click()
+  await expect(page.getByText('completed', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Last collected:/)).toContainText('Oct 1, 2026')
+  await expect(page.getByText(/Next collection:/)).toContainText('Oct 2, 2026')
+  await page.getByRole('button', { name: 'Pause', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeVisible()
+  await expect(page.getByText('Paused', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Resume', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
+  await expect(page.getByText('completed', { exact: true })).toBeVisible()
+})
+test('C36 several dated cards preserve API ordering ties and display thumbnail', async ({
+  page,
+}) => {
+  await mock(page)
+  const items = [
+    {
+      ...video,
+      id: 'aaaaaaaaaaa',
+      title: 'First tie',
+      publishedAt: '2026-10-02T09:00:00Z',
+      thumbnail: 'https://i.ytimg.com/vi/aaaaaaaaaaa/mqdefault.jpg',
+    },
+    { ...video, id: 'zzzzzzzzzzz', title: 'Second tie', publishedAt: '2026-10-02T09:00:00Z' },
+    video,
+  ]
+  await page.route('**/api/v1/videos?**', (route) =>
+    route.fulfill({ json: { items, total: 3, page: 1, pageSize: 20 } }),
+  )
+  await page.getByLabel('Search videos').fill('video')
+  await expect(page.getByRole('article').locator('h2')).toHaveText([
+    'First tie',
+    'Second tie',
+    'How careful systems recover',
+  ])
+  await expect(page.getByRole('article').locator('img')).toHaveAttribute(
+    'src',
+    'https://i.ytimg.com/vi/aaaaaaaaaaa/mqdefault.jpg',
+  )
+  await expect(page.locator('time')).toHaveText(['Oct 2, 2026', 'Oct 2, 2026', 'Oct 1, 2026'])
+})
+test('C40 filtered empty library clears filters and restores results', async ({ page }) => {
+  await mock(page)
+  await page.route('**/api/v1/videos?**', (route) => {
+    const empty = new URL(route.request().url()).searchParams.has('q')
+    return route.fulfill({
+      json: { items: empty ? [] : [video], total: empty ? 0 : 1, page: 1, pageSize: 20 },
+    })
+  })
+  await page.getByLabel('Search videos').fill('no matches')
+  await expect(page.getByText('No videos match these filters.', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Clear filters', exact: true }).click()
+  await expect(page.getByLabel('Search videos')).toHaveValue('')
+  await expect(page.getByRole('button', { name: 'Read How careful systems recover' })).toBeVisible()
+})
+test('C42 failed reader and channel refreshes retain content and provide retry', async ({
+  page,
+}) => {
+  await page.clock.install()
+  await mock(page)
+  await open(page)
+  await expect(page.getByText(detail.enrichment.summary, { exact: true })).toBeVisible()
+  await page.route(`**/api/v1/videos/${id}`, (route) =>
+    route.fulfill({ status: 503, json: { error: { message: 'Reader unavailable' } } }),
+  )
+  await page.clock.fastForward(5001)
+  await expect(page.getByRole('alert')).toContainText('Reader unavailable')
+  await expect(page.getByRole('button', { name: 'Retry loading', exact: true })).toBeVisible()
+  await expect(page.getByText(detail.enrichment.summary, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Channels', exact: true }).click()
+  await expect(page.getByText('Engineering Notes', { exact: true })).toBeVisible()
+  await page.route('**/api/v1/channels', (route) =>
+    route.fulfill({ status: 503, json: { error: { message: 'Channels unavailable' } } }),
+  )
+  await page.clock.fastForward(5001)
+  await expect(page.getByRole('alert')).toContainText('Channels unavailable')
+  await expect(page.getByRole('button', { name: 'Retry loading', exact: true })).toBeVisible()
+  await expect(page.getByText('Engineering Notes', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
+})
+test('C46 keyboard activates channel registration and collection actions', async ({ page }) => {
+  await mock(page)
+  await page.getByRole('button', { name: 'Channels', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  const input = page.getByLabel('YouTube channel URL')
+  await input.focus()
+  await page.keyboard.type('https://youtube.com/@keyboard')
+  await page.getByRole('button', { name: 'Add channel', exact: true }).focus()
+  const added = page.waitForRequest(
+    (r) => r.method() === 'POST' && new URL(r.url()).pathname === '/api/v1/channels',
+  )
+  await page.keyboard.press('Enter')
+  expect((await added).postDataJSON()).toEqual({ url: 'https://youtube.com/@keyboard' })
+  await expect(
+    page.getByText('Channel added. The ten most recent videos are queued.', { exact: true }),
+  ).toBeVisible()
+  const collected = page.waitForRequest((r) => r.method() === 'POST' && r.url().endsWith('/sync'))
+  await page.getByRole('button', { name: 'Collect now', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  expect((await collected).method()).toBe('POST')
+  await expect(page.getByText('Collection queued.', { exact: true })).toBeVisible()
+})

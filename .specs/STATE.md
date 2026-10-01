@@ -155,20 +155,19 @@
 ## Handoff
 
 - **Feature**: channel-transcript-library
-- **Phase**: Build complete; independent Verify next.
+- **Phase**: Round 1 verification findings fixed; scoped independent Round 2 next.
 - **Completed**: pinned complete lean skill; plan approved by instruction to finish all work;
   proof-backed checks; separate API, durable SQLite scheduler/worker, OpenCode adapters, React/Vite
   reader; source/browser tests; setup documentation; separate library CI workflow.
-- **Evidence**: existing API check passed 740 tests; library backend and 12 Chromium tests passed;
+- **Evidence**: existing API check passed 740 tests; library 69 backend and 17 Chromium tests passed;
   production server boot/static serving/auth/shutdown exercised; library production audit clean;
   local skill self-test killed all 46 injected faults. See checks.md and forthcoming verification.md.
 - **Authorization**: owner explicitly authorized continuing until completion and approved routine
   decisions/steps in advance; historical tlc-spec-driven specs must remain intact.
-- **In-progress**: independent review pending; no live-provider success claimed.
-- **Next step**: commit coherent feature work, dispatch a fresh Verifier for all 56 checks,
-  fix any findings, and pass validate_verification.py before reporting completion.
+- **In-progress**: 18 Round 1 proof/implementation gaps addressed; independent Round 2 pending. No live-provider success claimed.
+- **Next step**: commit fixes and re-run independent verification over the fix diff plus all previous FAIL verdicts; all proof targets rerun before the completion gate.
 - **Live prerequisites**: YouTube Data API key and transcript-service access credential were not
   present locally. OpenCode key is present but was not printed or used for paid validation.
-- **Uncommitted files**: new skill/docs/specs and channel-library implementation plus root integration.
+- **Uncommitted files**: Round 1 report, scoped fixes, strengthened proofs, and memory/lesson updates.
 - **Feature base**: `8310d8cf7884e77cf79ead213d4706300d6c03d6`
 - **Branch**: `main`
