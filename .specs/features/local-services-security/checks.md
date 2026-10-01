@@ -51,7 +51,9 @@ adm-zip 0.6.0 exact-version assertions must move to 0.6.1 as part of the request
 this replaces an obsolete vulnerable pin, preserves exactness and weakens no behavioral assertion.
 No historical feature specs will be edited. Fresh independent verification follows the final commit.
 
-Completion: C1–C4 author proofs passed; fresh independent verification pending.
+Completion: C1–C4 independently verified PASS at `b9db132`.
+The completion validator exits 0 with zero warnings. Both full audits are clean; all 826 tests
+and real development/compiled startup proofs passed independently. See verification.md.
 
 - Full root and library audits: zero known vulnerabilities, including development dependencies.
 - `npm run check:all`: 740 root, 69 library backend and 17 browser tests passed; lint, types and builds passed.

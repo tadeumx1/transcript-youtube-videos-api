@@ -155,7 +155,7 @@
 ## Handoff
 
 - **Feature**: local-services-security
-- **Phase**: Implementation and author proofs complete; independent verification next.
+- **Phase**: Complete — independent verification PASS on all four checks at `b9db132`.
 - **Completed**: docs/running-all-services.md and root README link; Fastify 5.12.5, adm-zip 0.6.1,
   fast-uri 3.1.8/4.2.1 and undici 6.29.0. Updated exact ZIP version assertions. Inference/runtime
   packages, model fingerprint and historical feature specs unchanged.
@@ -164,7 +164,7 @@
 - **Environment note**: root clean install succeeded; local make is absent, so the library's documented
   prebuilt/ignore-scripts alternative was used and its real SQLite binding and full suite passed.
 - **Authorization**: user requested docs and vulnerability fixes; standing routine approvals apply.
-- **Next step**: commit and dispatch a fresh independent verifier over all four checks.
-- **Uncommitted files**: this feature's docs, manifest/lock updates, exact dependency assertions and specs.
+- **Next step**: use docs/running-all-services.md to configure and run the local services; repeat audits periodically.
+- **Uncommitted files**: none after the final verification-record commit.
 - **Feature base**: `78bbe80`
 - **Branch**: `main`
