@@ -157,15 +157,25 @@ test('C41 all data views display loading state', async ({ page }) => {
 })
 test('C42 all data views show retry on error and retain existing results', async ({ page }) => {
   await mock(page)
-  await page.route('**/api/v1/videos*', (route) =>
-    route.fulfill({ status: 503, json: { error: { code: 'UNAVAILABLE', message: 'Try again' } } }),
+  await page.route(
+    (url) => url.pathname === '/api/v1/videos' || url.pathname === `/api/v1/videos/${id}`,
+    (route) =>
+      route.fulfill({
+        status: 503,
+        json: { error: { code: 'UNAVAILABLE', message: 'Try again' } },
+      }),
   )
   await page.getByLabel('Search videos').fill('recover')
   await expect(page.getByRole('alert')).toContainText('Try again')
   await expect(page.getByRole('button', { name: 'Retry loading' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Read How careful systems recover' })).toBeVisible()
-  await page.getByRole('button', { name: 'Read How careful systems recover' }).click()
+  const [readerFailure] = await Promise.all([
+    page.waitForResponse((response) => new URL(response.url()).pathname === `/api/v1/videos/${id}`),
+    page.getByRole('button', { name: 'Read How careful systems recover' }).click(),
+  ])
+  expect(readerFailure.status()).toBe(503)
   await expect(page.getByRole('alert')).toContainText('Try again')
+  await expect(page.getByRole('button', { name: 'Retry loading' })).toBeVisible()
   await page.getByRole('button', { name: 'Back to library' }).click()
   await page.route('**/api/v1/channels', (route) =>
     route.fulfill({ status: 503, json: { error: { message: 'Try again' } } }),

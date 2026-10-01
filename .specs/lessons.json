@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 21,
+  "next_id": 22,
   "lessons": [
     {
       "id": "L-001",
@@ -364,6 +364,24 @@
       ],
       "created": "2026-10-01T04:11:34Z",
       "last_seen": "2026-10-01T04:11:34Z"
+    },
+    {
+      "id": "L-021",
+      "key": "ac_gap::match each intended request path explicitly in browser failure fixtures and assert the failed response before inspecting its ui state",
+      "text": "Match each intended request path explicitly in browser failure fixtures and assert the failed response before inspecting its UI state.",
+      "signal": "ac_gap",
+      "scope": "browser-tests",
+      "status": "candidate",
+      "features": [
+        "channel-transcript-library"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "Round 2 C42 (browser-tests)"
+      ],
+      "created": "2026-10-01T04:17:53Z",
+      "last_seen": "2026-10-01T04:17:53Z"
     }
   ]
 }

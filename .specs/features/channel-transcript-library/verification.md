@@ -2,6 +2,138 @@
 
 **Verdict**: FAIL
 **Profile**: light
+**Diff range**: 8310d8cf7884e77cf79ead213d4706300d6c03d6..743e08e58b31287f774a09aea4afcddb51f1f22e
+**Fix diff**: 0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d..743e08e58b31287f774a09aea4afcddb51f1f22e
+**Round**: 2 - scoped
+**Verifier**: independent sub-agent (author != verifier), `/root/verify_channel_library`
+
+54/56 checks have adequate evidence at this round. Sixteen of the eighteen Round 1 findings are resolved. C42 remains blocked by an observed intermittent browser proof failure; C56 still lacks the exact storage-unavailable envelope assertion. Round 1 is preserved verbatim in the archive below.
+
+## Proof execution
+
+Verified at `743e08e58b31287f774a09aea4afcddb51f1f22e` with initially clean Git status. The full targets ran independently in parallel:
+
+- `npm --prefix services/channel-library test -- --reporter=verbose` — exit 0, 69/69 tests across 2 files. Every named check proof and all added tests appeared individually.
+- `npm --prefix services/channel-library run test:browser` — **exit 1, 16 passed and 1 failed** across 17 Chromium tests. The original C42 failed at `browser/reader.spec.ts:168` after a 5000ms wait for a missing alert. All five new browser tests passed, including the new C42 retained-refresh case.
+- `npm run check` — exit 0; lint, TypeScript, 740 tests across 59 files, build.
+- Diagnostic follow-up `npm --prefix services/channel-library run test:browser -- --grep 'C42 '` — exit 0, 2/2 passed. This demonstrates intermittent behavior; it does not erase the full-suite failure.
+
+The fix changed production remote response normalization and tick telemetry, plus additive proof bodies and CLI documentation. All backend assertions in touched files were re-read; browser additions and the failed existing C42 were inspected. Original proof line numbers remain stable because test additions are appended. Every target was executed at the new HEAD even where a semantic finding is carried forward.
+
+## Checks
+
+Rows marked refreshed were verified at `743e08e58b31287f774a09aea4afcddb51f1f22e`. Other located assertions are carried from `0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d`, inspected for fix impact, with proofs rerun at the current HEAD. Backend is the full 69-test passing run; Browser refers to the full run with named-test outcomes, including C42's failure; Root is the 740-test passing check.
+
+| Check | Claim | Proof run | Evidence | Result |
+| --- | --- | --- | --- | --- |
+| C1 | Canonical forms register with 201 | Backend | `services/channel-library/test/library.test.ts:117`; `services/channel-library/test/remote.test.ts:35` — `expect(res.statusCode).toBe(201)`; canonical ID and provider query asserted; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C2 | Invalid URLs rejected before outbound work | Backend | `services/channel-library/test/library.test.ts:134` — `expect(res.json().error.code).toBe('INVALID_CHANNEL_URL')`; remote not called; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C3 | Missing channel gives 404 CHANNEL_NOT_FOUND | Backend | `services/channel-library/test/library.test.ts:879` — `expect(response.json().error.code).toBe('CHANNEL_NOT_FOUND')` plus 404; refreshed at 743e08e | PASS |
+| C4 | Concurrent duplicate gives one record and CHANNEL_EXISTS | Backend | `services/channel-library/test/library.test.ts:887` — concurrent 409 response error code equals CHANNEL_EXISTS; refreshed at 743e08e | PASS |
+| C5 | Initial ten most recent, or every available video below ten | Backend | `services/channel-library/test/library.test.ts:902` — exact IDs vid00000000..02 for three available, vid00000000..09 for fifteen available; refreshed at 743e08e | PASS |
+| C6 | Pause prevents automatic collections | Backend | `services/channel-library/test/library.test.ts:177` — `expect(f.store.activeRuns()).toHaveLength(0)` after due slot; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C7 | Pause/resume preserves source and video | Backend | `services/channel-library/test/library.test.ts:186` — `expect(f.store.original(videoId)).toEqual(before)`; video remains; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C8 | 06:00 Sao Paulo due slot, one collection | Backend | `services/channel-library/test/library.test.ts:194` — `expect(...).toHaveLength(0)` before due, `toHaveLength(1)` after repeated scheduling, slot 2026-10-02; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C9 | Missed days create one catch-up | Backend | `services/channel-library/test/library.test.ts:204` — five days advanced; `expect(f.store.activeRuns()).toHaveLength(1)`; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C10 | Discovery continues beyond first page | Backend | `services/channel-library/test/library.test.ts:237`; `services/channel-library/test/remote.test.ts:68` — `expect(f.store.video('thirdvideo0')).not.toBeNull()`; page2 cursor sent; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C11 | Partial failure saves page without checkpoint advancement | Backend | `services/channel-library/test/library.test.ts:260` — saved second video and `expect(...checkpoint).toBe(checkpoint)`; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C12 | Rediscovery keeps one ready video | Backend | `services/channel-library/test/library.test.ts:270` — total 1; ready state; enrichment called once; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C13 | Overlap joins existing collection | Backend | `services/channel-library/test/library.test.ts:278` — 202, same collectionId, one active run; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C14 | Channel failure does not stop another channel | Backend | `services/channel-library/test/library.test.ts:293` — UPSTREAM_UNAVAILABLE on failed channel; video belongs to second channel; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C15 | Restart resumes collection and processing stages | Backend | `services/channel-library/test/library.test.ts:959` — saved-page used after database reopen; second/third videos present, run completed and checkpoint equals run.cutoff at lines 960–963; saved job/source proofs also passed; refreshed at 743e08e | PASS |
+| C16 | Only one active video pipeline | Backend | `services/channel-library/test/library.test.ts:314`; `services/channel-library/test/library.test.ts:848` — `expect(f.remote.submit).toHaveBeenCalledTimes(1)`; second video remains pending while first blocked; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C17 | 100-page bound preserves continuation | Backend | `services/channel-library/test/library.test.ts:324` — 101 list calls including seed, cursor more, status not completed; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C18 | Authenticated POST, polling, transcript HTTP retrieval | Backend | `services/channel-library/test/library.test.ts:976` — methods equal [POST, GET, GET]; line 977 submission body equals canonical watch URL; refreshed at 743e08e | PASS |
+| C19 | Full original saved before enrichment | Backend | `services/channel-library/test/library.test.ts:350` — enrichment callback asserts `expect(f.store.original(videoId)).toEqual(original)`; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C20 | Saved original/editorial survive source expiry | Backend | `services/channel-library/test/library.test.ts:364` — 200 and saved original plus summary while upstream transcript rejects JOB_EXPIRED; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C21 | Unavailable source avoids LLM | Backend | `services/channel-library/test/library.test.ts:373` — status unavailable; `expect(f.remote.enrich).not.toHaveBeenCalled()`; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C22 | All provider stages have bounded durable retry times | Backend | `services/channel-library/test/library.test.ts:986` and `services/channel-library/test/library.test.ts:1005` — 60000 delay before reopen; call counts remain one before due; 300000 delay and exactly three calls/failed state at lines 994–998 and 1013–1018; original Retry-After proofs pass; refreshed at 743e08e | PASS |
+| C23 | Permanent provider errors terminate | Backend | `services/channel-library/test/library.test.ts:402`; `services/channel-library/test/remote.test.ts:150` — failed with PROVIDER_AUTHENTICATION_FAILED; 401/403 nonretryable; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C24 | Six-hour poll timeout retains job ID | Backend | `services/channel-library/test/library.test.ts:412` — TRANSCRIPT_JOB_TIMEOUT and upstream-job retained; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C25 | Only validated complete editorial result publishes | Backend | `services/channel-library/test/library.test.ts:419`; `services/channel-library/test/library.test.ts:472`; `services/channel-library/test/remote.test.ts:100` — ready and full result; invalid data withheld; both text API styles exercised; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C26 | Correction instructions preserve meaning and language | Backend | `services/channel-library/test/library.test.ts:423` — regex assertions cover punctuation, names, quantities, source language, meaning, spelling, paragraphs, evident errors; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C27 | Grounded Brazilian Portuguese summary instruction | Backend | `services/channel-library/test/library.test.ts:434` — Brazilian Portuguese, only supplied, key points asserted; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C28 | Bounded ordered chunks and reduction without loss | Backend | `services/channel-library/test/library.test.ts:1034` — two reductions; explicit a/b summaries then reduced/c inputs at 1035/1039; saved reduced summary/key point at 1043; refreshed at 743e08e | PASS |
+| C29 | Oversized source kept without LLM | Backend | `services/channel-library/test/library.test.ts:457` — length 1000001; TRANSCRIPT_TOO_LARGE; enrich never called; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C30 | All invalid LLM responses produce INVALID_LLM_RESPONSE | Backend | `services/channel-library/test/remote.test.ts:160` — null/array/object/string envelopes reject INVALID_LLM_RESPONSE; `services/channel-library/test/library.test.ts:1256` code asserted with enrichment null and original preserved; refreshed at 743e08e | PASS |
+| C31 | Manual enrichment retry reuses source | Backend | `services/channel-library/test/library.test.ts:481` — 202; submit/getTranscript once; ready after retry; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C32 | Published model, prompt version, completion time | Backend | `services/channel-library/test/library.test.ts:491` — model glm-5.3-flash, promptVersion 1, clock-derived completedAt; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C33 | Discovery/LLM requests abort at 30/120 seconds | Backend | `services/channel-library/test/library.test.ts:508` — TIMEOUT at both deadlines; every captured signal aborted; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C34 | Untrusted markup displayed as text | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:81` — literal script content visible and `Object.hasOwn(window, 'hacked')` false; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C35 | Channel identity state times and pause/resume/sync actions | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:242` — completed state; Oct 1/2 times; Resume and Paused at 246–247; restored Pause/completed at 249–250; refreshed at 743e08e | PASS |
+| C36 | Cards include thumbnail and deterministic ordering | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:271` — three headings in exact expected order; thumbnail src at 276 and dates at 280; API tie ordering at `services/channel-library/test/library.test.ts:865` also reran; refreshed at 743e08e | PASS |
+| C37 | Channel/status/search filters and pagination bounds | Backend | `services/channel-library/test/library.test.ts:1059` — selected channel yields only first ID; failed state yields second ID; combined nonmatch empty; pageSize 100 accepted at 1072; refreshed at 743e08e | PASS |
+| C38 | All four saved-content tabs | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:107` — summary, key point, corrected statement, original segment visible in corresponding tabs; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C39 | Timestamp links source, never corrected prose | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:119` — href has video ID and t=12s; corrected tab has no timestamp link; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C40 | Empty views have applicable next action | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:291` — filtered-empty message; Clear filters activation; query empty and original card restored at 293–294; refreshed at 743e08e | PASS |
+| C41 | Loading state in all three data views | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:142`; `services/channel-library/browser/reader.spec.ts:149`; `services/channel-library/browser/reader.spec.ts:156` — visible Loading status asserted separately for videos, reader, channels; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C42 | Errors offer retry and retain previous content in every view | Browser exit 1; focused rerun exit 0 | `services/channel-library/browser/reader.spec.ts:168` — original C42 failed in full run: expected Try again alert absent after reader open; `services/channel-library/browser/reader.spec.ts:307` and 316 assert retained reader/channel content and retry in new passing proof; focused rerun passes but does not resolve race; refreshed at 743e08e | FAIL |
+| C43 | 401 clears credential and returns to access | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:182` — Unlock library visible, key empty, local/session storage empty; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C44 | Incomplete reader state, original, applicable retry | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:195` — transcribing/unavailable/failed status plus original; retry visible for last two; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C45 | Reader accessible without overflow at 360/1280 | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:207` — both widths have scrollWidth <= innerWidth and Back to library visible; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C46 | Keyboard inputs focus tabs and actions | Named browser proof passed (full target exit 1) | `services/channel-library/browser/reader.spec.ts:333` — keyboard registration sends exact channel URL; Enter collection sends POST and Collection queued at 340–341; original focused-tab proof also passes; refreshed at 743e08e | PASS |
+| C47 | Protected routes reject invalid owner before admission | Backend | `services/channel-library/test/library.test.ts:537`; `services/channel-library/test/library.test.ts:799` — all seven route/method pairs 401; upstream submit not called; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C48 | Absent owner key fails closed | Backend | `services/channel-library/test/library.test.ts:544`; `services/channel-library/test/library.test.ts:772` — 503 on first route and all seven protected routes in C56; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C49 | No upstream secrets in web bundle; memory-only owner token | Backend | `services/channel-library/test/library.test.ts:566`; `services/channel-library/browser/reader.spec.ts:183` — generated bundle excludes three sentinel keys; no persistent storage APIs; browser storage empty; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C50 | More than thirty admissions return 429/Retry-After | Backend | `services/channel-library/test/library.test.ts:587` — 29 syncs after registration succeed, next 429; positive retry-after; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C51 | Failure envelope is sanitized | Backend | `services/channel-library/test/library.test.ts:596` — 502, UPSTREAM_UNAVAILABLE, error.message and requestId strings; provider token absent; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C52 | Worker events always have stage outcome elapsed time | Backend | `services/channel-library/test/library.test.ts:1223` — real production fallback event exactly stage worker, outcome failure, numeric elapsedMs; nonnegative and secret exclusions at 1224–1226; refreshed at 743e08e | PASS |
+| C53 | Unconfigured providers report CONFIGURATION_REQUIRED while reads work | Backend | `services/channel-library/test/library.test.ts:1083` — missing transcription/enrichment keys each yield CONFIGURATION_REQUIRED/failed; detail 200 and saved source equality at 1089–1091; refreshed at 743e08e | PASS |
+| C54 | Reproducible independent startup/config/storage/scheduling docs | Backend | `services/channel-library/test/library.test.ts:1231` — README/CI explicit npm separator; actual browser dry-run output plus no Unknown cli config at 1241–1245; refreshed at 743e08e | PASS |
+| C55 | Existing API signatures and regressions unchanged | Backend + Root | `services/channel-library/test/library.test.ts:658`; `services/channel-library/test/library.test.ts:699` — separate assembly; production smoke 401/authorized response/static HTML/shutdown; root check 740 passed; carried from 0eca123, proof rerun at 743e08e | PASS |
+| C56 | Exact route status and error-envelope matrix | Backend | `services/channel-library/test/library.test.ts:1107` — exact status and error envelope helper with concrete code rows at 1115–1167; `services/channel-library/test/library.test.ts:812` still asserts only status for closed storage; no STORAGE_UNAVAILABLE envelope assertion found; refreshed at 743e08e | FAIL |
+
+## Remaining ranked findings
+
+1. **C42 — the original browser error proof is intermittent.** The full run failed at `services/channel-library/browser/reader.spec.ts:168`, expecting the reader's `Try again` alert after opening it. The mock at line 160 uses `**/api/v1/videos*`, which does not cover the slash-separated detail path; the reader can receive a successful fixture response. A quick assertion may instead see the stale list error, consistent with the focused rerun passing. Make list and detail failure interception explicit and synchronize the assertion to the failed reader response, retaining the original user-visible error/retry obligations. The new refresh test at line 296 proves the additional retained-content requirements and passed. This is a proof/harness blocker; the failed run alone does not establish an application regression.
+2. **C56 — the closed-storage failure still proves only HTTP status.** `services/channel-library/test/library.test.ts:811` closes storage and line 812 checks each protected route returns 503. The new exact-envelope matrix at 1095–1168 covers validation/auth/config/conflict/throttling/provider failures but never asserts `STORAGE_UNAVAILABLE`. A search for `STORAGE_UNAVAILABLE` across the proof file returns no occurrence. Apply the full envelope assertion to this existing storage-failure case for all seven protected routes. This is the remaining portion of Round 1's exact dependency-failure-envelope finding, not an added obligation.
+
+## Resolved findings and touched-surface review
+
+Verified at `743e08e58b31287f774a09aea4afcddb51f1f22e`.
+
+- C30 now normalizes top-level malformed LLM envelopes, and rejects non-JSON successful provider bodies without accidentally making them retryable. The error boundary preserves RemoteError TIMEOUT/auth/rate-limit failures; existing remote status and timeout proofs all reran successfully.
+- C52 now logs production tick elapsed time. A launched production process with a temporary damaged database proves the fallback event shape and absence of sensitive fields; successful worker logs remain covered.
+- C54 uses npm's explicit separator in CI and README. The dry-run assertion accepts the documented missing-system-dependency exit while requiring installer output and rejecting the npm unknown-option warning. This is proof of correct argument forwarding, not an assertion that the dry run installs dependencies.
+- Collection recovery, every retry stage, summary reduction, channel/status filters, provider configuration, browser state/resume, thumbnails/order, filtered empty actions, and keyboard actions now have the concrete assertions listed above. The browser clock is installed before application timers in the added refresh proof. No approved claim was changed.
+
+## Level and sampling limits
+
+Carried from `0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d`, updated for the scoped additions at `743e08e58b31287f774a09aea4afcddb51f1f22e`: route proofs use Fastify injection, remote proofs intercept fetch, worker proofs use temporary SQLite, and browser proofs use the real React application with API fixtures. C52 and C55 additionally exercise compiled production entry points over TCP. There is no live browser-to-provider smoke test or human visual acceptance. C26/C27 establish prompt wording rather than model semantic compliance; C34 samples original markup, C44 samples transcribing as the processing state, and C45 samples short corrected prose at 360/1280 widths. These unchanged light-profile sampling limits are not presented as complete UI or provider validation.
+
+## Coverage
+
+Carried from `0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d`: the approved light profile reads the author's Coverage join without recomputing it. Mandatory per-check assertion review exposed the remaining gaps above. No claim of an independently recomputed exhaustive join is made.
+
+## Test policy rows
+
+Carried from `0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d`: checks.md has no Test policy section. No rows to judge.
+
+## Swept existing
+
+Carried from `0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d`: all nine Swept dimensions refer to feature checks; none resolves to existing. Historical feature specifications remain unchanged by the fix diff.
+
+## Faults injected
+
+None — unchanged approved light profile. The builder's reported red-before-green experiments are not counted as independent Verifier fault injection.
+
+## Operational limits
+
+Carried from `0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d`: YouTube and transcript-service keys are unavailable locally; no live-provider success is claimed. The coordinator's separately reported pre-existing root audit findings remain attributed operational context, not a feature regression or an audit independently rerun here.
+
+## Gate
+
+`python3 .agents/skills/tlc-spec-lean/scripts/validate_verification.py channel-transcript-library` exited 1 with 1 error and 0 warnings, correctly retaining FAIL for the two findings. All required work in this verification round is complete; fix C42/C56, commit, then conduct scoped Round 3 with full proof targets rerun. Only verification.md was changed by this agent.
+
+## Round 1 archive
+
+The following is the complete previous report, preserved as historical evidence. Its verdict and rows are superseded by the current round above; the fence keeps historical outcomes separate from the active completion gate.
+
+```markdown
+# Channel Transcript Library verification
+
+**Verdict**: FAIL
+**Profile**: light
 **Diff range**: 8310d8cf7884e77cf79ead213d4706300d6c03d6..0eca12321a2a9fc8f853ce5f38cdf24c6a52fa6d
 **Round**: 1 - full
 **Verifier**: independent sub-agent (author != verifier), `/root/verify_channel_library`
@@ -125,3 +257,5 @@ No live provider validation was attempted: the YouTube API key and transcript-se
 `python3 .agents/skills/tlc-spec-lean/scripts/validate_verification.py channel-transcript-library` exited 1 with 1 error and 0 warnings because this report correctly records FAIL. Completion is blocked on the ranked fixes and scoped independent re-verification at the next committed HEAD, with all proof targets rerun.
 
 Only this report was authored. No implementation, tests, historical artifacts, or dependencies were edited, and no commit was created. Project lesson distillation for the grounded failures is handed to the coordinator because this Verifier was explicitly restricted to writing this report.
+
+```

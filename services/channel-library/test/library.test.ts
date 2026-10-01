@@ -1165,6 +1165,9 @@ test('C56 exact error envelopes cover every protected route failure', async () =
     `/api/v1/videos/${videoId}/retry`,
   ])
     check(await limited.request('POST', url), 429, 'RATE_LIMITED')
+  f.store.close()
+  for (const [method, url] of routes)
+    check(await f.request(method, url), 503, 'STORAGE_UNAVAILABLE')
 })
 
 test('C52 production worker failure logs elapsed time and no sensitive identifiers', async () => {

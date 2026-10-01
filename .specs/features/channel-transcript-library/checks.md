@@ -261,3 +261,12 @@ Root production audit additionally reports six pre-existing vulnerable dependenc
 root dependency declarations and package-lock remain unchanged. This is an existing operational
 limitation, separate from the new library's clean production audit. No dependency upgrade or
 historical spec rewrite was folded into this feature.
+
+
+Round 2 independently reran all targets: backend 69/69 and root 740/740 passed; browser
+16/17 passed. C42 exposed a mock glob that matched the video list but not the reader request.
+The mock now matches both exact paths and asserts the reader's actual HTTP 503 before checking
+the alert and retry action. This fixes the fixture under the owner's delegated routine approval,
+retaining every original assertion. C56 now checks the exact STORAGE_UNAVAILABLE envelope for
+every protected route after closing the database, in addition to the existing status checks.
+Independent scoped Round 3 is required after this proof-only fix commit.

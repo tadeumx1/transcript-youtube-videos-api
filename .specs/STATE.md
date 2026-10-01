@@ -155,7 +155,7 @@
 ## Handoff
 
 - **Feature**: channel-transcript-library
-- **Phase**: Round 1 verification findings fixed; scoped independent Round 2 next.
+- **Phase**: Round 2 proof findings fixed; scoped independent Round 3 next.
 - **Completed**: pinned complete lean skill; plan approved by instruction to finish all work;
   proof-backed checks; separate API, durable SQLite scheduler/worker, OpenCode adapters, React/Vite
   reader; source/browser tests; setup documentation; separate library CI workflow.
@@ -164,10 +164,10 @@
   local skill self-test killed all 46 injected faults. See checks.md and forthcoming verification.md.
 - **Authorization**: owner explicitly authorized continuing until completion and approved routine
   decisions/steps in advance; historical tlc-spec-driven specs must remain intact.
-- **In-progress**: 18 Round 1 proof/implementation gaps addressed; independent Round 2 pending. No live-provider success claimed.
+- **In-progress**: Round 1 implementation fixes verified; two Round 2 proof gaps addressed; independent Round 3 pending. No live-provider success claimed.
 - **Next step**: commit fixes and re-run independent verification over the fix diff plus all previous FAIL verdicts; all proof targets rerun before the completion gate.
 - **Live prerequisites**: YouTube Data API key and transcript-service access credential were not
   present locally. OpenCode key is present but was not printed or used for paid validation.
-- **Uncommitted files**: Round 1 report, scoped fixes, strengthened proofs, and memory/lesson updates.
+- **Uncommitted files**: Round 2 report, scoped proof fixes, and memory/lesson updates.
 - **Feature base**: `8310d8cf7884e77cf79ead213d4706300d6c03d6`
 - **Branch**: `main`

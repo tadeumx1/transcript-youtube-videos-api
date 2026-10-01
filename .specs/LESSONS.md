@@ -134,6 +134,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md Round 1 C15 C22 C35 C42 C56 (feature-proofs)
 - last seen: 2026-10-01T04:11:34Z
 
+### L-021 - Match each intended request path explicitly in browser failure fixtures and assert the failed response before inspecting its UI state.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `browser-tests` · harmful: 0
+- features: channel-transcript-library
+- evidence: Round 2 C42 (browser-tests)
+- last seen: 2026-10-01T04:17:53Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
