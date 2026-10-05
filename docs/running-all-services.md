@@ -6,15 +6,17 @@ The transcript API also hosts its job worker and local RAG engine.
 The library API hosts the daily channel collector and enrichment worker. Neither needs a separate
 queue service or database server.
 
-| Process | Development address | Start command from the repository root |
+| Process | Preferred development address | Individual start command from the repository root |
 | --- | --- | --- |
 | Transcript API, job worker and RAG | http://127.0.0.1:3000 | `npm run dev` |
 | Channel library API and worker | http://127.0.0.1:3100 | `npm run library:dev:api` |
 | React/Vite reader | http://127.0.0.1:5173 | `npm --prefix services/channel-library run dev:web -- --port 5173 --strictPort` |
 
-Vite forwards `/api` requests to the library API at `127.0.0.1:3100`. The library calls the
-transcript API at `TRANSCRIPT_API_URL`. Open the reader at port **5173** during development;
-the library API serves the reader itself on port **3100** after a production build.
+With `make dev`, use the **selected URLs** printed in the terminal. The launcher checks each
+preferred port and uses the **next available port** if another local application occupies it.
+It keeps the library's `TRANSCRIPT_API_URL` and Vite's `/api` proxy aligned with the selected APIs.
+Individual commands retain the defaults above; the library API serves the reader itself on
+port **3100** after a production build.
 
 ## 1. Prerequisites and installation
 
@@ -138,6 +140,27 @@ After completing steps 1–3, run this from the repository root on Linux, macOS 
 make dev
 ```
 
+The API preferences come from `PORT` in the root `.env` and `LIBRARY_PORT` in the library's `.env`,
+defaulting to 3000 and 3100. The reader defaults to 5173; set `WEB_PORT` in the root `.env` to
+change its preference. Exported shell values take precedence, for example:
+
+```sh
+PORT=4000 LIBRARY_PORT=4100 WEB_PORT=5200 make dev
+```
+
+Each search considers at most 100 consecutive ports, including the preferred one, and stops at
+65535. The selected ports are distinct. Invalid configuration or an exhausted search exits
+nonzero before launching applications. The checks use the configured API hosts; wildcard bind
+addresses are converted to loopback addresses in the local connection URLs.
+
+The launcher prints a `URL:` line for each application and reports every changed port. Open the
+reader at the `[web] URL:` shown for that session. Port and connection overrides are temporary:
+the launcher **does not modify** either `.env` file or stop applications occupying those ports.
+For the combined session, the library always points to the transcript API launched with it.
+Vite receives the selected library origin in its server-only `LIBRARY_PROXY_TARGET` environment
+variable. Individual Vite commands still default to `http://127.0.0.1:3100` unless that variable
+is exported explicitly.
+
 The terminal shows interleaved stdout and stderr with `[transcript]`, `[library]` and `[web]`
 labels. Each command reports its PID when started and its exit code or signal when it stops.
 A "started" line confirms a process launch; use the health checks below to verify readiness.
@@ -152,6 +175,12 @@ check its labeled logs and the HTTP health endpoints in that case.
 The command requires Node.js, npm and make, plus the setup above. It does not install dependencies,
 download models or overwrite configuration. If make is unavailable, install it using your OS
 package manager, or run the same launcher directly with `node scripts/dev.mjs`.
+
+Port checks happen before application startup. If another application takes a selected port
+between the check and the actual bind, inspect the startup logs and restart `make dev` to select
+again. Vite keeps `--strictPort` for the chosen port so it cannot silently invalidate the printed
+URL. Multiple instances of this library still require separate data directories; changing ports
+does not make concurrent writers to the same SQLite database supported.
 
 ### Run individual processes for debugging
 
@@ -176,7 +205,8 @@ In **terminal 3**, at the same repository root:
 npm --prefix services/channel-library run dev:web -- --port 5173 --strictPort
 ```
 
-Wait for the APIs to announce that they are listening. Open **http://127.0.0.1:5173** and enter
+Wait for the APIs to announce that they are listening. Open the reader's selected URL
+(**http://127.0.0.1:5173** by default) and enter
 `LIBRARY_ACCESS_KEY`. Add a public channel URL such as `https://www.youtube.com/@CHANNEL_HANDLE`.
 The first collection imports up to ten recent videos; subsequent collections run daily at 06:00
 in America/Sao_Paulo by default. The library API process must stay running for scheduled work.
@@ -192,20 +222,25 @@ Run this from another terminal at the repository root after both APIs and Vite a
 It reads the library owner key from its environment file, never prints it, and asserts both health
 responses, the real reader page, and authenticated/unauthenticated requests through the Vite proxy:
 
+Set these variables to the selected URLs printed by `make dev`; the example uses the defaults.
+
 ```sh
+export TRANSCRIPT_ORIGIN=http://127.0.0.1:3000
+export LIBRARY_ORIGIN=http://127.0.0.1:3100
+export READER_ORIGIN=http://127.0.0.1:5173
 node --env-file-if-exists=services/channel-library/.env --input-type=module <<'NODE'
 import assert from 'node:assert/strict'
 const key = process.env.LIBRARY_ACCESS_KEY
 assert.ok(key, 'Configure LIBRARY_ACCESS_KEY before the smoke check')
-for (const port of [3000, 3100]) {
-  const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(10000) })
+for (const origin of [process.env.TRANSCRIPT_ORIGIN, process.env.LIBRARY_ORIGIN]) {
+  const response = await fetch(`${origin}/health`, { signal: AbortSignal.timeout(10000) })
   assert.equal(response.status, 200)
   assert.deepEqual(await response.json(), { status: 'ok' })
 }
-const reader = await fetch('http://127.0.0.1:5173', { signal: AbortSignal.timeout(10000) })
+const reader = await fetch(process.env.READER_ORIGIN, { signal: AbortSignal.timeout(10000) })
 assert.equal(reader.status, 200)
 assert.match(await reader.text(), /<div id="root"><\/div>/)
-const url = 'http://127.0.0.1:5173/api/v1/channels'
+const url = `${process.env.READER_ORIGIN}/api/v1/channels`
 const denied = await fetch(url, { signal: AbortSignal.timeout(10000) })
 assert.equal(denied.status, 401)
 assert.equal((await denied.json()).error.code, 'UNAUTHORIZED')
@@ -221,7 +256,7 @@ NODE
 Then check full transcript/RAG readiness separately after model initialization:
 
 ```sh
-curl --fail --silent --show-error http://127.0.0.1:3000/ready
+curl --fail --silent --show-error "$TRANSCRIPT_ORIGIN/ready"
 ```
 
 Expected JSON is `{"status":"ready"}`. These checks prove local service wiring; they do not prove
@@ -266,9 +301,9 @@ The library's saved originals are independent of the transcript API's source-bun
 
 | Symptom | Action |
 | --- | --- |
-| Port already in use | Stop the earlier process. Vite uses `--strictPort` so it fails instead of silently opening a different port. |
-| Vite proxy reports connection refused | Start the library API on 3100. If changing `LIBRARY_PORT`, also change `services/channel-library/vite.config.ts`'s proxy target. |
-| Transcript connection refused | Start the root API on 3000. If changing `PORT`, update the library's `TRANSCRIPT_API_URL`. |
+| Port already in use | `make dev` selects another available port and prints its URL. If a port is taken after the check, restart the session. Individual commands still need explicit port changes or the earlier process stopped. |
+| Vite proxy reports connection refused | Check the library's startup logs at its selected URL. `make dev` configures the proxy automatically; for individual commands export `LIBRARY_PROXY_TARGET` with the actual library origin. |
+| Transcript connection refused | Check transcript startup logs at its selected URL. `make dev` sets the library's upstream automatically; with individual commands, update `TRANSCRIPT_API_URL` when changing the API port. |
 | Access screen rejects the token | Enter the library owner key, not the transcript or OpenCode key. Restart the library after editing its env file. |
 | Protected routes return 503 | Configure the appropriate owner key; root routes need `API_ACCESS_KEY`, library routes need `LIBRARY_ACCESS_KEY`. Check data directory permissions. |
 | Channel discovery fails | Enable YouTube Data API v3 and configure `YOUTUBE_API_KEY`; check provider restrictions/quota. Use a handle, channel ID URL or username URL. |
