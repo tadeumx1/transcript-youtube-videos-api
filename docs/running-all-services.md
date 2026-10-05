@@ -1,7 +1,8 @@
 # Run all services locally
 
-Run these commands from the repository root. Development uses three terminals; keep all three
-running at the same time. The transcript API also hosts its job worker and local RAG engine.
+Run these commands from the repository root. After the setup below, **`make dev` starts all three
+development processes in one terminal**, with labeled logs and shared shutdown.
+The transcript API also hosts its job worker and local RAG engine.
 The library API hosts the daily channel collector and enrichment worker. Neither needs a separate
 queue service or database server.
 
@@ -131,6 +132,32 @@ the configured path. The current model, embedding fingerprint and `v2` storage n
 
 ## 4. Start all services together for development
 
+After completing steps 1–3, run this from the repository root on Linux, macOS or WSL:
+
+```sh
+make dev
+```
+
+The terminal shows interleaved stdout and stderr with `[transcript]`, `[library]` and `[web]`
+labels. Each command reports its PID when started and its exit code or signal when it stops.
+A "started" line confirms a process launch; use the health checks below to verify readiness.
+The existing npm commands retain their environment files, working directories and watch behavior.
+
+Press **Ctrl+C once** to stop the whole session. The launcher sends SIGTERM to its process groups,
+waits up to ten seconds, and force-stops any remaining descendants. If a command cannot start or
+exits unexpectedly (including exit code 0), the launcher identifies it, stops the other groups,
+and `make dev` exits nonzero. A development watcher may remain alive after an application error;
+check its labeled logs and the HTTP health endpoints in that case.
+
+The command requires Node.js, npm and make, plus the setup above. It does not install dependencies,
+download models or overwrite configuration. If make is unavailable, install it using your OS
+package manager, or run the same launcher directly with `node scripts/dev.mjs`.
+
+### Run individual processes for debugging
+
+For separate terminals, use the commands below instead of `make dev`. Do not start both workflows
+against the same ports or library database.
+
 In **terminal 1**, at the repository root:
 
 ```sh
@@ -161,7 +188,7 @@ provider quotas; the health/auth checks below do not import a channel or call an
 
 ## Verify the running services
 
-Run this from a fourth terminal at the repository root after both APIs and Vite are listening.
+Run this from another terminal at the repository root after both APIs and Vite are listening.
 It reads the library owner key from its environment file, never prints it, and asserts both health
 responses, the real reader page, and authenticated/unauthenticated requests through the Vite proxy:
 
@@ -217,7 +244,8 @@ requests. This is a local production build, not a deployment or an automatic pro
 
 ## Stop, restart and retain data
 
-Press **Ctrl+C in each running terminal** and wait for its process to exit. Start the same commands
+With `make dev`, press **Ctrl+C once** and wait for the combined session to exit. When using
+individual commands, press **Ctrl+C in each running terminal**. Start the same command or commands
 to resume. The library resumes saved collection/enrichment progress; after downtime it admits one
 catch-up collection per channel. Stop both APIs before backing up their complete data directories.
 Do not run two library processes against the same SQLite database.

@@ -26,6 +26,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install locked dependencies
         run: npm ci
+      - name: Install channel library dependencies for the combined development smoke test
+        run: npm --prefix services/channel-library ci
       - name: Restore pinned RAG model cache
         id: rag-model-cache
         uses: actions/cache/restore@v4

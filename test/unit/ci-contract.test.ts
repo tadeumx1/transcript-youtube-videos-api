@@ -78,6 +78,7 @@ describe('CI workflow contract', () => {
       'actions/checkout@v4',
       'actions/setup-node@v4',
       'npm ci',
+      'npm --prefix services/channel-library ci',
       'actions/cache/restore@v4',
       'npm run build',
       'npm run rag:model:fetch',
