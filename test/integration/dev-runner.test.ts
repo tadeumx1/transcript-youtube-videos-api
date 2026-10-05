@@ -79,7 +79,7 @@ const child = spawn(process.execPath, ['-e', \`
   require('node:fs').writeFileSync(process.env.FIXTURE_DIR + '/\${name}-descendant.json', JSON.stringify({pid: process.pid}));
   setInterval(() => {}, 1000);
 \`], { stdio: 'ignore', env: { ...process.env, FIXTURE_MODE: name === 'web' ? mode : 'normal' } });
-fs.writeFileSync(path.join(process.env.FIXTURE_DIR, name + '.json'), JSON.stringify({ pid: process.pid, args, cwd: process.cwd(), inherited: process.env.INHERITED_MARKER, local: process.env.LOCAL_MARKER, port: process.env.PORT, libraryPort: process.env.LIBRARY_PORT, upstream: process.env.TRANSCRIPT_API_URL, proxy: process.env.LIBRARY_PROXY_TARGET }));
+fs.writeFileSync(path.join(process.env.FIXTURE_DIR, name + '.json'), JSON.stringify({ pid: process.pid, args, cwd: process.cwd(), inherited: process.env.INHERITED_MARKER, local: process.env.LOCAL_MARKER, port: process.env.PORT, libraryPort: process.env.LIBRARY_PORT, host: process.env.HOST, libraryHost: process.env.LIBRARY_HOST, upstream: process.env.TRANSCRIPT_API_URL, proxy: process.env.LIBRARY_PROXY_TARGET }));
 console.log('fixture stdout');
 console.error('fixture stderr');
 process.on('SIGTERM', () => {
@@ -342,6 +342,29 @@ it.each([false, true])(
     expect(session.output()).not.toContain('private-value')
   },
 )
+
+it('honors port configuration without rewriting env files from file hosts', async () => {
+  const port = await freePort()
+  const libraryPort = await freePort()
+  const rootEnv = `HOST=localhost\nPORT=${port}\n`
+  const libraryEnv = `LIBRARY_HOST=localhost\nLIBRARY_PORT=${libraryPort}\n`
+  const session = await fixture('normal', true, {
+    rootEnv,
+    libraryEnv,
+    env: { HOST: undefined, LIBRARY_HOST: undefined, PORT: undefined, LIBRARY_PORT: undefined },
+  })
+  await ready(session.dir)
+  const [api, library] = await records(session.dir)
+  expect(api.host).toBe('localhost')
+  expect(library.libraryHost).toBe('localhost')
+  expect(session.output()).toContain(`[transcript] URL: http://localhost:${port}`)
+  expect(session.output()).toContain(`[library] URL: http://localhost:${libraryPort}`)
+  expect(library.upstream).toBe(`http://localhost:${port}`)
+  expect(await readFile(join(session.dir, '.env'), 'utf8')).toBe(rootEnv)
+  expect(await readFile(join(session.dir, 'services/channel-library/.env'), 'utf8')).toBe(
+    libraryEnv,
+  )
+})
 
 it.each(['0', '65536', 'invalid', '3.5'])('rejects invalid preferred ports: %s', async (port) => {
   const session = await fixture('normal', false, { env: { PORT: port } })
