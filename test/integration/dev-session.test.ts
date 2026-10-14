@@ -1,12 +1,30 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { createServer as createHttpServer, type Server } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { expect, it } from 'vitest'
+
+async function prepareWorkspace(dir: string) {
+  const root = resolve('.')
+  const library = 'services/channel-library'
+  await mkdir(join(dir, library), { recursive: true })
+  for (const path of ['Makefile', 'package.json', 'tsconfig.json', 'src', 'scripts']) {
+    await cp(join(root, path), join(dir, path), { recursive: true })
+  }
+  for (const path of ['package.json', 'tsconfig.json', 'vite.config.ts', 'api', 'web']) {
+    await cp(join(root, library, path), join(dir, library, path), { recursive: true })
+  }
+  await symlink(join(root, 'node_modules'), join(dir, 'node_modules'), 'dir')
+  await symlink(join(root, library, 'node_modules'), join(dir, library, 'node_modules'), 'dir')
+  // Node 22 watch mode still watches an absent --env-file-if-exists path (nodejs/node#57040).
+  // Keep fixtures local to this workspace; never read or modify the owner's environment files.
+  await writeFile(join(dir, '.env'), '')
+  await writeFile(join(dir, library, '.env'), '')
+}
 
 it.each([false, true])(
   'serves both APIs and the authenticated reader proxy: occupied defaults %s',
@@ -33,8 +51,9 @@ it.each([false, true])(
       }
     }
     const dir = await mkdtemp(join(tmpdir(), 'dev-session-'))
+    await prepareWorkspace(dir)
     const session = spawn('make', ['dev'], {
-      cwd: resolve('.'),
+      cwd: dir,
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
@@ -53,6 +72,7 @@ it.each([false, true])(
         YOUTUBE_DISCOVERY_MODE: 'rss',
         DATA_ROOT: join(dir, 'transcripts'),
         RAG_DATA_ROOT: join(dir, 'rag'),
+        RAG_MODEL_ROOT: resolve('.models'),
         LIBRARY_DATA_DIR: join(dir, 'library'),
       },
     })
