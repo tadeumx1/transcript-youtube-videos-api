@@ -48,8 +48,8 @@ jobs:
         run: npm run check
       - name: Run offline RAG gates
         run: npm run test:rag:offline
-      - name: Audit production dependencies
-        run: npm audit --omit=dev
+      - name: Audit all dependencies
+        run: npm audit
 
   container:
     name: Container build

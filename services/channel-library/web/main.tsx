@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import type { Channel, Enrichment, Original, Video } from '../api/types'
+import type { Channel, Enrichment, Original, ReadingState, Video } from '../api/types'
+import { ReadingTools } from './reading-tools'
 import './style.css'
 
 type View = 'library' | 'channels'
@@ -36,15 +37,41 @@ function App() {
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
     [channelUrl, setChannelUrl] = useState(''),
+    [videoUrl, setVideoUrl] = useState(''),
+    [videoError, setVideoError] = useState(''),
+    [addingVideo, setAddingVideo] = useState(false),
     [query, setQuery] = useState(''),
     [channelFilter, setChannelFilter] = useState(''),
     [statusFilter, setStatusFilter] = useState(''),
+    [favoriteFilter, setFavoriteFilter] = useState(''),
+    [readFilter, setReadFilter] = useState(''),
     [page, setPage] = useState(1),
     [total, setTotal] = useState(0),
     [mutating, setMutating] = useState(false)
   const revision = useRef(0)
+  const session = useRef(0)
+  const currentToken = useRef('')
+  const changeSession = useCallback((value: string) => {
+    session.current++
+    revision.current++
+    currentToken.current = value
+    setToken(value)
+    setEntry('')
+    setVideos([])
+    setChannels([])
+    setDetail(null)
+    setSelected(null)
+    setNotice('')
+    setError('')
+    setLoading(false)
+    setMutating(false)
+    setVideoUrl('')
+    setVideoError('')
+    setAddingVideo(false)
+  }, [])
   const api = useCallback(
-    async (path: string, method = 'GET', body?: unknown) => {
+    async (path: string, method = 'GET', body?: unknown, raw = false) => {
+      const generation = session.current
       const response = await fetch(`/api/v1${path}`, {
         method,
         headers: {
@@ -53,10 +80,17 @@ function App() {
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
       })
+      if (generation !== session.current || currentToken.current !== token)
+        throw new Error('Session changed.')
+      if (raw && response.ok) {
+        const blob = await response.blob()
+        if (generation !== session.current) throw new Error('Session changed.')
+        return blob
+      }
       const data = await response.json()
+      if (generation !== session.current) throw new Error('Session changed.')
       if (response.status === 401) {
-        setToken('')
-        setEntry('')
+        changeSession('')
         setAuthError('Access denied. Enter your library access key.')
         setVideos([])
         setChannels([])
@@ -66,7 +100,7 @@ function App() {
       if (!response.ok) throw new Error(data.error?.message || 'This request could not complete.')
       return data
     },
-    [token],
+    [token, changeSession],
   )
   const load = useCallback(
     async (background = false) => {
@@ -88,6 +122,8 @@ function App() {
             ...(query ? { q: query } : {}),
             ...(channelFilter ? { channelId: channelFilter } : {}),
             ...(statusFilter ? { status: statusFilter } : {}),
+            ...(favoriteFilter ? { favorite: favoriteFilter } : {}),
+            ...(readFilter ? { read: readFilter } : {}),
           })
           const data = await api(`/videos?${params}`)
           if (revision.current === current) {
@@ -102,7 +138,18 @@ function App() {
         if (current === revision.current) setLoading(false)
       }
     },
-    [token, selected, view, page, query, channelFilter, statusFilter, api],
+    [
+      token,
+      selected,
+      view,
+      page,
+      query,
+      channelFilter,
+      statusFilter,
+      favoriteFilter,
+      readFilter,
+      api,
+    ],
   )
   useEffect(() => {
     void load()
@@ -125,17 +172,19 @@ function App() {
     }
   }, [token, api])
   const action = async (fn: () => Promise<unknown>, message: string) => {
+    const generation = session.current
     setMutating(true)
     setError('')
     setNotice('')
     try {
       await fn()
+      if (generation !== session.current) return
       setNotice(message)
       await load(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Action failed')
+      if (generation === session.current) setError(e instanceof Error ? e.message : 'Action failed')
     } finally {
-      setMutating(false)
+      if (generation === session.current) setMutating(false)
     }
   }
   const navigate = (next: View) => {
@@ -150,6 +199,23 @@ function App() {
     setDetail(null)
     setTab('Summary')
     setNotice('')
+  }
+  const addVideo = async () => {
+    if (addingVideo) return
+    const generation = session.current
+    setAddingVideo(true)
+    setVideoError('')
+    try {
+      const result = await api('/videos', 'POST', { url: videoUrl })
+      if (generation !== session.current) return
+      setVideoUrl('')
+      read(result.video.id)
+    } catch (e) {
+      if (generation === session.current)
+        setVideoError(e instanceof Error ? e.message : 'Could not add this video.')
+    } finally {
+      if (generation === session.current) setAddingVideo(false)
+    }
   }
   const tabs = ['Summary', 'Key points', 'Corrected transcript', 'Original transcript']
   if (!token)
@@ -174,8 +240,7 @@ function App() {
             onSubmit={(e) => {
               e.preventDefault()
               setAuthError('')
-              setToken(entry)
-              setEntry('')
+              changeSession(entry)
             }}
           >
             <label htmlFor="access-key">Access key</label>
@@ -243,11 +308,7 @@ function App() {
           type="button"
           className="lock"
           onClick={() => {
-            setToken('')
-            setEntry('')
-            setVideos([])
-            setDetail(null)
-            setChannels([])
+            changeSession('')
           }}
         >
           Lock library <span aria-hidden="true">↗</span>
@@ -281,7 +342,11 @@ function App() {
                     <span className={`badge ${detail.video.status}`}>
                       {labels[detail.video.status]}
                     </span>
-                    <span>{date(detail.video.publishedAt)}</span>
+                    <span>
+                      {detail.video.publishedAt
+                        ? date(detail.video.publishedAt)
+                        : `Added ${date(detail.video.addedAt)}`}
+                    </span>
                     <a
                       href={`https://www.youtube.com/watch?v=${detail.video.id}`}
                       target="_blank"
@@ -291,6 +356,36 @@ function App() {
                     </a>
                   </div>
                 </div>
+                <ReadingTools
+                  key={`${session.current}-${detail.video.id}`}
+                  video={detail.video}
+                  update={async (patch: Partial<ReadingState>) => {
+                    const generation = session.current
+                    const data = await api(`/videos/${detail.video.id}/reading`, 'PATCH', patch)
+                    if (generation !== session.current) throw new Error('Session changed.')
+                    revision.current++
+                    setDetail((current) =>
+                      current?.video.id === detail.video.id
+                        ? { ...current, video: { ...current.video, reading: data.reading } }
+                        : current,
+                    )
+                    return data.reading
+                  }}
+                  download={async () => {
+                    const blob = (await api(
+                      `/videos/${detail.video.id}/export`,
+                      'GET',
+                      undefined,
+                      true,
+                    )) as Blob
+                    const url = URL.createObjectURL(blob)
+                    const link = document.createElement('a')
+                    link.href = url
+                    link.download = `video-${detail.video.id}.md`
+                    link.click()
+                    setTimeout(() => URL.revokeObjectURL(url), 1000)
+                  }}
+                />
                 <div className="tabs" role="tablist" aria-label="Reading format">
                   {tabs.map((name) => (
                     <button
@@ -513,6 +608,32 @@ function App() {
                 <span>stories collected</span>
               </div>
             </section>
+            <form
+              className="add-channel"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void addVideo()
+              }}
+            >
+              <label htmlFor="video-url">YouTube video URL</label>
+              <div>
+                <input
+                  id="video-url"
+                  type="url"
+                  required
+                  maxLength={2048}
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={videoUrl}
+                  disabled={addingVideo}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                />
+                <button className="primary" type="submit" disabled={addingVideo}>
+                  {addingVideo ? 'Adding video…' : 'Add video'}
+                </button>
+              </div>
+              <p className="small">Save one video without following its channel.</p>
+              {videoError && <p role="alert">{videoError}</p>}
+            </form>
             <div className="filters">
               <div className="search">
                 <span aria-hidden="true">⌕</span>
@@ -557,6 +678,32 @@ function App() {
                 ))}
               </select>
             </div>
+            <div className="reading-filters">
+              <select
+                aria-label="Filter favorites"
+                value={favoriteFilter}
+                onChange={(e) => {
+                  setFavoriteFilter(e.target.value)
+                  setPage(1)
+                }}
+              >
+                <option value="">All favorites</option>
+                <option value="true">Favorites only</option>
+                <option value="false">Not favorites</option>
+              </select>
+              <select
+                aria-label="Filter reading state"
+                value={readFilter}
+                onChange={(e) => {
+                  setReadFilter(e.target.value)
+                  setPage(1)
+                }}
+              >
+                <option value="">All reading states</option>
+                <option value="false">Unread</option>
+                <option value="true">Read</option>
+              </select>
+            </div>
             <div className="section-label">
               <span>THE LATEST EDITION</span>
               <span>NEWEST FIRST ↓</span>
@@ -566,19 +713,21 @@ function App() {
                 <span className="empty-mark" aria-hidden="true">
                   ↗
                 </span>
-                <h2>Your next good read starts with a channel.</h2>
+                <h2>Your next good read starts with a video or channel.</h2>
                 <p>
-                  {query || channelFilter || statusFilter
+                  {query || channelFilter || statusFilter || favoriteFilter || readFilter
                     ? 'No videos match these filters.'
-                    : 'Follow the voices you want to make time for.'}
+                    : 'Add a video above or follow the voices you want to make time for.'}
                 </p>
-                {query || channelFilter || statusFilter ? (
+                {query || channelFilter || statusFilter || favoriteFilter || readFilter ? (
                   <button
                     type="button"
                     onClick={() => {
                       setQuery('')
                       setChannelFilter('')
                       setStatusFilter('')
+                      setFavoriteFilter('')
+                      setReadFilter('')
                       setPage(1)
                     }}
                   >
@@ -622,14 +771,18 @@ function App() {
                         <p className="eyebrow">{v.channelTitle}</p>
                         <h2>{v.title}</h2>
                         <div className="card-footer">
-                          <time dateTime={v.publishedAt}>
+                          <time dateTime={v.publishedAt ?? v.addedAt}>
+                            {!v.publishedAt && 'Added '}
                             {new Intl.DateTimeFormat('en', {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric',
-                            }).format(new Date(v.publishedAt))}
+                            }).format(new Date(v.publishedAt ?? v.addedAt))}
                           </time>
-                          <span>Read story ↗</span>
+                          <span>
+                            {v.reading?.favorite ? '★ ' : ''}
+                            {v.reading?.read ? 'Read' : 'Unread'} · Read story ↗
+                          </span>
                         </div>
                       </div>
                     </button>

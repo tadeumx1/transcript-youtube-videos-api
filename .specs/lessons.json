@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 22,
+  "next_id": 25,
   "lessons": [
     {
       "id": "L-001",
@@ -382,6 +382,60 @@
       ],
       "created": "2026-10-01T04:17:53Z",
       "last_seen": "2026-10-01T04:17:53Z"
+    },
+    {
+      "id": "L-022",
+      "key": "ac_gap::exercise retries against persisted pre upgrade terminal failures as well as failures produced by the new worker",
+      "text": "Exercise retries against persisted pre-upgrade terminal failures as well as failures produced by the new worker.",
+      "signal": "ac_gap",
+      "scope": "worker",
+      "status": "candidate",
+      "features": [
+        "library-reading-workflow"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md:Product findings C3 (worker)"
+      ],
+      "created": "2026-10-02T05:19:52Z",
+      "last_seen": "2026-10-02T05:19:52Z"
+    },
+    {
+      "id": "L-023",
+      "key": "ac_gap::resolve public channel identity from authoritative metadata independent of attribute order never from unrelated channel hyperlinks",
+      "text": "Resolve public channel identity from authoritative metadata independent of attribute order, never from unrelated channel hyperlinks.",
+      "signal": "ac_gap",
+      "scope": "discovery",
+      "status": "candidate",
+      "features": [
+        "library-reading-workflow"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md:Product findings C7 (discovery)"
+      ],
+      "created": "2026-10-02T05:19:52Z",
+      "last_seen": "2026-10-02T05:19:52Z"
+    },
+    {
+      "id": "L-024",
+      "key": "ac_gap::remove every higher precedence environment value when proving service file configuration fallback",
+      "text": "Remove every higher-precedence environment value when proving service-file configuration fallback.",
+      "signal": "ac_gap",
+      "scope": "development-launcher",
+      "status": "candidate",
+      "features": [
+        "dev-port-fallback"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "F1 / C2 / test/integration/dev-runner.test.ts:153 (development-launcher)"
+      ],
+      "created": "2026-10-05T00:47:37Z",
+      "last_seen": "2026-10-05T00:47:37Z"
     }
   ]
 }

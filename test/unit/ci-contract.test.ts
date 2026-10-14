@@ -85,7 +85,7 @@ describe('CI workflow contract', () => {
       'actions/cache/save@v4',
       'npm run check',
       'npm run test:rag:offline',
-      'npm audit --omit=dev',
+      'npm audit',
     ])
     const verify = steps.find((step) => step.run === 'npm run rag:model:fetch')
     expect(verify?.if).toBeUndefined()

@@ -1260,3 +1260,66 @@ test('C30 malformed HTTP envelope does not publish an enrichment', async () => {
   expect(next.store.enrichment(videoId)).toBeNull()
   expect(next.store.original(videoId)).toEqual(original)
 })
+
+test('T3 terminal failure retries submit fresh jobs while processing polls keep identity', async () => {
+  const f = fixture()
+  await f.seed()
+  f.remote.getJob.mockResolvedValueOnce({
+    status: 'failed',
+    failure: { code: 'YOUTUBE_UPSTREAM_ERROR' },
+  })
+  await f.worker.processVideo(videoId)
+  expect(f.store.video(videoId)?.status).toBe('retry_wait')
+  expect(f.store.video(videoId)?.jobId).toBeNull()
+  f.advance(60000)
+  f.remote.getJob.mockResolvedValueOnce({ status: 'processing', failure: null })
+  await f.worker.runOnce()
+  expect(f.remote.submit).toHaveBeenCalledTimes(2)
+  f.advance(2000)
+  await f.worker.runOnce()
+  expect(f.remote.submit).toHaveBeenCalledTimes(2)
+  expect(f.store.video(videoId)?.status).toBe('ready')
+  const g = fixture()
+  await g.seed()
+  g.remote.getJob.mockResolvedValueOnce({
+    status: 'failed',
+    failure: { code: 'PERMANENT_FAILURE' },
+  })
+  await g.worker.processVideo(videoId)
+  g.worker.retry(videoId)
+  expect(g.store.video(videoId)?.jobId).toBeNull()
+  await g.worker.processVideo(videoId)
+  expect(g.remote.submit).toHaveBeenCalledTimes(2)
+})
+
+test('T3 retries persisted pre-upgrade terminal failures with a new job', async () => {
+  const f = fixture()
+  await f.seed()
+  f.store.updateVideo(videoId, {
+    status: 'failed',
+    stage: 'transcription',
+    jobId: 'old-terminal-failed-job',
+    jobStartedAt: f.getTime(),
+    failure: { code: 'PERMANENT_FAILURE', message: 'Previous job failed' },
+  })
+  f.worker.retry(videoId)
+  expect(f.store.video(videoId)?.jobId).toBeNull()
+  await f.worker.processVideo(videoId)
+  expect(f.remote.submit).toHaveBeenCalledTimes(1)
+  expect(f.remote.getJob).not.toHaveBeenCalledWith('old-terminal-failed-job')
+  expect(f.store.video(videoId)?.status).toBe('ready')
+})
+
+test('T3 manual retry after a pending polling timeout keeps the upstream job', async () => {
+  const f = fixture()
+  await f.seed()
+  f.remote.getJob.mockResolvedValueOnce({ status: 'processing', failure: null })
+  await f.worker.processVideo(videoId)
+  f.advance(6 * 3600000 + 1)
+  await f.worker.processVideo(videoId)
+  f.worker.retry(videoId)
+  expect(f.store.video(videoId)?.jobId).toBe('upstream-job')
+  await f.worker.processVideo(videoId)
+  expect(f.remote.submit).toHaveBeenCalledTimes(1)
+  expect(f.store.video(videoId)?.status).toBe('ready')
+})

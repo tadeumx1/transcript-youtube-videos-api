@@ -9,3 +9,12 @@ README.md
 test
 .agents
 services
+**/.env*
+**/.data
+**/.models
+**/*.sqlite*
+**/*.db*
+**/node_modules
+**/dist
+test-results
+playwright-report

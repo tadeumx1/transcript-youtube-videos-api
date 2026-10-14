@@ -1,5 +1,23 @@
 # Run all services locally
 
+This English walkthrough covers first-time setup, starting each service manually, and then using
+the existing root [Makefile](../Makefile) to start and manage the applications. Commands use a
+Linux, macOS or WSL shell. On Windows, run them inside WSL.
+
+Choose one startup mode per session:
+
+| Mode | Preparation | Start | Browser address |
+| --- | --- | --- | --- |
+| Manual development, three terminals | Steps 1–3 | [Step 4](#4-start-each-service-manually) | `http://127.0.0.1:5173` with the example settings |
+| Makefile development, one terminal | Steps 1–3 | [Step 5](#5-start-all-services-with-make-dev) | The printed `[web] URL:` |
+| Makefile Docker, one terminal | Two environment files from step 2, Docker, Make and Python 3 | [Step 6](#6-run-all-applications-with-the-docker-make-targets) | The printed `[docker] URL:` |
+| Compiled local applications, two terminals | Steps 1–3 | [Compiled mode](#compiled-mode-two-terminals-no-vite-server) | `http://127.0.0.1:3100` with the example settings |
+
+Docker builds dependencies and model assets inside the images, so it does not need host Node/npm
+installation or step 3. See [Run all applications with Docker](docker.md) for its complete reference.
+Neither local mode requires Railway. YouTube access requires internet, and audio fallback and
+library enrichment still use OpenCode credentials and quota. Local RAG uses the downloaded model.
+
 Run these commands from the repository root. After the setup below, **`make dev` starts all three
 development processes in one terminal**, with labeled logs and shared shutdown.
 The transcript API also hosts its job worker and local RAG engine.
@@ -20,20 +38,37 @@ port **3100** after a production build.
 
 ## 1. Prerequisites and installation
 
+Open a terminal and enter your checkout. On the owner's current machine:
+
+```sh
+cd /home/matheus/transcript-youtube-videos-api
+```
+
+On another machine, replace that path with your checkout directory. Use this same working
+directory in every terminal below. The relative `docs`, `services` and `scripts` paths start here.
+
 - Node.js **22.12 or newer** and npm (the shared minimum includes Vite's requirement).
 - Python 3, a C/C++ build toolchain and make for npm's native-addon build step. On Debian/Ubuntu,
   install them with `sudo apt-get install build-essential python3`.
 - `yt-dlp` and FFmpeg on PATH for videos that require audio fallback. See the
   [yt-dlp installation guide](https://github.com/yt-dlp/yt-dlp#installation) and
   [FFmpeg downloads](https://ffmpeg.org/download.html).
-- A YouTube Data API v3 key for channel discovery and an OpenCode Go key for enrichment/audio fallback.
-  Obtain the YouTube key using Google's [getting started guide](https://developers.google.com/youtube/v3/getting-started).
+- An OpenCode Go key for enrichment/audio fallback. YouTube discovery can use public feeds without a key
+  with `YOUTUBE_DISCOVERY_MODE=rss`. An optional Data API key enables paginated discovery; see Google's
+  [getting started guide](https://developers.google.com/youtube/v3/getting-started).
 
 ```sh
 node --version
 npm --version
+python3 --version
+make --version
 yt-dlp --version
 ffmpeg -version
+```
+
+Resolve any missing prerequisites before continuing. Install the two locked dependency trees:
+
+```sh
 npm ci
 npm --prefix services/channel-library ci
 ```
@@ -72,6 +107,9 @@ Create the files only if they do not already exist; preserve any existing creden
 [ -f services/channel-library/.env ] || cp services/channel-library/.env.example services/channel-library/.env
 ```
 
+Open each file in your editor (for example, `nano .env` followed by
+`nano services/channel-library/.env`). Preserve the other example settings.
+
 Edit the **root `.env`**:
 
 ```dotenv
@@ -89,7 +127,8 @@ LIBRARY_PORT=3100
 LIBRARY_ACCESS_KEY=replace-with-a-different-long-random-library-token
 TRANSCRIPT_API_URL=http://127.0.0.1:3000
 TRANSCRIPT_API_KEY=replace-with-the-exact-root-API_ACCESS_KEY-value
-YOUTUBE_API_KEY=replace-with-your-youtube-data-api-key
+YOUTUBE_DISCOVERY_MODE=rss
+YOUTUBE_API_KEY=
 OPENCODE_API_KEY=replace-with-your-opencode-go-key
 LLM_BASE_URL=https://opencode.ai/zen/go/v1
 LLM_API_STYLE=chat_completions
@@ -98,8 +137,19 @@ LIBRARY_TIME_ZONE=America/Sao_Paulo
 LIBRARY_DAILY_HOUR=6
 ```
 
-The placeholder values above must be replaced, including the provider keys. Generate each owner
-access token separately with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
+Replace the non-empty placeholder values above; `YOUTUBE_API_KEY` may remain empty in RSS mode.
+Generate one token for `API_ACCESS_KEY`, then run the command again for `LIBRARY_ACCESS_KEY`:
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+For Docker-only setup without host Node, generate each token with Python instead:
+
+```sh
+python3 -c 'import secrets; print(secrets.token_hex(32))'
+```
+
 Copy the root `API_ACCESS_KEY` value into the library's `TRANSCRIPT_API_KEY`; only
 `LIBRARY_ACCESS_KEY` goes into the web access screen. The OpenCode key can be the same in both
 files, but must be configured in both because the library does not load the root `.env`.
@@ -132,7 +182,49 @@ A missing model can leave `/health` at 200 while `/ready` returns 503 and RAG re
 Do not delete stored RAG data to fix a missing model; first fetch the verified artifacts and check
 the configured path. The current model, embedding fingerprint and `v2` storage namespace are unchanged.
 
-## 4. Start all services together for development
+## 4. Start each service manually
+
+Complete steps 1–3 first. Open three terminals in the repository root. Each start command stays
+running; leave that terminal open and use the next terminal for the next service.
+These commands use the ports configured in step 2 and do not select alternate API ports.
+
+In **terminal 1**, start the transcript API, including its job worker and RAG engine:
+
+```sh
+npm run dev
+```
+
+In **terminal 2**, check the first service before starting the library API and its workers:
+
+```sh
+curl --fail --silent --show-error http://127.0.0.1:3000/health
+curl --fail --silent --show-error http://127.0.0.1:3000/ready
+npm run library:dev:api
+```
+
+Expect `{"status":"ok"}` and, after model initialization, `{"status":"ready"}`. If either command
+fails, resolve it before starting the next service; a 503 from `/ready` can indicate a missing
+model or unavailable storage.
+
+In **terminal 3**, check the library API and start the reader:
+
+```sh
+curl --fail --silent --show-error http://127.0.0.1:3100/health
+npm --prefix services/channel-library run dev:web -- --port 5173 --strictPort
+```
+
+Expect `{"status":"ok"}` from the library. Open **http://127.0.0.1:5173** and enter the value of
+`LIBRARY_ACCESS_KEY` from `services/channel-library/.env` in the browser's **Access key** field.
+Use **Add video** to import one public YouTube video URL, or **Channels** to follow a public
+channel. Imports invoke the providers; health checks do not. The APIs must stay running while
+videos are processed, and the library API must stay running for scheduled channel collection.
+
+To stop this mode, press **Ctrl+C in all three terminals**. Stop it before trying `make dev`,
+because both host workflows use the same saved data. For changed ports, update the library's
+`TRANSCRIPT_API_URL`; start Vite with `LIBRARY_PROXY_TARGET=http://127.0.0.1:<library-port>` and
+the desired `--port`. The next section automates these connections.
+
+## 5. Start all services with make dev
 
 After completing steps 1–3, run this from the repository root on Linux, macOS or WSL:
 
@@ -163,6 +255,53 @@ is exported explicitly.
 
 The terminal shows interleaved stdout and stderr with `[transcript]`, `[library]` and `[web]`
 labels. Each command reports its PID when started and its exit code or signal when it stops.
+
+The library also logs API method, route template, HTTP status and duration, plus processing
+stage start/success/failure events. Failures include the error code, retry decision and provider
+HTTP status when available; tokens, request bodies and transcript text are omitted.
+
+An HTTP `GET 200` only means the reader fetched saved state. It does not mean the LLM
+completed. The processing flow is:
+
+```text
+web -> library: admit a video or read its saved status
+library -> transcript: submit_job -> poll_job -> fetch_transcript
+library -> local storage: save or reuse the original transcript
+library -> llm: correct_chunk (part 1/N, then 2/N, ...)
+library -> llm: reduce_summaries when multiple chunks need combining
+library -> local storage: save corrected text, summary and key points; status ready
+```
+
+`stage=upstream` logs each call's `from`, `to`, `operation`, start, received headers,
+completion or failure. While a call is pending, a heartbeat every 15 seconds reports
+`phase=response_headers` or `phase=response_body`, `elapsedMs`, `remainingMs` and `timeoutMs`.
+This reports what the local HTTP client is waiting for, not a percentage or access to the
+provider's internal processing. `headers_received` with HTTP 200 alone is not completed output.
+Chunk events report `part`, `parts`, input character count, and whether the result was saved
+or reused. A terminal processing event reports `status`; failures include `retryInMs`.
+GET request logs use `operation=read_saved_state` to distinguish browser polling from work.
+
+For GLM 5.3 chat-completion models, editorial requests ask for low reasoning effort and JSON output.
+OpenCode requests use `reasoning: { effort: "low" }`; direct endpoints use `reasoning_effort=low`.
+The native field was rejected by an OpenCode upstream route during a live integration check.
+The [GLM 5.3 reference](https://docs.z.ai/guides/llm/glm-5.3) documents a `max` default,
+and [GLM 5.3 Flash](https://docs.z.ai/guides/vlm/glm-5.3-flash) shares those text parameters.
+Other model families and the Responses protocol retain their existing parameters. This lowers
+the requested reasoning effort but does not guarantee provider latency or eliminate retries.
+
+If no activity appears in your terminal, confirm that the browser uses that terminal's `[web] URL:`.
+Another `make dev` session can be serving an older browser tab on a different port. Stop the old
+session with Ctrl+C instead of running two workers against the same library data directory.
+
+The OpenCode adapter sends this application's user agent and a stable, opaque
+`x-opencode-session` per video, as required by the [provider's client documentation](https://opencode.ai/docs/go/#where-can-i-use-it).
+An HTTP 400 rejection is reported as `PROVIDER_REQUEST_REJECTED`, with its upstream status in
+server logs, rather than a generic connection failure. No session environment variable is needed.
+For slow full-transcript responses, `LLM_TIMEOUT_MS` in the library environment controls the
+per-request timeout (default 120000 ms; allowed 1000–900000). For example, set
+`LLM_TIMEOUT_MS=300000` for five minutes and restart the library. Saved transcript chunks survive
+retries, so already completed work is reused.
+
 A "started" line confirms a process launch; use the health checks below to verify readiness.
 The existing npm commands retain their environment files, working directories and watch behavior.
 
@@ -182,31 +321,7 @@ again. Vite keeps `--strictPort` for the chosen port so it cannot silently inval
 URL. Multiple instances of this library still require separate data directories; changing ports
 does not make concurrent writers to the same SQLite database supported.
 
-### Run individual processes for debugging
-
-For separate terminals, use the commands below instead of `make dev`. Do not start both workflows
-against the same ports or library database.
-
-In **terminal 1**, at the repository root:
-
-```sh
-npm run dev
-```
-
-In **terminal 2**, at the same repository root:
-
-```sh
-npm run library:dev:api
-```
-
-In **terminal 3**, at the same repository root:
-
-```sh
-npm --prefix services/channel-library run dev:web -- --port 5173 --strictPort
-```
-
-Wait for the APIs to announce that they are listening. Open the reader's selected URL
-(**http://127.0.0.1:5173** by default) and enter
+Wait for the APIs to announce that they are listening. Open the printed `[web] URL:` and enter
 `LIBRARY_ACCESS_KEY`. Add a public channel URL such as `https://www.youtube.com/@CHANNEL_HANDLE`.
 The first collection imports up to ten recent videos; subsequent collections run daily at 06:00
 in America/Sao_Paulo by default. The library API process must stay running for scheduled work.
@@ -215,6 +330,73 @@ Closing the browser leaves collection running; stopping the API does not.
 A registered video proceeds through transcription and enrichment before its summary, key points
 and corrected text are ready. Original text stays readable if enrichment fails. Live imports use
 provider quotas; the health/auth checks below do not import a channel or call an LLM.
+
+## 6. Run all applications with the Docker make targets
+
+Configure the two environment files in step 2 first. This mode needs Make, Python 3 and a working
+Docker engine with Compose v2.24 or newer. It builds Node, native/media dependencies and model
+assets inside the images; skip host npm installation and model downloads when using only Docker.
+On WSL, enable Docker integration and check engine permissions as described in the
+[Docker prerequisites](docker.md#wsl-prerequisites).
+
+In **terminal 1**, at the repository root, verify the tools:
+
+```sh
+make --version
+python3 --version
+docker version
+docker compose version
+```
+
+`docker version` must report both Client and Server. Then start the complete stack:
+
+```sh
+make docker-up
+```
+
+Wait for the builds and health checks, then open the printed `[docker] URL: http://127.0.0.1:<port>`.
+Enter `LIBRARY_ACCESS_KEY` in the browser. The command continues streaming logs; keep its terminal
+open. The frontend publishes one loopback port, while both APIs remain inside the Docker network.
+The host `curl` commands for ports 3000 and 3100 do not check these containers.
+
+In **terminal 2**, at the same repository root, inspect the running stack:
+
+```sh
+make docker-status
+make docker-logs
+```
+
+Status reports container health and the published address. Logs show the last 200 lines.
+Stop the stack with Ctrl+C in terminal 1, or from terminal 2:
+
+```sh
+make docker-down
+```
+
+Containers are stopped/removed and saved volumes remain. After the previous session exits,
+restart with `make docker-up`. To choose a fixed browser port for the next session:
+
+```sh
+DOCKER_WEB_PORT=8085 make docker-up
+```
+
+Open **http://127.0.0.1:8085**. Unlike `make dev`, an explicitly requested occupied Docker port
+fails rather than advancing to another port. Omit `DOCKER_WEB_PORT` for automatic allocation.
+
+The existing Makefile exposes exactly these targets:
+
+| Target | Launcher | Purpose |
+| --- | --- | --- |
+| `make dev` | `node scripts/dev.mjs` | Start all three host development processes and follow logs. |
+| `make docker-up` | `python3 scripts/docker.py up` | Build/start all three containers, wait for health, print URL and follow logs. |
+| `make docker-status` | `python3 scripts/docker.py status` | Show this Compose project's containers and ports. |
+| `make docker-logs` | `python3 scripts/docker.py logs` | Show the most recent container logs. |
+| `make docker-down` | `python3 scripts/docker.py down` | Stop/remove this Compose project's containers while retaining volumes. |
+
+There is no `make stop` or `make restart` target. Host development stops with Ctrl+C; Docker
+restarts with `make docker-down` followed by `make docker-up`. You can run the listed launcher
+commands directly if Make is unavailable. Docker and host modes keep separate data stores;
+see [Docker backup and restore](docker.md#data-backup-and-restore) before moving saved readings.
 
 ## Verify the running services
 
@@ -271,7 +453,18 @@ npm run build
 npm --prefix services/channel-library run build
 ```
 
-Run `npm start` in terminal 1 and `npm --prefix services/channel-library start` in terminal 2.
+Stop any host development session first. In **terminal 1**, at the repository root:
+
+```sh
+npm start
+```
+
+In **terminal 2**, at the repository root:
+
+```sh
+npm --prefix services/channel-library start
+```
+
 Open **http://127.0.0.1:3100**: the library process serves the compiled React application and API
 on the same origin. The transcript API stays at **http://127.0.0.1:3000**. The Vite-specific smoke
 block above is for development; in compiled mode use the library origin for the HTML and `/api`
@@ -306,7 +499,7 @@ The library's saved originals are independent of the transcript API's source-bun
 | Transcript connection refused | Check transcript startup logs at its selected URL. `make dev` sets the library's upstream automatically; with individual commands, update `TRANSCRIPT_API_URL` when changing the API port. |
 | Access screen rejects the token | Enter the library owner key, not the transcript or OpenCode key. Restart the library after editing its env file. |
 | Protected routes return 503 | Configure the appropriate owner key; root routes need `API_ACCESS_KEY`, library routes need `LIBRARY_ACCESS_KEY`. Check data directory permissions. |
-| Channel discovery fails | Enable YouTube Data API v3 and configure `YOUTUBE_API_KEY`; check provider restrictions/quota. Use a handle, channel ID URL or username URL. |
+| Channel discovery fails | In RSS mode use a public channel ID URL and check feed access. In data_api mode enable YouTube Data API v3 and configure its key; check restrictions/quota. |
 | Transcript request rejected | Confirm `TRANSCRIPT_API_KEY` exactly matches the root `API_ACCESS_KEY`. Check transcript API logs and connectivity. |
 | LLM enrichment fails | Confirm the library's OpenCode key, model, protocol and subscription quota. Source text is preserved; use Retry processing after correction. |
 | `/ready` remains 503 | Check `.models`, configured RAG model/storage paths, file permissions and root logs; allow time for local model initialization. |
@@ -339,3 +532,53 @@ embedding fingerprints remain unchanged. Sources: [Fastify advisory](https://git
 [adm-zip advisory](https://github.com/advisories/GHSA-rcw4-f5rp-g42v),
 [fast-uri advisory](https://github.com/advisories/GHSA-hrr3-gc8f-f4qj),
 [undici advisory](https://github.com/advisories/GHSA-r53p-7pc4-xj5r).
+
+For automatic setup, reading features and stage-specific probes, see [Reading workflow and validation](library-reading-workflow.md).
+
+## Add an individual video
+
+In **Library**, paste a **YouTube video URL** above the filters and select **Add video**.
+Watch, youtu.be, Shorts, live and embed HTTPS links are supported. Playlist and timestamp
+parameters still import only the specified video. A channel URL belongs in **Channels**.
+The reader opens immediately while transcription and enrichment run in the background.
+A duplicate link opens the existing video and preserves its progress, favorites and notes.
+
+This does not follow a channel. Until channel discovery supplies real metadata, the title is
+`YouTube video <id>`, the source is **Added individually**, and the displayed date is its
+addition date, not a guessed publication date. Existing retry, reading filters and Markdown
+export also work for individual videos. Provider credentials and transcript availability
+still determine whether background processing can finish.
+
+The authenticated `POST /api/v1/videos` endpoint accepts `{ "url": "https://youtu.be/abcdefghijk" }`.
+It returns `{ video, created }` with 202 for admission or 200 for an existing video.
+It shares the owner's mutation rate limit and rejects malformed URLs and unknown fields.
+
+This upgrade introduces schema 3. Stop the library and make a backup of the complete
+`LIBRARY_DATA_DIR` before upgrading. Schemas 1 and 2 migrate atomically, preserving sources,
+enrichment, reading state, jobs and collections. Older service binaries cannot open schema 3;
+rolling back requires restoring the backup alongside the older code. Do not lower `user_version`.
+
+## Which environment files to fill
+
+There are **two runtime environment files**. `.env.example` files are templates, not additional
+configuration to fill. The Vite frontend needs no `.env`: it uses the library API proxy.
+
+| File | Variable | Meaning |
+| --- | --- | --- |
+| Root `.env` | `API_ACCESS_KEY` | Private password you choose for the transcript API. |
+| Root `.env` | `OPENCODE_API_KEY` | Provider-issued key used by the transcript service where required. |
+| `services/channel-library/.env` | `LIBRARY_ACCESS_KEY` | Private password you choose; enter this in the browser's **Access key** field. |
+| `services/channel-library/.env` | `TRANSCRIPT_API_KEY` | Copy the exact root `API_ACCESS_KEY` here so the library can call the transcript API. |
+| `services/channel-library/.env` | `OPENCODE_API_KEY` | Provider-issued key for summaries and corrected transcripts. May be the same provider key as the root file. |
+| `services/channel-library/.env` | `YOUTUBE_DISCOVERY_MODE` | Keep `YOUTUBE_DISCOVERY_MODE=rss` to collect recent channel videos from public feeds. |
+| `services/channel-library/.env` | `YOUTUBE_API_KEY` | Optional with `rss`; required only when selecting `data_api` discovery through YouTube Data API. |
+
+RSS is a public feed of recent channel publications. It does not use a Google API key.
+It has a limited recent window; API discovery supports paginated channel history.
+The individual-video form also needs no `YOUTUBE_API_KEY`; it queues the video ID directly.
+
+Keep the other example defaults for local use unless changing ports, storage, provider model
+or installed binary paths. `make dev` selects free ports and connects the local services using
+the chosen ports; it does not rewrite your env files. Without the launcher, set
+`TRANSCRIPT_API_URL` to the transcript API address yourself. Never put provider keys in frontend
+variables. Changing a runtime `.env` requires restarting `make dev`.

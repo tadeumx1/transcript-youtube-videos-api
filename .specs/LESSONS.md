@@ -140,6 +140,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: Round 2 C42 (browser-tests)
 - last seen: 2026-10-01T04:17:53Z
 
+### L-022 - Exercise retries against persisted pre-upgrade terminal failures as well as failures produced by the new worker.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `worker` · harmful: 0
+- features: library-reading-workflow
+- evidence: verification.md:Product findings C3 (worker)
+- last seen: 2026-10-02T05:19:52Z
+
+### L-023 - Resolve public channel identity from authoritative metadata independent of attribute order, never from unrelated channel hyperlinks.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `discovery` · harmful: 0
+- features: library-reading-workflow
+- evidence: verification.md:Product findings C7 (discovery)
+- last seen: 2026-10-02T05:19:52Z
+
+### L-024 - Remove every higher-precedence environment value when proving service-file configuration fallback.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `development-launcher` · harmful: 0
+- features: dev-port-fallback
+- evidence: F1 / C2 / test/integration/dev-runner.test.ts:153 (development-launcher)
+- last seen: 2026-10-05T00:47:37Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

@@ -7,6 +7,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "validate:live": "node --env-file-if-exists=../../.env --env-file-if-exists=.env --import tsx api/validate-live.ts",
     "dev:api": "node --env-file-if-exists=.env --import tsx --watch api/server.ts",
     "dev:web": "vite --host 127.0.0.1",
     "start": "node --env-file-if-exists=.env dist/api/server.js",

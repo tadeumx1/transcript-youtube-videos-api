@@ -1,0 +1,37 @@
+name: Docker applications
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker-entrypoint.sh'
+      - '.dockerignore'
+      - 'compose.yaml'
+      - 'Makefile'
+      - 'scripts/docker.py'
+      - 'test/docker/**'
+      - 'services/channel-library/**'
+      - 'src/**'
+      - 'package*.json'
+      - '.github/workflows/docker.yml'
+permissions:
+  contents: read
+jobs:
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            services/channel-library/package-lock.json
+      - run: npm ci
+      - run: npm --prefix services/channel-library ci
+      - run: npm --prefix services/channel-library exec -- playwright install --with-deps chromium
+      - run: python3 -m unittest test/docker/test_launcher.py
+      - run: node --test test/docker/stack.test.mjs
+      - run: npm exec -- vitest run test/integration/dev-runner.test.ts test/integration/dev-session.test.ts --reporter=verbose

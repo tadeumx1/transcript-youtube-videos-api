@@ -3,10 +3,12 @@ export interface Config {
   dataDir: string
   accessKey: string
   youtubeApiKey: string
+  youtubeDiscoveryMode: 'data_api' | 'rss'
   transcriptApiUrl: string
   transcriptApiKey: string
   opencodeApiKey: string
   llmBaseUrl: string
+  llmTimeoutMs: number
   llmModel: string
   llmApiStyle: 'chat_completions' | 'responses'
   host: string
@@ -37,14 +39,18 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       throw new Error('Invalid upstream URL')
     return value.replace(/\/$/, '')
   }
+  const mode = env.YOUTUBE_DISCOVERY_MODE || 'data_api'
+  if (mode !== 'data_api' && mode !== 'rss') throw new Error('Invalid YOUTUBE_DISCOVERY_MODE')
   return {
+    youtubeDiscoveryMode: mode,
     dataDir: resolve(env.LIBRARY_DATA_DIR || '.data/library'),
-    accessKey: env.LIBRARY_ACCESS_KEY || '',
-    youtubeApiKey: env.YOUTUBE_API_KEY || '',
+    accessKey: env.LIBRARY_ACCESS_KEY?.trim() || '',
+    youtubeApiKey: env.YOUTUBE_API_KEY?.trim() || '',
     transcriptApiUrl: url(env.TRANSCRIPT_API_URL || 'http://127.0.0.1:3000'),
-    transcriptApiKey: env.TRANSCRIPT_API_KEY || '',
-    opencodeApiKey: env.OPENCODE_API_KEY || '',
+    transcriptApiKey: env.TRANSCRIPT_API_KEY?.trim() || '',
+    opencodeApiKey: env.OPENCODE_API_KEY?.trim() || '',
     llmBaseUrl: url(env.LLM_BASE_URL || 'https://opencode.ai/zen/go/v1'),
+    llmTimeoutMs: integer('LLM_TIMEOUT_MS', 120000, 1000, 900000),
     llmModel: env.LLM_MODEL || 'glm-5.3-flash',
     llmApiStyle: style,
     host: env.LIBRARY_HOST || '127.0.0.1',

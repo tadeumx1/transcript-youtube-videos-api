@@ -30,8 +30,17 @@ export interface DiscoveredVideo {
   publishedAt: string
   thumbnail: string | null
 }
-export interface Video extends DiscoveredVideo {
-  channelId: string
+export interface ReadingState {
+  favorite: boolean
+  read: boolean
+  notes: string
+  updatedAt: string | null
+}
+export interface Video extends Omit<DiscoveredVideo, 'publishedAt'> {
+  publishedAt: string | null
+  addedAt: string
+  reading: ReadingState
+  channelId: string | null
   channelTitle: string
   status: VideoStatus
   failure: Failure | null
@@ -87,9 +96,11 @@ export interface Remote {
   submit(videoId: string): Promise<string>
   getJob(id: string): Promise<{ status: string; failure: { code: string } | null }>
   getTranscript(id: string): Promise<Original>
-  enrich(text: string, mode: 'chunk' | 'summary'): Promise<EnrichmentData>
+  enrich(text: string, mode: 'chunk' | 'summary', sessionId?: string): Promise<EnrichmentData>
 }
 export interface VideoFilters {
+  favorite?: string
+  read?: string
   channelId?: string
   status?: string
   q?: string

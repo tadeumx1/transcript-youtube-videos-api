@@ -126,7 +126,7 @@ test('C39 original timestamp points to YouTube playback time', async ({ page }) 
 test('C40 empty channel and video views provide next action', async ({ page }) => {
   await mock(page, { empty: true })
   await expect(
-    page.getByText('Your next good read starts with a channel.', { exact: true }),
+    page.getByText('Your next good read starts with a video or channel.', { exact: true }),
   ).toBeVisible()
   await page.getByRole('button', { name: 'Channels', exact: true }).click()
   await expect(page.getByText('No channels yet.', { exact: true })).toBeVisible()

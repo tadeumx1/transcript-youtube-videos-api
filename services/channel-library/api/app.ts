@@ -1,9 +1,11 @@
 import { timingSafeEqual } from 'node:crypto'
 import Fastify from 'fastify'
 import type { Config } from './config.js'
+import { exportMarkdown } from './export.js'
 import { HttpRemote, parseChannelUrl, RemoteError } from './remote.js'
 import { Store } from './store.js'
 import type { Channel, Remote, VideoStatus } from './types.js'
+import { parseVideoUrl } from './video-url.js'
 import { failure, type Log, nextDaily, Worker } from './worker.js'
 
 const statuses: VideoStatus[] = [
@@ -29,8 +31,8 @@ export function createLibrary(
 ) {
   const now = options.now || Date.now
   const log = options.log || (() => {})
-  const store = new Store(config.dataDir)
-  const remote = options.remote || new HttpRemote(config)
+  const store = new Store(config.dataDir, now)
+  const remote = options.remote || new HttpRemote(config, fetch, log)
   const worker = new Worker(store, remote, config, now, log)
   const app = Fastify({ logger: false, bodyLimit: 8192 })
   let closed = false
@@ -55,6 +57,24 @@ export function createLibrary(
     if (e.statusCode === 429) reply.header('retry-after', String(e.retryAfter || 60))
     return reply.code(e.statusCode).send({ error: failure(e), requestId: request.id })
   })
+  app.addHook('onResponse', async (request, reply) => {
+    if (!request.url.startsWith('/api/')) return
+    log({
+      stage: 'http',
+      from: 'web',
+      to: 'library',
+      operation: request.method === 'GET' ? 'read_saved_state' : 'change_saved_state',
+      message:
+        request.method === 'GET'
+          ? 'Browser/client reading saved library state; this does not start processing.'
+          : 'Browser/client submitted a library action.',
+      outcome: reply.statusCode < 400 ? 'success' : 'failure',
+      method: request.method,
+      route: request.routeOptions.url || '/api/*',
+      statusCode: reply.statusCode,
+      elapsedMs: reply.elapsedTime,
+    })
+  })
   app.addHook('onRequest', async (request, reply) => {
     if (!request.url.startsWith('/api/')) return
     if (!config.accessKey) throw new RemoteError('CONFIGURATION_REQUIRED', 503)
@@ -68,7 +88,7 @@ export function createLibrary(
       throw new RemoteError('STORAGE_UNAVAILABLE', 503)
     }
     reply.header('cache-control', 'no-store')
-    if (request.method === 'POST') {
+    if (request.method === 'POST' || request.method === 'PATCH') {
       if (now() - admission.start >= 60000) admission = { start: now(), count: 0 }
       if (admission.count >= 30)
         throw new RemoteError(
@@ -132,8 +152,29 @@ export function createLibrary(
       return reply.code(202).send({ collectionId: run.id, status: run.status })
     },
   )
+  app.post<{ Body: unknown }>('/api/v1/videos', async (request, reply) => {
+    const body = request.body
+    if (
+      !body ||
+      typeof body !== 'object' ||
+      Array.isArray(body) ||
+      Object.keys(body).some((key) => key !== 'url')
+    )
+      throw new RemoteError('INVALID_REQUEST', 400)
+    const id = parseVideoUrl((body as { url?: unknown }).url)
+    const result = store.addIndividualVideo(id)
+    return reply.code(result.created ? 202 : 200).send(result)
+  })
   app.get<{ Querystring: Record<string, string> }>('/api/v1/videos', async (request) => {
     const q = request.query
+    const keys = ['page', 'pageSize', 'channelId', 'status', 'q', 'favorite', 'read']
+    if (
+      Object.entries(q).some(([key, value]) => !keys.includes(key) || typeof value !== 'string') ||
+      ['favorite', 'read'].some(
+        (key) => q[key] !== undefined && !['true', 'false'].includes(q[key]),
+      )
+    )
+      throw new RemoteError('INVALID_REQUEST', 400)
     const positive = (s: string | undefined, fallback: number, max: number) => {
       const n = Number(s ?? fallback)
       if (!Number.isInteger(n) || n < 1 || n > max) throw new RemoteError('INVALID_REQUEST', 400)
@@ -157,6 +198,39 @@ export function createLibrary(
       failure: video.failure,
     }
   })
+  app.patch<{ Params: { videoId: string }; Body: Record<string, unknown> }>(
+    '/api/v1/videos/:videoId/reading',
+    { bodyLimit: 65536 },
+    async (request) => {
+      const id = videoId(request.params.videoId)
+      if (!store.video(id)) throw new RemoteError('VIDEO_NOT_FOUND', 404)
+      const body = request.body
+      if (
+        !body ||
+        Array.isArray(body) ||
+        typeof body !== 'object' ||
+        !Object.keys(body).length ||
+        Object.keys(body).some((key) => !['favorite', 'read', 'notes'].includes(key)) ||
+        ['favorite', 'read'].some((key) => key in body && typeof body[key] !== 'boolean') ||
+        ('notes' in body &&
+          (typeof body.notes !== 'string' || Array.from(body.notes).length > 10000))
+      )
+        throw new RemoteError('INVALID_REQUEST', 400)
+      return { reading: store.updateReading(id, body, now()) }
+    },
+  )
+  app.get<{ Params: { videoId: string } }>(
+    '/api/v1/videos/:videoId/export',
+    async (request, reply) => {
+      const id = videoId(request.params.videoId)
+      const video = store.video(id)
+      if (!video) throw new RemoteError('VIDEO_NOT_FOUND', 404)
+      return reply
+        .type('text/markdown; charset=utf-8')
+        .header('content-disposition', `attachment; filename="video-${id}.md"`)
+        .send(exportMarkdown(video, store.original(id), store.enrichment(id)))
+    },
+  )
   app.post<{ Params: { videoId: string } }>(
     '/api/v1/videos/:videoId/retry',
     async (request, reply) => reply.code(202).send(worker.retry(videoId(request.params.videoId))),

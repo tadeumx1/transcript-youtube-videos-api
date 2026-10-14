@@ -15,6 +15,8 @@ npm --prefix services/channel-library ci
 cp services/channel-library/.env.example services/channel-library/.env
 ```
 
+Alternatively, run `npm run library:setup` from the repository root to generate missing owner keys, connect the two APIs and select keyless RSS discovery. Existing values are preserved.
+
 Fill the server environment file, then start the two development processes in separate terminals:
 
 ```sh
@@ -52,7 +54,8 @@ when this service calls the transcript API; do not give that credential to the b
 | `LIBRARY_DATA_DIR` | `.data/library` | Persistent SQLite directory, relative to the service working directory. |
 | `LIBRARY_TIME_ZONE` | `America/Sao_Paulo` | IANA timezone for collection. |
 | `LIBRARY_DAILY_HOUR` | `6` | Daily collection hour, 0–23; default **06:00**. |
-| `YOUTUBE_API_KEY` | empty | YouTube Data API v3 key for public channel lookup and upload-playlist pagination. |
+| `YOUTUBE_DISCOVERY_MODE` | `data_api` in code; `rss` in the example/setup | `rss` reads public feeds without a key; `data_api` uses paginated uploads. |
+| `YOUTUBE_API_KEY` | empty | Required only in `data_api` mode. |
 | `TRANSCRIPT_API_URL` | `http://127.0.0.1:3000` | Existing transcript API origin. |
 | `TRANSCRIPT_API_KEY` | empty | Bearer credential for existing `/v1/jobs` routes. |
 | `OPENCODE_API_KEY` | empty | OpenCode Go key used for text enrichment. |
@@ -125,3 +128,28 @@ responses. Browser proofs run the real React application in Chromium with contro
 `npm run check:all` from the repository root runs the original API checks plus this application's checks.
 The library CI workflow installs its own locked dependencies and browser. No live-provider success
 is implied by fixture-based verification.
+
+
+## Personal reading state and export
+
+Use **Add favorite**, **Mark as read** and **Personal notes** in the reader. Notes allow up to
+10000 Unicode code points; **Save notes** persists them. Unsaved drafts survive background refresh
+and failed saves, but are not automatically saved when navigating away. The original transcript
+and AI output stay unchanged. Favorite/read filters combine with channel, processing state and
+title search. **Download Markdown** includes all saved reading sections and notes.
+
+These records live in schema version 2 of the same SQLite database. Opening an existing version 1
+database adds default reading values without deleting its originals, results or collection progress.
+Back up the stopped service before changing versions; an older service cannot open schema version 2.
+
+## Discovery without a YouTube API key
+
+Set `YOUTUBE_DISCOVERY_MODE=rss` or run the root `library:setup` script. Channel ID URLs are the
+most reliable; handles/user URLs require publicly accessible channel-page metadata first. The
+collector imports up to ten entries initially and checks the feed daily. RSS has a bounded recent
+window and no pagination: older publications may be missed after downtime or very high posting
+volume. Private/blocked/consent-gated pages remain errors; this does not bypass YouTube restrictions.
+Use `data_api` with your own key when paginated historical discovery is needed.
+
+See [Reading workflow and validation](../../docs/library-reading-workflow.md) for live probes and
+Playwright CLI steps. No live-provider success is implied by controlled fixture tests.

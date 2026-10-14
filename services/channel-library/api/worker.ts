@@ -2,8 +2,60 @@ import type { Config } from './config.js'
 import { RemoteError, validateEnrichment } from './remote.js'
 import type { Store } from './store.js'
 import type { EnrichmentData, Failure, Remote } from './types.js'
-export type Log = (event: { stage: string; outcome: string; elapsedMs: number }) => void
+export type Log = (event: {
+  stage: string
+  outcome: string
+  elapsedMs: number
+  code?: string
+  provider?: string
+  upstreamStatus?: number
+  retryable?: boolean
+  attempt?: number
+  method?: string
+  route?: string
+  statusCode?: number
+  from?: 'web' | 'library'
+  to?: 'library' | 'transcript' | 'llm' | 'youtube'
+  operation?: string
+  message?: string
+  reason?: string
+  phase?: 'response_headers' | 'response_body'
+  timeoutMs?: number
+  remainingMs?: number
+  part?: number
+  parts?: number
+  characters?: number
+  inputSummaries?: number
+  status?: string
+  retryInMs?: number
+}) => void
 export function failure(error: unknown): Failure {
+  if (error instanceof RemoteError && error.code === 'INVALID_LLM_RESPONSE') {
+    const reasons: Record<string, string> = {
+      incomplete_output: 'The model stopped before completing its response.',
+      invalid_json: 'The model returned invalid JSON.',
+      invalid_fields_or_bounds:
+        'The model returned missing fields or values beyond the supported limits.',
+    }
+    return {
+      code: error.code,
+      message:
+        reasons[error.diagnostics?.reason || ''] ||
+        'The model returned an invalid response. Check the validation reason in the server logs.',
+    }
+  }
+  const messages: Record<string, string> = {
+    PROVIDER_REQUEST_REJECTED:
+      'The provider rejected this request. Check the server logs and provider configuration before retrying.',
+    PROVIDER_AUTHENTICATION_FAILED:
+      'The provider rejected its API key. Check the server credentials before retrying.',
+    UPSTREAM_UNAVAILABLE:
+      'A required service could not be reached or returned a server error. Check the server logs before retrying.',
+    TIMEOUT: 'The provider took too long to respond. Retry processing shortly.',
+    RATE_LIMITED: 'The provider request limit was reached. Processing will retry when allowed.',
+  }
+  if (error instanceof RemoteError && messages[error.code])
+    return { code: error.code, message: messages[error.code] }
   return {
     code: error instanceof RemoteError ? error.code : 'UPSTREAM_UNAVAILABLE',
     message:
@@ -155,7 +207,15 @@ export class Worker {
         collectionStatus: retry ? 'retry_wait' : 'failed',
         ...(!retry ? { nextCollectionAt: nextDaily(this.now(), this.config) } : {}),
       })
-      this.log({ stage: 'discovery', outcome: 'failure', elapsedMs: this.now() - start })
+      this.log({
+        stage: 'discovery',
+        outcome: 'failure',
+        elapsedMs: this.now() - start,
+        code: e.code,
+        retryable: e.retryable,
+        attempt: attempts,
+        ...e.diagnostics,
+      })
     } finally {
       this.collections.delete(id)
     }
@@ -173,6 +233,7 @@ export class Worker {
     if (!video || ['ready', 'failed', 'unavailable'].includes(video.status)) return
     this.videoBusy = true
     let attempt: string | undefined
+    let terminalJobFailed = false
     let stage = video.stage
     const start = this.now()
     try {
@@ -181,6 +242,7 @@ export class Worker {
       if (!source) {
         this.store.updateVideo(id, { status: 'transcribing' })
         if (!video.jobId) {
+          this.log({ stage: 'transcription', outcome: 'started', elapsedMs: this.now() - start })
           const jobId = await this.remote.submit(id)
           this.store.updateVideo(id, { jobId, jobStartedAt: this.now() })
           video = this.store.video(id) as typeof video
@@ -189,10 +251,20 @@ export class Worker {
           throw new RemoteError('TRANSCRIPT_JOB_TIMEOUT', 502, false)
         const job = await this.remote.getJob(video.jobId as string)
         if (job.status === 'queued' || job.status === 'processing') {
+          this.log({
+            stage: 'transcription',
+            operation: 'poll_job',
+            outcome: 'waiting',
+            status: job.status,
+            retryInMs: 2000,
+            elapsedMs: this.now() - start,
+            message: 'Transcript job is still queued or processing.',
+          })
           this.store.updateVideo(id, { nextAttemptAt: this.now() + 2000 })
           return
         }
         if (job.status === 'failed') {
+          terminalJobFailed = true
           const code = job.failure?.code || 'TRANSCRIPT_FAILED'
           throw new RemoteError(
             code,
@@ -203,11 +275,26 @@ export class Worker {
         source = await this.remote.getTranscript(video.jobId as string)
         if (source.videoId !== id) throw new RemoteError('INVALID_PROVIDER_RESPONSE', 502, false)
         this.store.saveOriginal(id, source)
+        this.log({
+          stage: 'transcription',
+          outcome: 'success',
+          elapsedMs: this.now() - start,
+          message: 'Original transcript saved in the library.',
+        })
+      } else {
+        this.log({
+          stage: 'transcription',
+          outcome: 'reused',
+          elapsedMs: this.now() - start,
+          message: 'Using the original transcript already saved in the library.',
+        })
       }
       stage = 'enrichment'
+      this.log({ stage, outcome: 'started', elapsedMs: this.now() - start })
       this.store.updateVideo(id, { stage, status: 'enriching' })
       const characters = Array.from(source.text)
       if (characters.length > 1000000) throw new RemoteError('TRANSCRIPT_TOO_LARGE', 422, false)
+      const parts = Math.ceil(characters.length / 12000)
       const chunks: EnrichmentData[] = []
       for (let offset = 0, index = 0; offset < characters.length; offset += 12000, index++) {
         if (this.stopped) {
@@ -216,10 +303,43 @@ export class Worker {
         }
         let chunk = this.store.chunk(id, index)
         if (!chunk) {
+          this.log({
+            stage,
+            operation: 'correct_chunk',
+            outcome: 'started',
+            part: index + 1,
+            parts,
+            characters: Math.min(12000, characters.length - offset),
+            elapsedMs: this.now() - start,
+            message: 'Correcting a transcript chunk and generating its summary and key points.',
+          })
           chunk = validateEnrichment(
-            await this.remote.enrich(characters.slice(offset, offset + 12000).join(''), 'chunk'),
+            await this.remote.enrich(
+              characters.slice(offset, offset + 12000).join(''),
+              'chunk',
+              id,
+            ),
           )
           this.store.saveChunk(id, index, chunk)
+          this.log({
+            stage,
+            operation: 'correct_chunk',
+            outcome: 'saved',
+            part: index + 1,
+            parts,
+            elapsedMs: this.now() - start,
+            message: 'Chunk result validated and saved.',
+          })
+        } else {
+          this.log({
+            stage,
+            operation: 'correct_chunk',
+            outcome: 'reused',
+            part: index + 1,
+            parts,
+            elapsedMs: this.now() - start,
+            message: 'Using a previously saved chunk result.',
+          })
         }
         chunks.push(chunk)
       }
@@ -235,7 +355,15 @@ export class Worker {
           }
           const input = JSON.stringify(group)
           if (Array.from(input).length > 24000) throw new RemoteError('INVALID_LLM_RESPONSE')
-          const reduced = validateEnrichment(await this.remote.enrich(input, 'summary'), true)
+          this.log({
+            stage,
+            operation: 'reduce_summaries',
+            outcome: 'started',
+            inputSummaries: group.length,
+            elapsedMs: this.now() - start,
+            message: 'Combining chunk summaries into the final summary.',
+          })
+          const reduced = validateEnrichment(await this.remote.enrich(input, 'summary', id), true)
           next.push({ summary: reduced.summary, keyPoints: reduced.keyPoints })
         }
         summaries = next
@@ -248,7 +376,13 @@ export class Worker {
         promptVersion: 1,
         completedAt: new Date(this.now()).toISOString(),
       })
-      this.log({ stage: 'enrichment', outcome: 'success', elapsedMs: this.now() - start })
+      this.log({
+        stage: 'enrichment',
+        outcome: 'success',
+        elapsedMs: this.now() - start,
+        status: 'ready',
+        message: 'Corrected transcript, summary and key points saved. Video is ready to read.',
+      })
     } catch (error) {
       const e =
         error instanceof RemoteError ? error : new RemoteError('UPSTREAM_UNAVAILABLE', 502, true)
@@ -265,9 +399,24 @@ export class Worker {
         stage,
         stageAttempts: attempts,
         failure: failure(e),
+        ...(terminalJobFailed ? { jobId: null, jobStartedAt: null } : {}),
         nextAttemptAt: status === 'retry_wait' ? this.now() + this.delay(e, attempts) : 0,
       })
-      this.log({ stage, outcome: 'failure', elapsedMs: this.now() - start })
+      this.log({
+        stage,
+        outcome: 'failure',
+        elapsedMs: this.now() - start,
+        code: e.code,
+        retryable: e.retryable,
+        attempt: attempts,
+        status,
+        retryInMs: status === 'retry_wait' ? this.delay(e, attempts) : 0,
+        message:
+          status === 'retry_wait'
+            ? 'Processing failed; an automatic retry is scheduled.'
+            : 'Processing stopped; review the error before retrying.',
+        ...e.diagnostics,
+      })
     } finally {
       if (attempt) this.store.finishAttempt(attempt, 'finished')
       this.videoBusy = false
@@ -279,7 +428,7 @@ export class Worker {
     if (!['failed', 'unavailable'].includes(video.status))
       throw new RemoteError('VIDEO_NOT_RETRYABLE', 409)
     const source = this.store.original(id)
-    const expired = video.failure?.code === 'JOB_EXPIRED'
+    const pendingTimeout = video.failure?.code === 'TRANSCRIPT_JOB_TIMEOUT'
     this.store.updateVideo(id, {
       status: source ? 'enriching' : 'pending',
       stage: source ? 'enrichment' : 'transcription',
@@ -289,7 +438,7 @@ export class Worker {
       ...(!source
         ? {
             jobStartedAt: this.now(),
-            ...(expired || video.status === 'unavailable' ? { jobId: null } : {}),
+            ...(!pendingTimeout ? { jobId: null } : {}),
           }
         : {}),
     })

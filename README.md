@@ -109,8 +109,21 @@ in the `Authorization` header and treat it as a production credential.
 ## Running all services
 
 See [Run all services locally](docs/running-all-services.md) for the transcript API, channel
-library API and React reader together: environment setup, ports, model assets, development and
-compiled startup, verification and shutdown.
+library API and React reader together: an English, command-by-command walkthrough of environment
+setup, manual startup, `make dev`, all Docker Makefile targets, compiled startup and shutdown.
+
+All capabilities from the former Railway deployment run locally: transcript JSON/PDF, durable
+jobs, artifact cache, embedded LanceDB and the packaged E5 encoder. For the complete application,
+including the library and reader, follow [Run all applications with Docker](docs/docker.md):
+
+```sh
+make docker-up
+```
+
+Configure the two environment files described in that guide first. Local execution needs no
+Railway account. YouTube access still needs internet; Muse audio fallback and library enrichment
+still use OpenCode credentials and quota. RAG inference uses the local model after its initial
+download. Local startup does not recover data from the removed Railway deployment automatically.
 
 ## Running the API
 
@@ -132,8 +145,10 @@ npm start
 ```bash
 docker build -t youtube-transcript-api .
 docker run --rm \
-  -p 3000:3000 \
+  -p 127.0.0.1:3000:3000 \
   --env-file .env \
+  -e DATA_ROOT=/data/transcripts \
+  -v youtube-transcript-data:/data \
   youtube-transcript-api
 ```
 
@@ -393,6 +408,11 @@ used to repeat external work silently.
 
 ## Railway
 
+**Current status (2026-10-13):** The owner removed the Railway deployment due to costs; see
+[AD-020](.specs/STATE.md#ad-020-retire-railway-hosting-due-to-costs). The following configuration
+and procedure are retained for a future deployment. Historical health checks and deployment IDs
+are not evidence of a currently running service.
+
 `.railway/railway.ts` manages the project and service with Railway's current Infrastructure as Code
 implementation. It configures `/health` as the health check and allows up to 300 seconds for the
 image to become healthy. The topology uses one replica and one shared 1024 MB (1 GB) Volume mounted
@@ -407,7 +427,45 @@ this replica at a time, causing brief downtime during each redeploy. Backups are
 deleting, recreating, or corrupting the Volume without a recoverable copy can
 permanently lose jobs, JSON, PDFs, and the RAG knowledge base.
 
-To review infrastructure changes before applying them:
+### Redeploy the transcript API
+
+This restores the former API service, including its job worker and RAG engine. The channel
+library API, SQLite database and React reader are separate applications and are not declared
+in this Railway IaC. Their local startup remains documented above; hosting them would require
+additional services, routing, secrets and a separate persistent library volume.
+
+1. Choose the source revision to deploy and retain a backup of the data you want to move.
+   Review the current Railway cost estimate before creating resources again. The stored baseline
+   is one service, one replica and a 1024 MB `transcript-data` Volume in `sfo`; confirm that the
+   region, capacity and runtime resources still fit the workload.
+2. Prepare the repository from its root and validate the image locally:
+
+   ```sh
+   npm ci
+   npm run rag:model:fetch
+   npm run check
+   docker build -t transcript-rag:redeploy .
+   docker run --rm --network none transcript-rag:redeploy node scripts/rag-container-smoke.mjs
+   ```
+
+3. Install/authenticate the Railway CLI when deployment is actually requested. If the old project
+   and service remain, select them. Otherwise create an empty project and service named
+   `transcript-youtube-videos-api` in the intended workspace using the dashboard. Do not add a
+   database or deploy application code yet. Link that project's `production` environment:
+
+   ```sh
+   railway link --project <PROJECT_ID> --environment production --service transcript-youtube-videos-api
+   railway status --json
+   ```
+
+   Confirm the selected project/environment/service. Never assume a previous local link still
+   identifies a live project. See the official [link command](https://docs.railway.com/cli/link).
+
+4. Set `API_ACCESS_KEY` and `OPENCODE_API_KEY` in the service's Variables tab from your secret
+   manager. Use a strong API token and retain it for authorized clients. `preserve()` in IaC
+   preserves existing remote values; it does not recover deleted credentials or upload `.env`.
+   The API key is required for protected routes; OpenCode is required for audio fallback.
+5. Generate and review a fresh infrastructure plan:
 
 ```bash
 railway config plan --file .railway/railway.ts
@@ -415,34 +473,45 @@ railway config plan --file .railway/railway.ts
 
 Review the count and every add/change/destroy item. Tests do not apply configuration automatically;
 run `railway config apply --file .railway/railway.ts` only after explicit approval of that exact
-plan. This version's validation plan was read-only, so it does not prove that the remote state has
-already been applied.
+plan. Retain an existing Volume and its region when reusing data. For a new environment, verify
+that the plan creates and mounts the required Volume and sets `DATA_ROOT=/data/transcripts` and
+`RAG_DATA_ROOT=/data/lancedb`. Resolve unexpected deletions or variable changes before applying.
+The [Railway IaC documentation](https://docs.railway.com/infrastructure-as-code) describes plan/apply;
+the checked-in authoring file and lockfile remain this project's configuration baseline.
 
-For the first deployment, run this from the project root:
-
-```bash
-railway up
-```
-
-Then configure both service secrets. Pass values through stdin so they are not recorded in shell
-history:
+After applying the reviewed plan, decide whether to start empty or restore a compatible backup
+using the next section. Complete restoration with all writers stopped before starting the API.
+Then upload the selected source from the repository root:
 
 ```bash
-printf '%s' "$OPENCODE_API_KEY" | railway variable set OPENCODE_API_KEY --stdin --service transcript-youtube-videos-api
-printf '%s' "$API_ACCESS_KEY" | railway variable set API_ACCESS_KEY --stdin --service transcript-youtube-videos-api
+railway up --service transcript-youtube-videos-api --environment production
 ```
 
-A variable change triggers a new deployment. Generate the public domain and confirm status:
+Generate or reuse the public domain and inspect the specific new deployment:
 
 ```bash
-railway domain --service transcript-youtube-videos-api --json
-railway deployment list --service transcript-youtube-videos-api --json
+railway domain --service transcript-youtube-videos-api --environment production --json
+railway deployment list --service transcript-youtube-videos-api --environment production --json
 ```
+
+Wait for that deployment to report terminal `SUCCESS`. A queued upload is not completion; see
+the official [`railway up` reference](https://docs.railway.com/cli/up). On failure, inspect bounded
+build/runtime logs and correct the cause before sending work to the service.
 
 Use the returned domain in the same `curl` examples. First confirm `/health` without a credential,
 then confirm that `POST /v1/transcripts` without a Bearer token returns 401 before testing an
-authenticated call. Keep the real `API_ACCESS_KEY` only in the secret manager and authorized
-clients.
+authenticated call. Wait for `/ready` to return 200, then verify one known public video's JSON/PDF,
+a durable job through completion, and RAG ingestion/search using the examples above. Empty storage
+needs an ingested document before a search can prove retrieval. Keep the real `API_ACCESS_KEY`
+only in the secret manager and authorized clients.
+
+For an independently started host library that should use this API, set `TRANSCRIPT_API_URL` to
+the new HTTPS base URL and `TRANSCRIPT_API_KEY` to its API token, then restart the library using
+its own startup command from the [local guide](docs/running-all-services.md). Both `make dev` and
+the default Compose stack wire the library to their local transcript service; editing the library
+`.env` alone does not switch those launchers to Railway. Record the source revision, deployment
+ID, topology and fresh smoke results in the specs, and update AD-020 only after hosting has
+actually resumed.
 
 After copying `API_ACCESS_KEY` into a password manager, you can use **Seal** in Railway's Variables
 tab. Sealing is irreversible and prevents retrieval through the dashboard or CLI, so do it only
@@ -456,28 +525,53 @@ provider failure.
 
 ### Backup, restore, and local model
 
+Code and IaC can recreate the service, but cannot recreate deleted transcripts, vectors or secrets.
+The old Railway Volume's survival has not been verified. If it was deleted and no backup exists,
+start with empty storage and submit/reingest source videos again. The library's SQLite data is
+separate and must be backed up independently.
+
+For local Docker data, use the stopped-writer [backup procedure](docs/docker.md#data-backup-and-restore).
+Its transcript archive contains `transcripts/` and `lancedb/` relative to `/data`, matching the
+Railway layout. With host execution, stop the API and archive both configured storage roots with
+those same top-level names. Do not restore the separate library archive into the transcript Volume.
+Check uncompressed size against destination capacity, checksum the archive, and restore into
+empty storage with a compatible image/model fingerprint. Keep an external copy until validation.
+
 Schedule a maintenance window that prevents new writes. Create a verifiable backup before any
 manual compaction, store it outside the Volume, and preserve both roots together; this version has
-no public compaction endpoint. A workflow compatible with the current CLI creates an archive in a
-temporary operations area, downloads it, and verifies its local checksum:
+no public compaction endpoint. Blocking HTTP access alone does not stop job/RAG workers or cleanup.
+For the SSH examples below, use a temporary maintenance deployment of the same image on the same
+Volume: override its start command to `sleep infinity` and temporarily remove the HTTP health check
+in the service settings. Confirm that the normal Node process has stopped and no second writer is
+using the Volume. This provides an SSH target without starting the application workers. After
+restoring data, clear the temporary start-command override so the Dockerfile's `CMD` runs again,
+restore the `/health` check, and review a fresh IaC plan before the final API deployment.
+
+A backup workflow creates an archive in a temporary operations area, downloads it, and verifies
+its local checksum. Volume file commands use paths relative to the Volume root; SSH uses the
+container mount path `/data`. See the [volume CLI reference](https://docs.railway.com/cli/volume).
 
 ```bash
 railway ssh --service transcript-youtube-videos-api --environment production \
   'mkdir -p /data/.ops && tar --exclude=.ops -C /data -czf /data/.ops/volume-backup.tgz transcripts lancedb'
-railway volume files download /data/.ops/volume-backup.tgz ./volume-backup.tgz \
+railway volume files download /.ops/volume-backup.tgz ./volume-backup.tgz \
   --service transcript-youtube-videos-api --environment production
 sha256sum ./volume-backup.tgz
 ```
 
 Record the checksum and test the archive in separate storage. Do not treat platform retention or an
 eventual snapshot as a substitute for this backup. To restore, keep writes stopped, verify the
-source and checksum, upload the archive, and extract both roots as one unit:
+source and checksum, upload the archive, and extract both roots as one unit. The restore shell
+must have permission to set ownership to `node:node` (UID/GID 1000); the normal application
+entrypoint only fixes the mount root, not nested restored files.
 
 ```bash
-railway volume files upload ./volume-backup.tgz /data/.ops/volume-restore.tgz \
+railway ssh --service transcript-youtube-videos-api --environment production \
+  'mkdir -p /data/.ops'
+railway volume files upload ./volume-backup.tgz /.ops/volume-restore.tgz \
   --service transcript-youtube-videos-api --environment production
 railway ssh --service transcript-youtube-videos-api --environment production \
-  'tar -C /data -xzf /data/.ops/volume-restore.tgz'
+  'tar -C /data -xzf /data/.ops/volume-restore.tgz && chown -R node:node /data/transcripts /data/lancedb'
 ```
 
 Then restart the single replica, confirm `/health`, wait for `/ready` to return 200, and run a known

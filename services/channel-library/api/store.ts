@@ -9,24 +9,33 @@ import type {
   Enrichment,
   EnrichmentData,
   Original,
+  ReadingState,
   Video,
   VideoFilters,
 } from './types.js'
 export class Store {
   readonly db: Database.Database
   private closed = false
-  constructor(dir: string) {
+  constructor(
+    dir: string,
+    private readonly now: () => number = Date.now,
+  ) {
     mkdirSync(dir, { recursive: true })
     this.db = new Database(join(dir, 'library.sqlite'))
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('foreign_keys = ON')
     this.db.pragma('busy_timeout = 5000')
     const version = this.db.pragma('user_version', { simple: true })
-    if (version !== 0 && version !== 1) throw new Error('Unsupported library schema')
-    this.db.transaction(() => {
-      this.db.exec(`
+    if (version !== 0 && version !== 1 && version !== 2 && version !== 3) {
+      this.db.close()
+      throw new Error('Unsupported library schema')
+    }
+    this.db.pragma('foreign_keys = OFF')
+    try {
+      this.db.transaction(() => {
+        this.db.exec(`
  CREATE TABLE IF NOT EXISTS channels(youtube_channel_id TEXT PRIMARY KEY, data TEXT NOT NULL);
- CREATE TABLE IF NOT EXISTS videos(youtube_video_id TEXT PRIMARY KEY, channel_id TEXT NOT NULL REFERENCES channels(youtube_channel_id), data TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS videos(youtube_video_id TEXT PRIMARY KEY, channel_id TEXT REFERENCES channels(youtube_channel_id), data TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS sources(video_id TEXT PRIMARY KEY REFERENCES videos(youtube_video_id), data TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS enrichments(video_id TEXT PRIMARY KEY REFERENCES sources(video_id), data TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS collections(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL REFERENCES channels(youtube_channel_id),status TEXT NOT NULL,data TEXT NOT NULL);
@@ -34,9 +43,33 @@ export class Store {
  CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY,video_id TEXT NOT NULL REFERENCES videos(youtube_video_id),status TEXT NOT NULL,stage TEXT NOT NULL);
  CREATE UNIQUE INDEX IF NOT EXISTS active_video_attempt ON attempts(video_id) WHERE status='active';
  CREATE TABLE IF NOT EXISTS chunks(video_id TEXT NOT NULL REFERENCES videos(youtube_video_id),chunk_index INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(video_id,chunk_index));
- PRAGMA user_version = 1;`)
-    })()
+ `)
+        if (version === 1 || version === 2) {
+          this.db.exec(`
+ CREATE TABLE videos_new(youtube_video_id TEXT PRIMARY KEY, channel_id TEXT REFERENCES channels(youtube_channel_id), data TEXT NOT NULL);
+ INSERT INTO videos_new SELECT * FROM videos;
+ DROP TABLE videos;
+ ALTER TABLE videos_new RENAME TO videos;
+ `)
+        }
+        if (version !== 3) {
+          this.db
+            .prepare(`UPDATE videos SET data=json_insert(data,
+          '$.reading',json_object('favorite',json('false'),'read',json('false'),'notes','','updatedAt',NULL),
+          '$.addedAt',COALESCE(json_extract(data,'$.publishedAt'),?))`)
+            .run(new Date(this.now()).toISOString())
+        }
+        if ((this.db.pragma('foreign_key_check') as unknown[]).length)
+          throw new Error('Invalid library references')
+        this.db.pragma('user_version = 3')
+      })()
+      this.db.pragma('foreign_keys = ON')
+    } catch (error) {
+      this.db.close()
+      throw error
+    }
   }
+
   close() {
     if (!this.closed) {
       this.closed = true
@@ -73,24 +106,57 @@ export class Store {
   video(id: string) {
     return this.one<Video>('SELECT data FROM videos WHERE youtube_video_id=?', id)
   }
+  private initialVideo(
+    item: Pick<Video, 'id' | 'title' | 'publishedAt' | 'thumbnail'>,
+    channel: Channel | null,
+  ): Video {
+    return {
+      ...item,
+      addedAt: new Date(this.now()).toISOString(),
+      reading: { favorite: false, read: false, notes: '', updatedAt: null },
+      channelId: channel?.id ?? null,
+      channelTitle: channel?.title ?? 'Added individually',
+      status: 'pending',
+      failure: null,
+      jobId: null,
+      jobStartedAt: null,
+      nextAttemptAt: 0,
+      stageAttempts: 0,
+      stage: 'transcription',
+    }
+  }
+  addIndividualVideo(id: string) {
+    return this.db.transaction(() => {
+      const existing = this.video(id)
+      if (existing) return { video: existing, created: false }
+      const video = this.initialVideo(
+        { id, title: `YouTube video ${id}`, publishedAt: null, thumbnail: null },
+        null,
+      )
+      this.db.prepare('INSERT INTO videos VALUES (?,NULL,?)').run(id, JSON.stringify(video))
+      return { video, created: true }
+    })()
+  }
   insertVideos(channel: Channel, items: DiscoveredVideo[]) {
     this.db.transaction(() => {
       for (const item of items) {
-        const v: Video = {
-          ...item,
-          channelId: channel.id,
-          channelTitle: channel.title,
-          status: 'pending',
-          failure: null,
-          jobId: null,
-          jobStartedAt: null,
-          nextAttemptAt: 0,
-          stageAttempts: 0,
-          stage: 'transcription',
+        const existing = this.video(item.id)
+        if (existing?.channelId === null) {
+          const attached = {
+            ...existing,
+            ...item,
+            channelId: channel.id,
+            channelTitle: channel.title,
+          }
+          this.db
+            .prepare('UPDATE videos SET channel_id=?,data=? WHERE youtube_video_id=?')
+            .run(channel.id, JSON.stringify(attached), item.id)
+        } else if (!existing) {
+          const video = this.initialVideo(item, channel)
+          this.db
+            .prepare('INSERT INTO videos VALUES (?,?,?)')
+            .run(item.id, channel.id, JSON.stringify(video))
         }
-        this.db
-          .prepare('INSERT OR IGNORE INTO videos VALUES (?,?,?)')
-          .run(item.id, channel.id, JSON.stringify(v))
       }
     })()
   }
@@ -101,11 +167,29 @@ export class Store {
       .prepare('UPDATE videos SET data=? WHERE youtube_video_id=?')
       .run(JSON.stringify({ ...v, ...patch }), id)
   }
+  updateReading(id: string, patch: Partial<ReadingState>, now: number) {
+    const video = this.video(id)
+    if (!video) throw new Error('Missing video')
+    const changed = Object.entries(patch).some(
+      ([key, value]) => video.reading[key as keyof ReadingState] !== value,
+    )
+    if (changed)
+      this.updateVideo(id, {
+        reading: { ...video.reading, ...patch, updatedAt: new Date(now).toISOString() },
+      })
+    return this.video(id)?.reading
+  }
   videos(filters: VideoFilters) {
     const page = filters.page ?? 1,
       pageSize = filters.pageSize ?? 20
     const clauses: string[] = [],
       args: unknown[] = []
+    for (const field of ['favorite', 'read'] as const) {
+      if (filters[field] !== undefined) {
+        clauses.push(`json_extract(data,'$.reading.${field}')=?`)
+        args.push(filters[field] === 'true' ? 1 : 0)
+      }
+    }
     if (filters.channelId) {
       clauses.push('channel_id=?')
       args.push(filters.channelId)
@@ -124,7 +208,7 @@ export class Store {
     ).n
     return {
       items: this.many<Video>(
-        `SELECT data FROM videos${where} ORDER BY json_extract(data,'$.publishedAt') DESC,youtube_video_id LIMIT ? OFFSET ?`,
+        `SELECT data FROM videos${where} ORDER BY COALESCE(json_extract(data,'$.publishedAt'),json_extract(data,'$.addedAt')) DESC,youtube_video_id LIMIT ? OFFSET ?`,
         ...args,
         pageSize,
         (page - 1) * pageSize,
@@ -136,7 +220,7 @@ export class Store {
   }
   dueVideos(now: number) {
     return this.many<Video>(
-      "SELECT data FROM videos WHERE json_extract(data,'$.status') IN ('pending','transcribing','enriching','retry_wait') AND json_extract(data,'$.nextAttemptAt')<=? ORDER BY json_extract(data,'$.publishedAt')",
+      "SELECT data FROM videos WHERE json_extract(data,'$.status') IN ('pending','transcribing','enriching','retry_wait') AND json_extract(data,'$.nextAttemptAt')<=? ORDER BY COALESCE(json_extract(data,'$.publishedAt'),json_extract(data,'$.addedAt')),youtube_video_id",
       now,
     )
   }
