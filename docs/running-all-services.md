@@ -533,6 +533,14 @@ embedding fingerprints remain unchanged. Sources: [Fastify advisory](https://git
 [fast-uri advisory](https://github.com/advisories/GHSA-hrr3-gc8f-f4qj),
 [undici advisory](https://github.com/advisories/GHSA-r53p-7pc4-xj5r).
 
+The 2026-10-13 CI follow-up pins `sharp` to 0.35.5, updates the locked `source-map-js` to 1.2.2,
+and overrides ONNX Runtime's installer dependency to `global-agent` 4.1.3, removing the vulnerable
+`roarr`/`sprintf-js` chain. The installer bootstrap is checked in a subprocess without downloads.
+LanceDB, Transformers, ONNX Runtime and model versions remain unchanged. These updates address
+the [sharp advisory](https://github.com/advisories/GHSA-wq5f-xc86-pv6w),
+[source-map-js advisory](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) and
+[sprintf-js advisory](https://github.com/advisories/GHSA-hp3w-g68c-fv3c).
+
 For automatic setup, reading features and stage-specific probes, see [Reading workflow and validation](library-reading-workflow.md).
 
 ## Add an individual video

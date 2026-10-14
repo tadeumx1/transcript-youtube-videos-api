@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { readdir, readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
@@ -43,7 +44,10 @@ describe('local RAG dependency contract', () => {
         '@huggingface/transformers': '4.2.0',
       },
       'adm-zip': '0.6.1',
-      sharp: '0.35.4',
+      sharp: '0.35.5',
+      'onnxruntime-node': {
+        'global-agent': '4.1.3',
+      },
     })
     expect(lockfile.packages['node_modules/@huggingface/transformers']?.version).toBe('4.2.0')
     expect(
@@ -57,7 +61,14 @@ describe('local RAG dependency contract', () => {
       ),
     ).toEqual(['node_modules/onnxruntime-node'])
     expect(lockfile.packages['node_modules/adm-zip']?.version).toBe('0.6.1')
-    expect(lockfile.packages['node_modules/sharp']?.version).toBe('0.35.4')
+    expect(lockfile.packages['node_modules/sharp']?.version).toBe('0.35.5')
+    expect(lockfile.packages['node_modules/source-map-js']?.version).toBe('1.2.2')
+    expect(lockfile.packages['node_modules/global-agent']?.version).toBe('4.1.3')
+    expect(
+      Object.keys(lockfile.packages).filter((path) =>
+        /node_modules\/(sprintf-js|roarr)$/.test(path),
+      ),
+    ).toEqual([])
     expect(
       Object.keys(lockfile.packages).filter((path) => path.endsWith('node_modules/adm-zip')),
     ).toEqual(['node_modules/adm-zip'])
@@ -76,9 +87,19 @@ describe('local RAG dependency contract', () => {
       import('onnxruntime-node'),
     ])
 
-    expect(sharp.versions.sharp).toBe('0.35.4')
+    expect(sharp.versions.sharp).toBe('0.35.5')
     expect(sharp.versions.vips).toBeTruthy()
     expect(typeof ort.InferenceSession.create).toBe('function')
+  })
+
+  it('bootstraps the ONNX installer with the patched proxy dependency without downloads', () => {
+    const install = spawnSync(
+      process.execPath,
+      ['node_modules/onnxruntime-node/script/install.js', '--onnxruntime-node-install=skip'],
+      { encoding: 'utf8', timeout: 10000 },
+    )
+    expect(install.error).toBeUndefined()
+    expect(install.status, install.stderr).toBe(0)
   })
 
   it('keeps only local CPU retrieval packages and stable offline scripts', async () => {
